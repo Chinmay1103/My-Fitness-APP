@@ -83,7 +83,14 @@ The math computes the scores. The AI only explains them.
 `daily_scores`, `coach_messages`. Every table uses Row Level Security, so each user only
 sees their own rows.
 
-## 6. Milestones
+## 6. Decisions so far
+
+- **Android first** (Health Connect). iOS (HealthKit) comes later from the same Expo
+  codebase, so the health adapter sits behind one interface from day one.
+- **Fitbit Air arrives after Oct 2.** Until then we build against realistic mock data and
+  whatever the phone's Health Connect already holds, then switch to real band data.
+
+## 7. Milestones
 
 | # | Milestone | Done when |
 |---|---|---|
@@ -94,7 +101,7 @@ sees their own rows.
 | 4 | AI coach | Chat screen: Claude reads your scores, sleep, training and food through tools and gives advice |
 | 5 | Polish | Trends, weekly report, notifications, optional MCP server to use your data from the Claude app |
 
-## 7. Ground rules
+## 8. Ground rules
 
 - Health data is sensitive: RLS on every table, no API keys in the app, and you can
   delete your data.
