@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedProps } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
-import { colors, fonts, gradientFor, motion } from '@/constants/theme';
+import { colors, fonts, gradientFor, motion, type } from '@/constants/theme';
 import { useAnimatedTarget, useCountUp } from '@/lib/animation';
 import { tapHaptic } from '@/lib/haptics';
 
@@ -120,6 +120,6 @@ const styles = StyleSheet.create({
   wrap: { alignItems: 'center', gap: 8, minWidth: 48 },
   pressed: { opacity: 0.7, transform: [{ scale: 0.97 }] },
   center: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
-  value: { color: colors.text, fontFamily: fonts.display, fontVariant: ['tabular-nums'] },
-  label: { color: colors.muted, fontFamily: fonts.displaySemi, fontSize: 13, letterSpacing: 1.4 },
+  value: { color: colors.text, fontFamily: fonts.number, fontVariant: ['tabular-nums'] },
+  label: { ...type.overline, color: colors.muted },
 });

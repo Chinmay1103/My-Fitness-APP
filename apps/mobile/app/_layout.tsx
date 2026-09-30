@@ -3,6 +3,10 @@ import { Barlow_500Medium } from '@expo-google-fonts/barlow/500Medium';
 import { Barlow_600SemiBold } from '@expo-google-fonts/barlow/600SemiBold';
 import { BarlowCondensed_600SemiBold } from '@expo-google-fonts/barlow-condensed/600SemiBold';
 import { BarlowCondensed_700Bold } from '@expo-google-fonts/barlow-condensed/700Bold';
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { useFonts } from 'expo-font';
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -10,7 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import { colors, fonts } from '@/constants/theme';
+import { colors } from '@/constants/theme';
 import { ScoresProvider } from '@/lib/ScoresProvider';
 
 export {
@@ -31,12 +35,17 @@ const theme = {
 };
 
 export default function RootLayout() {
+  // Both text faces are loaded while we compare them (see TEXT_FONT in constants/theme.ts).
   const [fontsLoaded, fontError] = useFonts({
-    [fonts.body]: Barlow_400Regular,
-    [fonts.bodyMedium]: Barlow_500Medium,
-    [fonts.bodySemi]: Barlow_600SemiBold,
-    [fonts.displaySemi]: BarlowCondensed_600SemiBold,
-    [fonts.display]: BarlowCondensed_700Bold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Barlow_400Regular,
+    Barlow_500Medium,
+    Barlow_600SemiBold,
+    BarlowCondensed_600SemiBold,
+    BarlowCondensed_700Bold,
   });
   const ready = fontsLoaded || !!fontError;
 

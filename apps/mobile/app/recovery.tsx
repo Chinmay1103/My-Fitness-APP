@@ -5,7 +5,7 @@ import { Breakdown, BreakdownFactor, BreakdownTotal } from '@/components/Breakdo
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Screen } from '@/components/ui';
-import { colors, fonts } from '@/constants/theme';
+import { colors, type } from '@/constants/theme';
 import { FACTOR_LABELS, RECOVERY_GUIDANCE, recoveryFactorDetail } from '@/lib/insights';
 import { useScores } from '@/lib/ScoresProvider';
 
@@ -97,5 +97,5 @@ export default function RecoveryScreen() {
 
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: 10 },
-  verdict: { fontFamily: fonts.display, fontSize: 26 },
+  verdict: { ...type.title, textAlign: 'center' },
 });

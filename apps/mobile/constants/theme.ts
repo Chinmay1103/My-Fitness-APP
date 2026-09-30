@@ -1,4 +1,5 @@
 import type { RecoveryZone } from '@fitness/scoring';
+import type { TextStyle } from 'react-native';
 
 /**
  * Design tokens. The reasoning behind them is in design-system/my-fitness-app/MASTER.md.
@@ -53,26 +54,51 @@ export function gradientFor(color: string): Gradient {
 }
 
 /**
- * Barlow Condensed for numbers and headings (compact, sporty), Barlow for body text.
+ * TRYING OUT: which face words use. 'inter' is the design review's suggestion; 'barlow' is the
+ * previous look (condensed titles and labels). Flip it, reload, compare, then delete the loser.
+ */
+const TEXT_FONT: 'inter' | 'barlow' = 'inter';
+
+const textFaces = {
+  inter: {
+    heading: 'Inter_700Bold',
+    label: 'Inter_600SemiBold',
+    body: 'Inter_400Regular',
+    bodyMedium: 'Inter_500Medium',
+    bodySemi: 'Inter_600SemiBold',
+  },
+  barlow: {
+    heading: 'BarlowCondensed_700Bold',
+    label: 'BarlowCondensed_600SemiBold',
+    body: 'Barlow_400Regular',
+    bodyMedium: 'Barlow_500Medium',
+    bodySemi: 'Barlow_600SemiBold',
+  },
+};
+
+/**
+ * Words (titles, labels, body) use the text face above; numbers (ring values, stats, deltas) use
+ * Barlow Condensed, which looks sporty on digits but cramped on words.
  * On Android a custom font must be picked by family name, so don't combine these with fontWeight.
  */
 export const fonts = {
-  display: 'BarlowCondensed_700Bold',
-  displaySemi: 'BarlowCondensed_600SemiBold',
-  body: 'Barlow_400Regular',
-  bodyMedium: 'Barlow_500Medium',
-  bodySemi: 'Barlow_600SemiBold',
+  ...textFaces[TEXT_FONT],
+  number: 'BarlowCondensed_700Bold',
+  numberSemi: 'BarlowCondensed_600SemiBold',
 };
 
+const inter = (TEXT_FONT as string) === 'inter';
+
 export const type = {
-  hero: { fontFamily: fonts.display, fontSize: 30, letterSpacing: 0.2 },
-  title: { fontFamily: fonts.display, fontSize: 22 },
-  overline: { fontFamily: fonts.displaySemi, fontSize: 13, letterSpacing: 1.4 },
+  hero: { fontFamily: fonts.heading, fontSize: inter ? 26 : 30, letterSpacing: inter ? -0.3 : 0.2 },
+  title: { fontFamily: fonts.heading, fontSize: inter ? 20 : 22 },
+  overline: { fontFamily: fonts.label, fontSize: inter ? 12 : 13, letterSpacing: inter ? 1 : 1.4 },
   body: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
   bodyStrong: { fontFamily: fonts.bodySemi, fontSize: 15, lineHeight: 21 },
   caption: { fontFamily: fonts.bodyMedium, fontSize: 12, lineHeight: 16 },
-  stat: { fontFamily: fonts.display, fontSize: 24 },
-};
+  /** Keep tabular digits on numbers that change, so they don't wobble during count-up. */
+  stat: { fontFamily: fonts.number, fontSize: 24, fontVariant: ['tabular-nums'] },
+} satisfies Record<string, TextStyle>;
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
 

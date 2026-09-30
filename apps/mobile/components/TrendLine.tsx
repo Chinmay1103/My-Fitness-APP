@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     width: 60,
     textAlign: 'center',
     color: colors.text,
-    fontFamily: fonts.display,
+    fontFamily: fonts.number,
     fontSize: 15,
   },
   days: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
