@@ -47,7 +47,6 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{ title: 'Today', tabBarIcon: tabIcon('heart.circle', 'monitor_heart') }} />
       <Tabs.Screen name="sleep" options={{ title: 'Sleep', tabBarIcon: tabIcon('moon.zzz', 'bedtime') }} />
       <Tabs.Screen name="strain" options={{ title: 'Strain', tabBarIcon: tabIcon('bolt.heart', 'bolt') }} />
-      <Tabs.Screen name="log" options={{ title: 'Log', tabBarIcon: tabIcon('plus.circle', 'add_circle') }} />
       <Tabs.Screen name="coach" options={{ title: 'Coach', tabBarIcon: tabIcon('sparkles', 'auto_awesome') }} />
     </Tabs>
   );

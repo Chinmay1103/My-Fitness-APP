@@ -54,9 +54,10 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
 - `packages/scoring/`: pure TypeScript scoring and mock data, Vitest tests. Consumed as source
   (`main: src/index.ts`), no build step.
 - `apps/mobile/`: Expo SDK 57 app with expo-router. Tabs live in `app/(tabs)/`: Today (`index.tsx`),
-  Sleep, Strain, Log, Coach (Coach is a placeholder); `app/recovery.tsx` is the Recovery
-  detail screen, `app/workout.tsx` the log/edit workout form. Workouts are stored on the phone
-  (`lib/WorkoutsProvider.tsx`, a JSON file) and matched to band-detected activities in `lib/workouts.ts`. Shared data comes from
+  Sleep, Strain, Coach (placeholder); `app/recovery.tsx` is the Recovery detail screen.
+  **No logging forms or Log tab** (Chinmay's call, Oct 1): workouts and meals are logged by typing or
+  voice-typing into the Coach chat, and the AI records them. `lib/workouts.ts` holds the workout model
+  and matches workouts to band-detected activities. Shared data comes from
   `lib/ScoresProvider.tsx`; UI pieces live in `components/`; design tokens (colors, gradients,
   fonts, motion) in `constants/theme.ts`. Use tokens, not raw hex, in screens.
   Visual direction: `design-system/my-fitness-app/MASTER.md` (made with the ui-ux-pro-max skill in
@@ -87,8 +88,8 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | 0 | Setup | Runs on the phone; design review done; Supabase schema + sign-in + daily sync written. To do: Chinmay creates the Supabase project (docs/SETUP.md), verify Fitbit Air data types |
 | 1 | Health Connect data in | Code ready (`lib/health/healthConnectSource.ts`, Health data screen `app/health.tsx`); first EAS dev build done (Oct 1); to do: check real Fitbit Air data |
 | 2 | Scores + Today rings | Done on demo data; tune against real data |
-| 3 | Logging: workouts, plans, meals (AI macros) | Workout logging done (on the phone, labels band-detected activities); to do: sync to Supabase, plans, meals |
-| 4 | AI coach chat | Not started |
+| 3 | Logging: workouts, plans, meals (AI macros) | Merged into 4: the user types or speaks what they did or ate in the Coach chat and the AI records it (no forms) |
+| 4 | AI coach chat (also does all logging) | Not started; needs Supabase set up and a Claude API key |
 | 5 | Trends, weekly report, notifications, MCP server | Not started |
 
 Keep this table up to date when a milestone moves.

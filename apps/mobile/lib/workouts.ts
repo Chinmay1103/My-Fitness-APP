@@ -16,9 +16,9 @@ export interface Exercise {
 }
 
 /**
- * One logged session. Stored on the phone for now (lib/WorkoutsProvider.tsx); the fields map onto
- * the `workouts` table in Supabase (kind, started_at, ended_at, title, notes, and the rest in
- * `details`) for when sync is added.
+ * One workout, as the coach records it from what the user types or says (milestone 4). The fields
+ * map onto the `workouts` table in Supabase: kind, started_at, ended_at, title, notes, and the
+ * rest in `details`.
  */
 export interface Workout {
   /** UUID, so it can become the Supabase row id as-is. */
