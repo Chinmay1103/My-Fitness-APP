@@ -5,7 +5,7 @@ import { Breakdown, BreakdownFactor, BreakdownTotal } from '@/components/Breakdo
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Screen } from '@/components/ui';
-import { colors } from '@/constants/theme';
+import { colors, fonts } from '@/constants/theme';
 import { FACTOR_LABELS, RECOVERY_GUIDANCE, recoveryFactorDetail } from '@/lib/insights';
 import { useScores } from '@/lib/ScoresProvider';
 
@@ -32,10 +32,10 @@ export default function RecoveryScreen() {
   const guidance = RECOVERY_GUIDANCE[recovery.zone];
 
   return (
-    <Screen>
+    <Screen glow={color}>
       <Card>
         <View style={styles.hero}>
-          <ScoreRing label="RECOVERY" display={`${recovery.score}%`} progress={recovery.score / 100} color={color} size={150} />
+          <ScoreRing label="RECOVERY" value={recovery.score} suffix="%" progress={recovery.score / 100} color={color} size={150} />
           <Text style={[styles.verdict, { color }]}>{guidance.title}</Text>
           <Muted>{guidance.body}</Muted>
         </View>
@@ -72,6 +72,7 @@ export default function RecoveryScreen() {
 
       <Card title="RECOVERY, LAST 14 DAYS">
         <TrendBars
+          label="Recovery"
           max={100}
           color={colors.muted}
           points={scores.slice(-14).map((s) => ({
@@ -96,5 +97,5 @@ export default function RecoveryScreen() {
 
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: 10 },
-  verdict: { fontSize: 20, fontWeight: '800' },
+  verdict: { fontFamily: fonts.display, fontSize: 26 },
 });

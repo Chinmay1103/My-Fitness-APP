@@ -2,17 +2,17 @@ import { StyleSheet, View } from 'react-native';
 
 import { Breakdown, BreakdownFactor, BreakdownTotal } from '@/components/Breakdown';
 import { ScoreRing } from '@/components/ScoreRing';
-import { TrendBars } from '@/components/TrendBars';
+import { TrendLine } from '@/components/TrendLine';
 import { Card, Muted, Row, Screen, Stat } from '@/components/ui';
 import { colors } from '@/constants/theme';
 import { formatMinutes } from '@/lib/format';
 import { useScores } from '@/lib/ScoresProvider';
 
 const STAGES = [
-  { key: 'awake', label: 'Awake', color: '#E8E8E8' },
-  { key: 'light', label: 'Light', color: '#6C7BD9' },
-  { key: 'deep', label: 'Deep', color: '#3F4DB8' },
-  { key: 'rem', label: 'REM', color: '#B39DF5' },
+  { key: 'awake', label: 'Awake' },
+  { key: 'light', label: 'Light' },
+  { key: 'deep', label: 'Deep' },
+  { key: 'rem', label: 'REM' },
 ] as const;
 
 export default function SleepScreen() {
@@ -27,12 +27,15 @@ export default function SleepScreen() {
   const { ceiling, penalties } = sleep.breakdown;
   const penaltyScale = Math.max(penalties.efficiency, penalties.restorative, penalties.consistency, 1);
   const bedtimeDrift = Math.round((1 - sleep.consistency) * 120);
+  // Sleep scores cluster high; start the trend axis a bit below the lowest night so changes are visible.
+  const trendScores = scores.slice(-14).flatMap((s) => (s.sleep ? [s.sleep.score] : []));
+  const trendMin = Math.max(0, Math.floor((Math.min(...trendScores, 100) - 15) / 10) * 10);
 
   return (
-    <Screen>
+    <Screen glow={colors.sleep}>
       <Card>
         <View style={styles.hero}>
-          <ScoreRing label="SLEEP PERFORMANCE" display={`${sleep.score}%`} progress={sleep.score / 100} color={colors.sleep} size={140} />
+          <ScoreRing label="SLEEP PERFORMANCE" value={sleep.score} suffix="%" progress={sleep.score / 100} color={colors.sleep} size={140} />
           <Muted>
             You slept {formatMinutes(sleep.asleepMinutes)} of the {formatMinutes(sleep.needMinutes)} your body needed.
           </Muted>
@@ -108,12 +111,12 @@ export default function SleepScreen() {
       <Card title="STAGES">
         <View style={styles.stageBar}>
           {STAGES.map((s) => (
-            <View key={s.key} style={{ flex: session.stages[s.key] / totalStages, backgroundColor: s.color }} />
+            <View key={s.key} style={{ flex: session.stages[s.key] / totalStages, backgroundColor: colors.sleepStages[s.key] }} />
           ))}
         </View>
         <Row>
           {STAGES.map((s) => (
-            <Stat key={s.key} label={s.label} value={formatMinutes(session.stages[s.key])} />
+            <Stat key={s.key} label={s.label} value={formatMinutes(session.stages[s.key])} color={colors.sleepStages[s.key]} />
           ))}
         </Row>
       </Card>
@@ -127,7 +130,14 @@ export default function SleepScreen() {
       </Card>
 
       <Card title="SLEEP PERFORMANCE, LAST 14 DAYS">
-        <TrendBars max={100} color={colors.sleep} points={scores.slice(-14).map((s) => ({ date: s.date, value: s.sleep?.score ?? null }))} />
+        <TrendLine
+          label="Sleep performance"
+          min={trendMin}
+          max={100}
+          color={colors.sleep}
+          format={(v) => `${Math.round(v)}%`}
+          points={scores.slice(-14).map((s) => ({ date: s.date, value: s.sleep?.score ?? null }))}
+        />
       </Card>
     </Screen>
   );
@@ -135,5 +145,5 @@ export default function SleepScreen() {
 
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: 12 },
-  stageBar: { flexDirection: 'row', height: 14, borderRadius: 7, overflow: 'hidden' },
+  stageBar: { flexDirection: 'row', height: 14, borderRadius: 7, overflow: 'hidden', gap: 2 },
 });

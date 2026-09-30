@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Row, Screen, Stat } from '@/components/ui';
-import { colors } from '@/constants/theme';
+import { colors, fonts, type } from '@/constants/theme';
 import { formatDate, formatMinutes } from '@/lib/format';
 import { todayHeadline } from '@/lib/insights';
 import { useScores } from '@/lib/ScoresProvider';
@@ -21,7 +21,7 @@ export default function TodayScreen() {
   const headline = todayHeadline(today);
 
   return (
-    <Screen>
+    <Screen glow={recoveryColor}>
       <View style={styles.header}>
         <Text style={styles.date}>{formatDate(today.date)}</Text>
         <Text style={styles.source}>{sourceLabel}</Text>
@@ -31,21 +31,24 @@ export default function TodayScreen() {
         <Row>
           <ScoreRing
             label="RECOVERY"
-            display={recovery?.score != null ? `${recovery.score}%` : '--'}
+            value={recovery?.score ?? null}
+            suffix="%"
             progress={(recovery?.score ?? 0) / 100}
             color={recoveryColor}
             onPress={() => router.push('/recovery')}
           />
           <ScoreRing
             label="STRAIN"
-            display={today.strain.strain.toFixed(1)}
+            value={today.strain.strain}
+            decimals={1}
             progress={today.strain.strain / 21}
             color={colors.strain}
             onPress={() => router.navigate('/strain')}
           />
           <ScoreRing
             label="SLEEP"
-            display={today.sleep ? `${today.sleep.score}%` : '--'}
+            value={today.sleep?.score ?? null}
+            suffix="%"
             progress={(today.sleep?.score ?? 0) / 100}
             color={colors.sleep}
             onPress={() => router.navigate('/sleep')}
@@ -75,6 +78,7 @@ export default function TodayScreen() {
 
       <Card title="RECOVERY, LAST 14 DAYS">
         <TrendBars
+          label="Recovery"
           max={100}
           color={colors.muted}
           points={scores.slice(-14).map((s) => ({
@@ -89,8 +93,8 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  date: { color: colors.text, fontSize: 22, fontWeight: '700' },
-  source: { color: colors.muted, fontSize: 12 },
-  headline: { fontSize: 15, fontWeight: '600', lineHeight: 21 },
+  header: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', columnGap: 8 },
+  date: { ...type.hero, color: colors.text },
+  source: { ...type.caption, color: colors.muted },
+  headline: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 22 },
 });

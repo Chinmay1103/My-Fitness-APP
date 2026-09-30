@@ -1,7 +1,10 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 
-import { colors, spacing } from '@/constants/theme';
+import { colors, fonts, gradientFor, motion, spacing, type } from '@/constants/theme';
+import { useAnimatedTarget } from '@/lib/animation';
 
 const POSITIVE = colors.recovery.green;
 const NEGATIVE = colors.recovery.red;
@@ -44,6 +47,10 @@ interface FactorProps {
 export function BreakdownFactor({ label, detail, delta, scale, decimals = 0, unit = '', color: fixedColor }: FactorProps) {
   const rounded = Number(delta.toFixed(decimals));
   const color = rounded === 0 ? colors.muted : fixedColor ? fixedColor : rounded > 0 ? POSITIVE : NEGATIVE;
+  const [light, dark] = gradientFor(color);
+  const fraction = Math.min(Math.abs(delta) / Math.max(scale, 1e-6), 1);
+  const grow = useAnimatedTarget(1, motion.bars, 150);
+  const barStyle = useAnimatedStyle(() => ({ transform: [{ scaleX: grow.value }] }));
   const sign = rounded > 0 ? '+' : rounded < 0 ? '−' : '±';
   return (
     <View style={styles.factor}>
@@ -59,7 +66,9 @@ export function BreakdownFactor({ label, detail, delta, scale, decimals = 0, uni
         </Text>
       </View>
       <View style={styles.track}>
-        <View style={{ width: `${Math.min(Math.abs(delta) / Math.max(scale, 1e-6), 1) * 100}%`, backgroundColor: color, borderRadius: 3 }} />
+        <Animated.View style={[styles.bar, { width: `${fraction * 100}%` }, barStyle]}>
+          <LinearGradient colors={[dark, light]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
+        </Animated.View>
       </View>
     </View>
   );
@@ -69,12 +78,13 @@ const styles = StyleSheet.create({
   list: { gap: spacing.md },
   text: { flex: 1, gap: 2 },
   total: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  totalLabel: { color: colors.text, fontSize: 15, fontWeight: '600' },
-  totalValue: { color: colors.text, fontSize: 22, fontWeight: '800' },
-  factor: { gap: 6, paddingLeft: spacing.sm, borderLeftWidth: 2, borderLeftColor: colors.border },
+  totalLabel: { ...type.bodyStrong, color: colors.text },
+  totalValue: { fontFamily: fonts.display, fontSize: 26, color: colors.text },
+  factor: { gap: 8, paddingLeft: spacing.sm + 2, borderLeftWidth: 2, borderLeftColor: colors.border },
   factorTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  label: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  detail: { color: colors.muted, fontSize: 12, lineHeight: 17 },
-  delta: { fontSize: 17, fontWeight: '800', minWidth: 48, textAlign: 'right' },
-  track: { height: 5, flexDirection: 'row', backgroundColor: colors.track, borderRadius: 3, overflow: 'hidden' },
+  label: { fontFamily: fonts.bodySemi, fontSize: 14, color: colors.text },
+  detail: { ...type.caption, lineHeight: 17, color: colors.muted },
+  delta: { fontFamily: fonts.display, fontSize: 20, minWidth: 52, textAlign: 'right' },
+  track: { height: 6, flexDirection: 'row', backgroundColor: colors.track, borderRadius: 3, overflow: 'hidden' },
+  bar: { borderRadius: 3, overflow: 'hidden', transformOrigin: 'left' },
 });

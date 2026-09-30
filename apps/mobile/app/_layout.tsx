@@ -1,8 +1,16 @@
+import { Barlow_400Regular } from '@expo-google-fonts/barlow/400Regular';
+import { Barlow_500Medium } from '@expo-google-fonts/barlow/500Medium';
+import { Barlow_600SemiBold } from '@expo-google-fonts/barlow/600SemiBold';
+import { BarlowCondensed_600SemiBold } from '@expo-google-fonts/barlow-condensed/600SemiBold';
+import { BarlowCondensed_700Bold } from '@expo-google-fonts/barlow-condensed/700Bold';
+import { useFonts } from 'expo-font';
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import { colors } from '@/constants/theme';
+import { colors, fonts } from '@/constants/theme';
 import { ScoresProvider } from '@/lib/ScoresProvider';
 
 export {
@@ -14,17 +22,40 @@ export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
+// Keep the splash screen up until the fonts are ready, so text doesn't flash in the system font.
+SplashScreen.preventAutoHideAsync();
+
 const theme = {
   ...DarkTheme,
   colors: { ...DarkTheme.colors, background: colors.background, card: colors.background, border: colors.border },
 };
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    [fonts.body]: Barlow_400Regular,
+    [fonts.bodyMedium]: Barlow_500Medium,
+    [fonts.bodySemi]: Barlow_600SemiBold,
+    [fonts.displaySemi]: BarlowCondensed_600SemiBold,
+    [fonts.display]: BarlowCondensed_700Bold,
+  });
+  const ready = fontsLoaded || !!fontError;
+
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync();
+  }, [ready]);
+
+  if (!ready) return null;
+
   return (
     <ThemeProvider value={theme}>
       <ScoresProvider>
         <StatusBar style="light" />
-        <Stack screenOptions={{ headerTintColor: colors.text }}>
+        <Stack
+          screenOptions={{
+            headerTintColor: colors.text,
+            headerTitleStyle: { fontFamily: fonts.display, fontSize: 22 },
+            headerShadowVisible: false,
+          }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="recovery" options={{ title: 'Recovery', headerBackTitle: 'Today' }} />
         </Stack>

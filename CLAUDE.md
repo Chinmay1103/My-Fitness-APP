@@ -48,7 +48,12 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
 - `apps/mobile/`: Expo SDK 57 app with expo-router. Tabs live in `app/(tabs)/`: Today (`index.tsx`),
   Sleep, Strain, Log, Coach (Log and Coach are placeholders); `app/recovery.tsx` is the Recovery
   detail screen. Shared data comes from
-  `lib/ScoresProvider.tsx`; UI pieces live in `components/`; colors in `constants/theme.ts`.
+  `lib/ScoresProvider.tsx`; UI pieces live in `components/`; design tokens (colors, gradients,
+  fonts, motion) in `constants/theme.ts`. Use tokens, not raw hex, in screens.
+  Visual direction: `design-system/my-fitness-app/MASTER.md` (made with the ui-ux-pro-max skill in
+  `.claude/skills/`; its "Project decisions" table overrides the generated parts). Rings and charts
+  animate via Reanimated and skip motion when the phone's "reduce motion" setting is on; haptics go through
+  `lib/haptics.ts`. On Android, pick Barlow weights by `fontFamily` only (no `fontWeight`).
   Also read `apps/mobile/AGENTS.md`: Expo APIs change every SDK, so check the installed version's
   docs or types, not memory.
 

@@ -3,7 +3,8 @@ import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import type { ColorValue } from 'react-native';
 
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
-import { colors } from '@/constants/theme';
+import { colors, fonts } from '@/constants/theme';
+import { tapHaptic } from '@/lib/haptics';
 
 type SymbolNames = Extract<SymbolViewProps['name'], object>;
 
@@ -16,9 +17,14 @@ function tabIcon(ios: SymbolNames['ios'], android: SymbolNames['android']) {
 export default function TabLayout() {
   return (
     <Tabs
+      screenListeners={{ tabPress: tapHaptic }}
       screenOptions={{
         tabBarActiveTintColor: colors.text,
         tabBarInactiveTintColor: colors.muted,
+        tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
+        tabBarLabelStyle: { fontFamily: fonts.bodyMedium, fontSize: 11 },
+        headerTitleStyle: { fontFamily: fonts.display, fontSize: 22 },
+        headerShadowVisible: false,
         // Disable the static render of the header on web
         // to prevent a hydration error in React Navigation v6.
         headerShown: useClientOnlyValue(false, true),
