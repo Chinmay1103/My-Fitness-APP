@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { colors } from '@/constants/theme';
@@ -11,16 +11,24 @@ interface Props {
   progress: number;
   color: string;
   size?: number;
+  /** Makes the ring tappable, e.g. to open an explanation of the score. */
+  onPress?: () => void;
 }
 
-export function ScoreRing({ label, display, progress, color, size = 104 }: Props) {
+export function ScoreRing({ label, display, progress, color, size = 104, onPress }: Props) {
   const stroke = size * 0.09;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const filled = Math.min(Math.max(progress, 0), 1) * circumference;
 
   return (
-    <View style={styles.wrap} accessibilityLabel={`${label} ${display}`}>
+    <Pressable
+      style={({ pressed }) => [styles.wrap, pressed && styles.pressed]}
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={`${label} ${display}`}
+      accessibilityHint={onPress ? 'Shows how this score was worked out' : undefined}>
       <View style={{ width: size, height: size }}>
         <Svg width={size} height={size}>
           <Circle cx={size / 2} cy={size / 2} r={radius} stroke={colors.track} strokeWidth={stroke} fill="none" />
@@ -41,13 +49,17 @@ export function ScoreRing({ label, display, progress, color, size = 104 }: Props
           <Text style={[styles.value, { fontSize: size * 0.22 }]}>{display}</Text>
         </View>
       </View>
-      <Text style={styles.label}>{label}</Text>
-    </View>
+      <Text style={styles.label}>
+        {label}
+        {onPress ? '  ›' : ''}
+      </Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', gap: 8 },
+  pressed: { opacity: 0.6, transform: [{ scale: 0.97 }] },
   center: { alignItems: 'center', justifyContent: 'center' },
   value: { color: colors.text, fontWeight: '700' },
   label: { color: colors.muted, fontSize: 12, fontWeight: '600', letterSpacing: 1 },

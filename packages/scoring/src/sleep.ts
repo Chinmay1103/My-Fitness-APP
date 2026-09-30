@@ -1,4 +1,4 @@
-import { clamp, round } from "./stats";
+import { clamp, round, roundToTotal } from "./stats";
 import type { SleepSession, Timestamp } from "./types";
 
 const DEFAULT_SLEEP_NEED_MINUTES = 480;
@@ -14,7 +14,17 @@ export interface SleepNeedInput {
   recentShortfalls?: number[];
 }
 
-export function sleepNeedMinutes(input: SleepNeedInput = {}): number {
+/** Sleep need in minutes, split into where it came from. */
+export interface SleepNeed {
+  base: number;
+  /** Extra for a hard day before (strain above 8). */
+  strain: number;
+  /** Paying back part of the last 3 nights' shortfall. */
+  debt: number;
+  total: number;
+}
+
+export function sleepNeed(input: SleepNeedInput = {}): SleepNeed {
   const base = input.baseNeedMinutes ?? DEFAULT_SLEEP_NEED_MINUTES;
   const strainExtra = Math.max(0, (input.priorDayStrain ?? 0) - 8) * 2.5;
   const shortfalls = (input.recentShortfalls ?? []).slice(-3);
@@ -22,7 +32,13 @@ export function sleepNeedMinutes(input: SleepNeedInput = {}): number {
     shortfalls.reduce((sum, s) => sum + Math.max(0, s), 0) / 3,
     MAX_DEBT_MINUTES,
   );
-  return Math.round(base + strainExtra + debt);
+  const total = Math.round(base + strainExtra + debt);
+  const [strain, debtRounded] = roundToTotal([strainExtra, debt], total - base) as [number, number];
+  return { base, strain, debt: debtRounded, total };
+}
+
+export function sleepNeedMinutes(input: SleepNeedInput = {}): number {
+  return sleepNeed(input).total;
 }
 
 export function asleepMinutes(session: SleepSession): number {
@@ -45,6 +61,13 @@ export interface SleepScoreResult {
   efficiency: number;
   restorativeRatio: number;
   consistency: number;
+  /** `ceiling` minus the penalties equals the score. */
+  breakdown: {
+    /** The best score possible from hours alone (hours slept / need). */
+    ceiling: number;
+    /** Points each quality measure took off the ceiling. */
+    penalties: { efficiency: number; restorative: number; consistency: number };
+  };
 }
 
 export function computeSleepScore(
@@ -68,10 +91,14 @@ export function computeSleepScore(
   // Hours vs. need sets the ceiling; poor quality can take up to 30% off it.
   // A great-quality short night can never score higher than a full one.
   const sufficiency = clamp(asleep / needMinutes, 0, 1);
-  const quality =
-    (clamp(efficiency / 0.95, 0, 1) + clamp(restorativeRatio / RESTORATIVE_TARGET, 0, 1) + consistency) /
-    3;
+  const parts = [clamp(efficiency / 0.95, 0, 1), clamp(restorativeRatio / RESTORATIVE_TARGET, 0, 1), consistency];
+  const quality = (parts[0]! + parts[1]! + parts[2]!) / 3;
   const score = sufficiency * (0.7 + 0.3 * quality);
+  const ceiling = Math.round(sufficiency * 100);
+  const [efficiencyPenalty, restorativePenalty, consistencyPenalty] = roundToTotal(
+    parts.map((p) => (sufficiency * 0.3 * (1 - p) * 100) / 3),
+    ceiling - Math.round(score * 100),
+  ) as [number, number, number];
 
   return {
     score: Math.round(score * 100),
@@ -80,5 +107,9 @@ export function computeSleepScore(
     efficiency: round(efficiency, 2),
     restorativeRatio: round(restorativeRatio, 2),
     consistency: round(consistency, 2),
+    breakdown: {
+      ceiling,
+      penalties: { efficiency: efficiencyPenalty, restorative: restorativePenalty, consistency: consistencyPenalty },
+    },
   };
 }

@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
+import { Breakdown, BreakdownFactor, BreakdownTotal } from '@/components/Breakdown';
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Row, Screen, Stat } from '@/components/ui';
@@ -17,10 +18,15 @@ const STAGES = [
 export default function SleepScreen() {
   const { scores, days } = useScores();
   const sleep = scores.at(-1)?.sleep;
+  const need = scores.at(-1)?.sleepNeed;
+  const priorStrain = scores.at(-2)?.strain.strain;
   const session = days.at(-1)?.sleep;
   if (!sleep || !session) return <Screen><Muted>No sleep recorded last night.</Muted></Screen>;
 
   const totalStages = STAGES.reduce((sum, s) => sum + session.stages[s.key], 0);
+  const { ceiling, penalties } = sleep.breakdown;
+  const penaltyScale = Math.max(penalties.efficiency, penalties.restorative, penalties.consistency, 1);
+  const bedtimeDrift = Math.round((1 - sleep.consistency) * 120);
 
   return (
     <Screen>
@@ -32,6 +38,72 @@ export default function SleepScreen() {
           </Muted>
         </View>
       </Card>
+
+      <Card title={`WHY ${sleep.score}%`}>
+        <Breakdown>
+          <BreakdownTotal
+            label="Hours vs need"
+            detail={`${formatMinutes(sleep.asleepMinutes)} of ${formatMinutes(sleep.needMinutes)} sets the most you can score`}
+            value={`${ceiling}%`}
+          />
+          <BreakdownFactor
+            label="Efficiency"
+            detail={`${Math.round(sleep.efficiency * 100)}% of your time in bed was asleep (95% is ideal)`}
+            delta={-penalties.efficiency}
+            scale={penaltyScale}
+          />
+          <BreakdownFactor
+            label="Restorative sleep"
+            detail={`${Math.round(sleep.restorativeRatio * 100)}% deep + REM (40% or more is ideal)`}
+            delta={-penalties.restorative}
+            scale={penaltyScale}
+          />
+          <BreakdownFactor
+            label="Consistency"
+            detail={
+              bedtimeDrift <= 5
+                ? 'You went to bed at your usual time'
+                : `Bedtime was about ${formatMinutes(bedtimeDrift)} off your usual (last 7 nights)`
+            }
+            delta={-penalties.consistency}
+            scale={penaltyScale}
+          />
+          <BreakdownTotal label="Sleep performance" value={`${sleep.score}%`} color={colors.sleep} />
+        </Breakdown>
+        <Muted>Hours matter most: quality can take up to 30% off, but a short night can never score high.</Muted>
+      </Card>
+
+      {need ? (
+        <Card title={`LAST NIGHT YOU NEEDED ${formatMinutes(need.total).toUpperCase()}`}>
+          <Breakdown>
+            <BreakdownTotal label="Base need" detail="What an average adult needs; adjustable later" value={formatMinutes(need.base)} />
+            <BreakdownFactor
+              label="Yesterday's strain"
+              detail={
+                need.strain > 0
+                  ? `Strain of ${priorStrain?.toFixed(1)} needs extra recovery (anything over 8 adds time)`
+                  : 'Light day, no extra sleep needed'
+              }
+              delta={need.strain}
+              scale={Math.max(need.strain, need.debt, 1)}
+              unit="m"
+              color={colors.sleep}
+            />
+            <BreakdownFactor
+              label="Sleep debt"
+              detail={
+                need.debt > 0
+                  ? 'Paying back a third of what you missed over the last 3 nights'
+                  : 'No debt from the last 3 nights'
+              }
+              delta={need.debt}
+              scale={Math.max(need.strain, need.debt, 1)}
+              unit="m"
+              color={colors.sleep}
+            />
+          </Breakdown>
+        </Card>
+      ) : null}
 
       <Card title="STAGES">
         <View style={styles.stageBar}>

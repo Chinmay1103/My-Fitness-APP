@@ -36,12 +36,18 @@ Full plan: [docs/ROADMAP.md](docs/ROADMAP.md). Run instructions: [docs/SETUP.md]
 When changing a formula, check the numbers on mock data still look like a real Whoop week, not
 just that tests pass.
 
+Every score also returns a **breakdown** that adds up exactly to it (recovery: typical night +
+factor points; sleep: hours ceiling − quality penalties, plus need = base + strain + debt; strain:
+activities + everyday movement). The app shows these as "WHY 81%" cards, worded in
+`apps/mobile/lib/insights.ts`. Keep breakdowns summing to the score; `tests/breakdown.test.ts` checks it.
+
 ## Layout
 
 - `packages/scoring/`: pure TypeScript scoring and mock data, Vitest tests. Consumed as source
   (`main: src/index.ts`), no build step.
 - `apps/mobile/`: Expo SDK 57 app with expo-router. Tabs live in `app/(tabs)/`: Today (`index.tsx`),
-  Sleep, Strain, Log, Coach (Log and Coach are placeholders). Shared data comes from
+  Sleep, Strain, Log, Coach (Log and Coach are placeholders); `app/recovery.tsx` is the Recovery
+  detail screen. Shared data comes from
   `lib/ScoresProvider.tsx`; UI pieces live in `components/`; colors in `constants/theme.ts`.
   Also read `apps/mobile/AGENTS.md`: Expo APIs change every SDK, so check the installed version's
   docs or types, not memory.

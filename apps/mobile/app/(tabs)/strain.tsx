@@ -1,10 +1,11 @@
 import { StyleSheet, View } from 'react-native';
 
+import { Breakdown, BreakdownFactor, BreakdownTotal } from '@/components/Breakdown';
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Screen, Stat } from '@/components/ui';
 import { colors } from '@/constants/theme';
-import { formatMinutes } from '@/lib/format';
+import { formatMinutes, formatTime } from '@/lib/format';
 import { useScores } from '@/lib/ScoresProvider';
 
 const ZONE_COLORS = ['#5B6573', '#2E86DE', '#2ED573', '#F5A623', '#FF4757'];
@@ -21,7 +22,8 @@ export default function StrainScreen() {
   const today = scores.at(-1);
   if (!today) return <Screen><Muted>No data yet.</Muted></Screen>;
 
-  const { strain, zoneMinutes } = today.strain;
+  const { strain, zoneMinutes, activities, everydayStrain } = today.strain;
+  const strainScale = Math.max(...activities.map((a) => a.strain), everydayStrain, 0.1);
   const maxZone = Math.max(...zoneMinutes, 1);
 
   return (
@@ -33,6 +35,35 @@ export default function StrainScreen() {
             {strainLabel(strain)} day. Strain runs from 0 to 21 and gets harder to raise the higher it goes.
           </Muted>
         </View>
+      </Card>
+
+      <Card title={`WHY ${strain.toFixed(1)}`}>
+        <Breakdown>
+          {activities.map((a) => (
+            <BreakdownFactor
+              key={a.start}
+              label={`${formatTime(a.start)} – ${formatTime(a.end)}`}
+              detail={`${formatMinutes(a.minutes)} of effort · avg ${a.avgBpm} bpm · peak ${a.maxBpm} bpm`}
+              delta={a.strain}
+              scale={strainScale}
+              decimals={1}
+              color={colors.strain}
+            />
+          ))}
+          <BreakdownFactor
+            label="Everyday movement"
+            detail="Short bursts under 10 minutes: stairs, errands, chores"
+            delta={everydayStrain}
+            scale={strainScale}
+            decimals={1}
+            color={colors.strain}
+          />
+          <BreakdownTotal label="Day strain" value={strain.toFixed(1)} color={colors.strain} />
+        </Breakdown>
+        <Muted>
+          Only time above 30% of your heart-rate reserve counts, and a hard minute counts several times more than an
+          easy one. Each activity gets its share of the day's total.
+        </Muted>
       </Card>
 
       <Card title="TIME IN HEART RATE ZONES">
@@ -50,9 +81,6 @@ export default function StrainScreen() {
         <TrendBars max={21} color={colors.strain} points={scores.slice(-14).map((s) => ({ date: s.date, value: s.strain.strain }))} />
       </Card>
 
-      <Card title="COMING NEXT">
-        <Muted>Individual workouts from the Fitbit Air will show up here in milestone 1.</Muted>
-      </Card>
     </Screen>
   );
 }

@@ -9,7 +9,12 @@ export const MOCK_PROFILE: UserProfile = { age: 28, baseSleepNeedMinutes: 480 };
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
+
+function localDate(ms: number): string {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -33,7 +38,7 @@ const WORKOUT: Record<Load, { minutes: number; effort: number }> = {
 export interface MockOptions {
   days?: number;
   seed?: number;
-  /** The last generated day, YYYY-MM-DD. Defaults to today (UTC). */
+  /** The last generated day, YYYY-MM-DD. Defaults to today. Times are in the local time zone. */
   endDate?: string;
 }
 
@@ -42,7 +47,11 @@ export function generateMockDays(options: MockOptions = {}): DayData[] {
   const rand = mulberry32(seed);
   const noise = (scale: number) => (rand() + rand() + rand() - 1.5) * scale;
 
-  const end = Date.parse(options.endDate ?? new Date().toISOString().slice(0, 10));
+  const [year, month, dayOfMonth] = (options.endDate ?? localDate(Date.now())).split("-").map(Number) as [
+    number,
+    number,
+    number,
+  ];
   const baseRhr = 58;
   const baseHrv = 55;
   const maxHr = Math.round(208 - 0.7 * MOCK_PROFILE.age);
@@ -51,7 +60,8 @@ export function generateMockDays(options: MockOptions = {}): DayData[] {
   let prevLoad: Load = "rest";
 
   for (let d = days - 1; d >= 0; d--) {
-    const midnight = end - d * DAY;
+    // Local midnight, so a workout at "18:00" shows as 6 PM wherever you are.
+    const midnight = new Date(year, month - 1, dayOfMonth - d).getTime();
 
     // Last night's sleep: a hard day before means a bit more sleep but worse HRV.
     const sleepStart = midnight - HOUR + noise(40 * MINUTE);
@@ -98,7 +108,7 @@ export function generateMockDays(options: MockOptions = {}): DayData[] {
     heartRate.sort((a, b) => a.time - b.time);
 
     result.push({
-      date: new Date(midnight).toISOString().slice(0, 10),
+      date: localDate(midnight),
       heartRate,
       sleep,
       restingHr,

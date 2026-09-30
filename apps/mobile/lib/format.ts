@@ -15,3 +15,7 @@ export function formatDate(date: string): string {
 export function shortDay(date: string): string {
   return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'narrow' });
 }
+
+export function formatTime(ms: number): string {
+  return new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}

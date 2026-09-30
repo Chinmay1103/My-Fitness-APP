@@ -39,3 +39,25 @@ export function zScore(value: number, baseline: Baseline, limit = 2.5): number {
 export function sigmoid(x: number): number {
   return 1 / (1 + Math.exp(-x));
 }
+
+/**
+ * Rounds `values` so they add up to exactly `total`, taking the rounding difference from the
+ * values closest to the next step. Keeps "57 + 12 - 3 = 66" breakdowns honest after rounding.
+ */
+export function roundToTotal(values: number[], total: number, decimals = 0): number[] {
+  const f = 10 ** decimals;
+  const scaled = values.map((v) => v * f);
+  const result = scaled.map(Math.round);
+  let diff = Math.round(total * f) - result.reduce((sum, v) => sum + v, 0);
+  // Nudge the values whose rounding was closest to going the other way.
+  const order = scaled
+    .map((v, i) => ({ i, err: v - result[i]! }))
+    .sort((a, b) => (diff > 0 ? b.err - a.err : a.err - b.err));
+  for (let k = 0; diff !== 0 && order.length > 0; k = (k + 1) % order.length) {
+    const step = Math.sign(diff);
+    const i = order[k]!.i;
+    result[i] = result[i]! + step;
+    diff -= step;
+  }
+  return result.map((v) => v / f);
+}

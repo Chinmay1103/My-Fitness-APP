@@ -24,8 +24,9 @@ export default function RootLayout() {
     <ThemeProvider value={theme}>
       <ScoresProvider>
         <StatusBar style="light" />
-        <Stack>
+        <Stack screenOptions={{ headerTintColor: colors.text }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="recovery" options={{ title: 'Recovery', headerBackTitle: 'Today' }} />
         </Stack>
       </ScoresProvider>
     </ThemeProvider>
