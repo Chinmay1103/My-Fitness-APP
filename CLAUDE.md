@@ -54,9 +54,12 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
 - `packages/scoring/`: pure TypeScript scoring and mock data, Vitest tests. Consumed as source
   (`main: src/index.ts`), no build step.
 - `apps/mobile/`: Expo SDK 57 app with expo-router. Tabs live in `app/(tabs)/`: Today (`index.tsx`),
-  Sleep, Strain, Coach (placeholder); `app/recovery.tsx` is the Recovery detail screen.
-  **No logging forms or Log tab** (Chinmay's call, Oct 1): workouts and meals are logged by typing or
-  voice-typing into the Coach chat, and the AI records them. `lib/workouts.ts` holds the workout model
+  Sleep, Strain, Coach; `app/recovery.tsx` is the Recovery detail screen.
+  **No logging forms or Log tab** (Chinmay's call, Oct 1). **The coach is the Claude app, not an
+  in-app chat** (Chinmay has no paid Claude plan or API key): the Coach tab opens a new claude.ai chat
+  with the question plus today's numbers (`lib/claudeHandoff.ts`). Next: an MCP connector on Supabase
+  (free plans allow one custom connector) so that same chat can read the data and record workouts and
+  meals the user types or speaks. `lib/workouts.ts` holds the workout model
   and matches workouts to band-detected activities. Shared data comes from
   `lib/ScoresProvider.tsx`; UI pieces live in `components/`; design tokens (colors, gradients,
   fonts, motion) in `constants/theme.ts`. Use tokens, not raw hex, in screens.
@@ -89,7 +92,7 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | 1 | Health Connect data in | Code ready (`lib/health/healthConnectSource.ts`, Health data screen `app/health.tsx`); first EAS dev build done (Oct 1); to do: check real Fitbit Air data |
 | 2 | Scores + Today rings | Done on demo data; tune against real data |
 | 3 | Logging: workouts, plans, meals (AI macros) | Merged into 4: the user types or speaks what they did or ate in the Coach chat and the AI records it (no forms) |
-| 4 | AI coach chat (also does all logging) | Not started; needs Supabase set up and a Claude API key |
+| 4 | AI coach (in the Claude app; also does all logging) | "Ask Claude" handoff done; to do: MCP connector on Supabase so Claude can read data and record workouts/meals |
 | 5 | Trends, weekly report, notifications, MCP server | Not started |
 
 Keep this table up to date when a milestone moves.
