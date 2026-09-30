@@ -9,13 +9,13 @@ Its Fitness/Gym match leans towards marketing sites, so this app keeps only part
 | Area | Decision | Why |
 |---|---|---|
 | Typography | **Changed (Sep 30, 2026):** Inter for all words (titles, overlines, body, tab bar); Barlow Condensed only for numbers (ring values, stats, deltas) | Condensed numerals look sporty and fit inside rings, but condensed words looked cramped next to wide body text. Inter was picked over Manrope after the Sep 30 design review |
-| Colors | **Not kept:** orange primary. Uses the skill's *Financial Dashboard* dark palette instead (navy-black `#05070D` background, `#0C1020`→`#172038` card gradient, `#94A3B8` muted text) | Score colors carry meaning (recovery green/yellow/red, strain blue, sleep lavender); an orange brand color would compete with them |
-| Score colors | Unchanged; each gets a two-stop gradient (light end → the flat color) | Gradients add depth without changing what a color means |
+| Colors | **Changed (Sep 30, 2026):** no blue or navy anywhere. Near-black `#050505` page, warm greys (`#FAFAF9` text, `#A8A29E` muted). Orange primary still not used as a brand color | Chinmay found the navy/blue dashboard look generic; warm neutrals let the score colors carry the screen |
+| Score colors | Recovery green/yellow/red unchanged. **Strain orange `#FF8A1F`** (was blue) and **sleep violet `#9D7CFF`** (was periwinkle); each has a two-stop gradient (light end → the flat color). HR zones: grey, green, yellow, orange, red | Same split as Bevel: warm effort, cool-but-not-blue rest |
 | Layout | **Not kept:** landing-page "hero + feature grid + CTA" pattern | This is a native dashboard app with tabs, not a marketing page |
 | Motion | Rings fill from 12 o'clock (1100 ms, ease-out cubic) with a counting number; bars grow in with a 35 ms stagger. All of it is skipped when the phone's "reduce motion" setting is on | One key animation per view; motion shows the value rather than decorating |
 | Haptics | Light selection tick on tapping a ring and switching tabs; light impact on pull-to-refresh. Nothing else | Feedback for touches, never a notification-like buzz |
 | Charts | **Changed (Sep 30, 2026):** one style for every 14-day trend: bars in the ring gradients at full strength, dashed average line, only the selected day labelled (today until you tap another bar) | Three chart styles read as three apps; a number on every bar was crowded on a phone |
-| Surfaces | **Added (Sep 30, 2026):** each screen's color tints the whole page (strongest at the top); the tab bar is see-through so the tint runs to the bottom edge. Cards are raised: lighter-top gradient, lit top edge, soft drop shadow | A flat black page with a glow only at the top looked stitched together; raised tiles give depth on a dark UI |
+| Surfaces | **Changed (Sep 30, 2026):** each screen's color tints the whole page (strongest at the top); the tab bar is see-through. Cards are **glass**: white at 3.5–8.5% opacity with a brighter top edge, no drop shadow, so the tint shows through | Chinmay asked for transparent tiles; a solid navy card looked generic |
 | Accessibility | Muted text ≥ 4.5:1 on cards; charts have a spoken summary (average and today); color is always paired with a label or number | Skill pro-rules checklist |
 
 Code: tokens in `apps/mobile/constants/theme.ts`, motion hooks in `apps/mobile/lib/animation.ts`,

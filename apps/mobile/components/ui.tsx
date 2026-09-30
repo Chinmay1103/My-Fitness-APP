@@ -6,7 +6,7 @@ import { useContext, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { backdrop, colors, gradients, radius, shadows, spacing, type } from '@/constants/theme';
+import { backdrop, colors, gradients, radius, spacing, type } from '@/constants/theme';
 import { refreshHaptic, tapHaptic } from '@/lib/haptics';
 import { useScores } from '@/lib/ScoresProvider';
 
@@ -62,7 +62,7 @@ export function Screen({ children, overline, title, accessory, back, glow }: Scr
             progressViewOffset={insets.top + 64}
             tintColor={colors.text}
             colors={[colors.strain]}
-            progressBackgroundColor={colors.card}
+            progressBackgroundColor={colors.surface}
           />
         }>
         {back || overline || title ? (
@@ -99,8 +99,8 @@ export function Screen({ children, overline, title, accessory, back, glow }: Scr
 }
 
 /**
- * Raised tile: a lighter-at-the-top gradient, a lit top edge and a soft drop shadow underneath.
- * The shadow sits on a plain View because the native gradient view doesn't draw box shadows.
+ * Glass tile: a see-through white gradient (a little brighter at the top) with a lit top edge,
+ * so the screen's color tint shows through and the card still reads as a raised pane.
  */
 export function Card({ title, children }: { title?: string; children: ReactNode }) {
   return (
@@ -188,7 +188,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.md + 2,
     gap: spacing.md,
-    boxShadow: shadows.card,
   },
   cardFill: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: radius.lg },
   cardTitle: { ...type.overline, color: colors.muted },

@@ -8,54 +8,56 @@ import type { TextStyle } from 'react-native';
 
 type Gradient = readonly [string, string];
 
+/**
+ * No blue or navy anywhere: a near-black page with warm greys, and see-through "glass" cards that
+ * let each screen's color tint show through. Hex values that get an alpha suffix appended
+ * (score colors, `muted`, `hrZones`) must stay 6-digit hex.
+ */
 export const colors = {
-  background: '#05070D',
-  card: '#0C1020',
-  /** Top of the card gradient: a lighter navy, so cards read as raised. */
-  cardHighlight: '#172038',
+  background: '#050505',
+  /** Glass card fill, bottom and top of its gradient: white at low opacity over the tinted page. */
+  card: 'rgba(255,255,255,0.035)',
+  cardHighlight: 'rgba(255,255,255,0.085)',
   /** Top edge of a card, as if lit from above. */
-  cardEdge: 'rgba(255,255,255,0.10)',
+  cardEdge: 'rgba(255,255,255,0.22)',
+  /** Solid dark grey, for the few things that can't be see-through (the refresh spinner's disc). */
+  surface: '#1C1A19',
   /** Tab bar: see-through, so the screen's gradient carries on behind it. */
-  tabBar: 'rgba(5,7,13,0.78)',
-  border: '#1E2638',
-  text: '#F8FAFC',
-  muted: '#94A3B8',
-  /** Empty part of rings and bars; light enough to see on a card even when nothing fills it. */
-  track: '#252E44',
-  strain: '#1E9BF0',
-  sleep: '#8E9CF5',
+  tabBar: 'rgba(5,5,5,0.72)',
+  border: 'rgba(255,255,255,0.10)',
+  text: '#FAFAF9',
+  muted: '#A8A29E',
+  /** Empty part of rings and bars. */
+  track: 'rgba(255,255,255,0.10)',
+  strain: '#FF8A1F',
+  sleep: '#9D7CFF',
   recovery: {
     green: '#2ED573',
     yellow: '#F5C518',
     red: '#FF4757',
   } satisfies Record<RecoveryZone, string>,
   sleepStages: {
-    awake: '#E2E8F0',
-    light: '#6C7BD9',
-    deep: '#3F4DB8',
-    rem: '#B39DF5',
+    awake: '#E7E5E4',
+    light: '#8A6CF0',
+    deep: '#5A3CC8',
+    rem: '#C9B2FF',
   },
-  /** Heart-rate zones 1–5, cool to hot. */
-  hrZones: ['#64748B', '#2E86DE', '#2ED573', '#F5A623', '#FF4757'],
+  /** Heart-rate zones 1–5, easy to hard. */
+  hrZones: ['#78716C', '#2ED573', '#F5C518', '#FF8A1F', '#FF4757'],
 };
 
 /** Two-stop gradients, light end first. The dark end matches the flat color above. */
 export const gradients = {
-  strain: ['#6FD0FF', colors.strain],
-  sleep: ['#C3CAFF', colors.sleep],
+  strain: ['#FFC078', colors.strain],
+  sleep: ['#D2C2FF', colors.sleep],
   recovery: {
     green: ['#8BF7B4', colors.recovery.green],
     yellow: ['#FFE483', colors.recovery.yellow],
     red: ['#FF97A0', colors.recovery.red],
   } satisfies Record<RecoveryZone, Gradient>,
   card: [colors.cardHighlight, colors.card],
-  neutral: ['#CBD5E1', colors.muted],
+  neutral: ['#E7E5E4', colors.muted],
 } as const;
-
-/** Drop shadows (CSS syntax, supported by React Native's boxShadow). */
-export const shadows = {
-  card: '0px 14px 28px -10px rgba(0,0,0,0.75)',
-};
 
 /**
  * Full-screen background tint: strongest at the top, never quite gone at the bottom, so the
