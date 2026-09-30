@@ -54,10 +54,11 @@ export function gradientFor(color: string): Gradient {
 }
 
 /**
- * TRYING OUT: which face words use. 'inter' is the design review's suggestion; 'barlow' is the
- * previous look (condensed titles and labels). Flip it, reload, compare, then delete the loser.
+ * TRYING OUT: which face words use. 'inter' is the design review's suggestion, 'manrope' its
+ * alternative, 'barlow' the previous look (condensed titles and labels). Flip it, reload, compare,
+ * then delete the losers.
  */
-const TEXT_FONT: 'inter' | 'barlow' = 'inter';
+const TEXT_FONT: 'inter' | 'manrope' | 'barlow' = 'manrope';
 
 const textFaces = {
   inter: {
@@ -66,6 +67,13 @@ const textFaces = {
     body: 'Inter_400Regular',
     bodyMedium: 'Inter_500Medium',
     bodySemi: 'Inter_600SemiBold',
+  },
+  manrope: {
+    heading: 'Manrope_700Bold',
+    label: 'Manrope_600SemiBold',
+    body: 'Manrope_400Regular',
+    bodyMedium: 'Manrope_500Medium',
+    bodySemi: 'Manrope_600SemiBold',
   },
   barlow: {
     heading: 'BarlowCondensed_700Bold',
@@ -87,12 +95,13 @@ export const fonts = {
   numberSemi: 'BarlowCondensed_600SemiBold',
 };
 
-const inter = (TEXT_FONT as string) === 'inter';
+/** Inter and Manrope are much wider than Barlow Condensed, so they get smaller titles. */
+const wide = (TEXT_FONT as string) !== 'barlow';
 
 export const type = {
-  hero: { fontFamily: fonts.heading, fontSize: inter ? 26 : 30, letterSpacing: inter ? -0.3 : 0.2 },
-  title: { fontFamily: fonts.heading, fontSize: inter ? 20 : 22 },
-  overline: { fontFamily: fonts.label, fontSize: inter ? 12 : 13, letterSpacing: inter ? 1 : 1.4 },
+  hero: { fontFamily: fonts.heading, fontSize: wide ? 26 : 30, letterSpacing: wide ? -0.3 : 0.2 },
+  title: { fontFamily: fonts.heading, fontSize: wide ? 20 : 22 },
+  overline: { fontFamily: fonts.label, fontSize: wide ? 12 : 13, letterSpacing: wide ? 1 : 1.4 },
   body: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
   bodyStrong: { fontFamily: fonts.bodySemi, fontSize: 15, lineHeight: 21 },
   caption: { fontFamily: fonts.bodyMedium, fontSize: 12, lineHeight: 16 },
