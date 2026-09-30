@@ -30,8 +30,15 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: colors.text,
         tabBarInactiveTintColor: colors.muted,
-        // Same color as the screens, so the bar doesn't read as a separate block; a hairline marks the edge.
-        tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth },
+        // Floats over the screen and is see-through, so each screen's gradient runs to the bottom edge.
+        // Screen pads its content by the tab bar's height so nothing ends up hidden under it.
+        tabBarStyle: {
+          position: 'absolute',
+          backgroundColor: colors.tabBar,
+          borderTopColor: colors.border,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          elevation: 0,
+        },
         tabBarButton: TabButton,
         tabBarLabelStyle: { fontFamily: fonts.bodyMedium, fontSize: 11 },
         // Screens draw their own titles (see Screen in components/ui.tsx).

@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
+import { BottomTabBarHeightContext } from 'expo-router/tabs';
 import { SymbolView } from 'expo-symbols';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, gradients, radius, spacing, type } from '@/constants/theme';
+import { backdrop, colors, gradients, radius, shadows, spacing, type } from '@/constants/theme';
 import { refreshHaptic, tapHaptic } from '@/lib/haptics';
 import { useScores } from '@/lib/ScoresProvider';
 
@@ -18,7 +19,7 @@ type ScreenProps = {
   accessory?: ReactNode;
   /** Show a back arrow (for screens pushed on top of the tabs). */
   back?: boolean;
-  /** Tints the top of the screen with the screen's main color (e.g. today's recovery zone). */
+  /** Tints the whole screen with its main color (e.g. today's recovery zone); neutral if left out. */
   glow?: string;
 };
 
@@ -30,6 +31,9 @@ type ScreenProps = {
 export function Screen({ children, overline, title, accessory, back, glow }: ScreenProps) {
   const { loading, error, scores, refresh } = useScores();
   const insets = useSafeAreaInsets();
+  // The tab bar floats over the content (see app/(tabs)/_layout.tsx); undefined outside the tabs.
+  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? insets.bottom;
+  const tint = backdrop(glow ?? colors.muted);
 
   if (loading && scores.length === 0) {
     return (
@@ -41,15 +45,12 @@ export function Screen({ children, overline, title, accessory, back, glow }: Scr
 
   return (
     <View style={styles.screen}>
-      {glow ? (
-        <LinearGradient
-          pointerEvents="none"
-          colors={[`${glow}33`, `${glow}00`]}
-          style={styles.glow}
-        />
-      ) : null}
+      <LinearGradient pointerEvents="none" colors={tint.colors} locations={tint.locations} style={StyleSheet.absoluteFill} />
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.sm }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: insets.top + spacing.sm, paddingBottom: tabBarHeight + spacing.xl },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={loading}
@@ -97,16 +98,21 @@ export function Screen({ children, overline, title, accessory, back, glow }: Scr
   );
 }
 
+/**
+ * Raised tile: a lighter-at-the-top gradient, a lit top edge and a soft drop shadow underneath.
+ * The shadow sits on a plain View because the native gradient view doesn't draw box shadows.
+ */
 export function Card({ title, children }: { title?: string; children: ReactNode }) {
   return (
-    <LinearGradient colors={gradients.card} style={styles.card}>
+    <View style={styles.card}>
+      <LinearGradient colors={gradients.card} style={styles.cardFill} />
       {title ? (
         <Text style={styles.cardTitle} accessibilityRole="header">
           {title}
         </Text>
       ) : null}
       {children}
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -142,8 +148,7 @@ export function Muted({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  glow: { position: 'absolute', top: 0, left: 0, right: 0, height: 360 },
-  content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xl * 2 },
+  content: { padding: spacing.md, gap: spacing.md },
   header: { gap: 2, marginBottom: spacing.xs },
   back: { alignSelf: 'flex-start', marginLeft: -2, marginBottom: spacing.sm },
   overline: { ...type.overline, color: colors.muted },
@@ -153,11 +158,14 @@ const styles = StyleSheet.create({
   error: { ...type.body, color: colors.recovery.red },
   card: {
     borderColor: colors.border,
+    borderTopColor: colors.cardEdge,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radius.lg,
     padding: spacing.md + 2,
     gap: spacing.md,
+    boxShadow: shadows.card,
   },
+  cardFill: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: radius.lg },
   cardTitle: { ...type.overline, color: colors.muted },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   stat: { flex: 1, gap: 2 },

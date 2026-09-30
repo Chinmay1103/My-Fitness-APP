@@ -10,9 +10,13 @@ type Gradient = readonly [string, string];
 
 export const colors = {
   background: '#05070D',
-  card: '#0E1223',
-  /** Top of the card gradient: a slightly lighter navy, so cards read as raised. */
-  cardHighlight: '#141A30',
+  card: '#0C1020',
+  /** Top of the card gradient: a lighter navy, so cards read as raised. */
+  cardHighlight: '#172038',
+  /** Top edge of a card, as if lit from above. */
+  cardEdge: 'rgba(255,255,255,0.10)',
+  /** Tab bar: see-through, so the screen's gradient carries on behind it. */
+  tabBar: 'rgba(5,7,13,0.78)',
   border: '#1E2638',
   text: '#F8FAFC',
   muted: '#94A3B8',
@@ -47,6 +51,19 @@ export const gradients = {
   card: [colors.cardHighlight, colors.card],
   neutral: ['#CBD5E1', colors.muted],
 } as const;
+
+/** Drop shadows (CSS syntax, supported by React Native's boxShadow). */
+export const shadows = {
+  card: '0px 14px 28px -10px rgba(0,0,0,0.75)',
+};
+
+/**
+ * Full-screen background tint: strongest at the top, never quite gone at the bottom, so the
+ * screen's color (e.g. today's recovery zone) washes over the whole page.
+ */
+export function backdrop(tint: string): { colors: readonly [string, string, string]; locations: readonly [number, number, number] } {
+  return { colors: [`${tint}4D`, `${tint}1A`, `${tint}0D`], locations: [0, 0.45, 1] };
+}
 
 /** Picks a gradient whose dark end is `color`, falling back to a flat one. */
 export function gradientFor(color: string): Gradient {
