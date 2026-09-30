@@ -82,29 +82,11 @@ export function backdrop(tint: string, strength = 1, lower = tint): Backdrop {
 }
 
 /**
- * TRYING OUT: the Today screen's background. Flip it, save, compare on the phone, then delete the
- * losers.
- * - 'zone': today's recovery color, full strength (green / yellow / red)
- * - 'soft': the same, at 40%: a hint of the day without flooding the screen
- * - 'aurora': recovery color at the top melting into sleep violet lower down
- * - 'neutral': a warm grey glow, the same every day
- * - 'black': no tint at all
+ * The Today screen's background ("aurora"): today's recovery color at the top, melting into sleep
+ * violet lower down. Chosen over a flat zone tint, a softer one, neutral grey and plain black.
  */
-const TODAY_BACKGROUND: 'zone' | 'soft' | 'aurora' | 'neutral' | 'black' = 'soft';
-
 export function todayBackdrop(recoveryColor: string): Backdrop {
-  switch (TODAY_BACKGROUND as string) {
-    case 'soft':
-      return backdrop(recoveryColor, 0.4);
-    case 'aurora':
-      return backdrop(recoveryColor, 1, colors.sleep);
-    case 'neutral':
-      return backdrop(colors.muted, 0.8);
-    case 'black':
-      return backdrop(colors.muted, 0);
-    default:
-      return backdrop(recoveryColor);
-  }
+  return backdrop(recoveryColor, 1, colors.sleep);
 }
 
 /** Picks a gradient whose dark end is `color`, falling back to a flat one. */
