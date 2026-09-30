@@ -59,12 +59,52 @@ export const gradients = {
   neutral: ['#E7E5E4', colors.muted],
 } as const;
 
+export interface Backdrop {
+  colors: readonly [string, string, string];
+  locations: readonly [number, number, number];
+}
+
+/** `hex` (6-digit) at `opacity` 0–1, as 8-digit hex. */
+function withAlpha(hex: string, opacity: number): string {
+  return `${hex}${Math.round(Math.min(Math.max(opacity, 0), 1) * 255).toString(16).padStart(2, '0')}`;
+}
+
 /**
  * Full-screen background tint: strongest at the top, never quite gone at the bottom, so the
- * screen's color (e.g. today's recovery zone) washes over the whole page.
+ * screen's color (e.g. today's recovery zone) washes over the whole page. `lower` lets the bottom
+ * fade into a second color.
  */
-export function backdrop(tint: string): { colors: readonly [string, string, string]; locations: readonly [number, number, number] } {
-  return { colors: [`${tint}4D`, `${tint}1A`, `${tint}0D`], locations: [0, 0.45, 1] };
+export function backdrop(tint: string, strength = 1, lower = tint): Backdrop {
+  return {
+    colors: [withAlpha(tint, 0.3 * strength), withAlpha(lower, 0.1 * strength), withAlpha(lower, 0.05 * strength)],
+    locations: [0, 0.45, 1],
+  };
+}
+
+/**
+ * TRYING OUT: the Today screen's background. Flip it, save, compare on the phone, then delete the
+ * losers.
+ * - 'zone': today's recovery color, full strength (green / yellow / red)
+ * - 'soft': the same, at 40%: a hint of the day without flooding the screen
+ * - 'aurora': recovery color at the top melting into sleep violet lower down
+ * - 'neutral': a warm grey glow, the same every day
+ * - 'black': no tint at all
+ */
+const TODAY_BACKGROUND: 'zone' | 'soft' | 'aurora' | 'neutral' | 'black' = 'soft';
+
+export function todayBackdrop(recoveryColor: string): Backdrop {
+  switch (TODAY_BACKGROUND as string) {
+    case 'soft':
+      return backdrop(recoveryColor, 0.4);
+    case 'aurora':
+      return backdrop(recoveryColor, 1, colors.sleep);
+    case 'neutral':
+      return backdrop(colors.muted, 0.8);
+    case 'black':
+      return backdrop(colors.muted, 0);
+    default:
+      return backdrop(recoveryColor);
+  }
 }
 
 /** Picks a gradient whose dark end is `color`, falling back to a flat one. */

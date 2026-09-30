@@ -5,7 +5,7 @@ import { StyleSheet, Text } from 'react-native';
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Pill, Row, Screen, Stat } from '@/components/ui';
-import { colors, fonts } from '@/constants/theme';
+import { colors, fonts, todayBackdrop } from '@/constants/theme';
 import { formatDate, formatMinutes } from '@/lib/format';
 import { todayHeadline } from '@/lib/insights';
 import { useScores } from '@/lib/ScoresProvider';
@@ -25,7 +25,7 @@ export default function TodayScreen() {
       overline="TODAY"
       title={formatDate(today.date)}
       accessory={<Pill onPress={() => router.push('/health')}>{`${sourceLabel}  ›`}</Pill>}
-      glow={recoveryColor}>
+      background={todayBackdrop(recoveryColor)}>
 
       <Card>
         <Row>
