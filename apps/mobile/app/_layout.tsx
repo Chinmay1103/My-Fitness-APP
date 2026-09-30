@@ -12,6 +12,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { colors } from '@/constants/theme';
+import { AuthProvider } from '@/lib/AuthProvider';
 import { ScoresProvider } from '@/lib/ScoresProvider';
 
 export {
@@ -50,15 +51,18 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={theme}>
-      <ScoresProvider>
-        <StatusBar style="light" />
-        {/* Screens draw their own titles (see Screen in components/ui.tsx), so no navigator headers. */}
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="recovery" options={{ title: 'Recovery' }} />
-          <Stack.Screen name="health" options={{ title: 'Health data' }} />
-        </Stack>
-      </ScoresProvider>
+      <AuthProvider>
+        <ScoresProvider>
+          <StatusBar style="light" />
+          {/* Screens draw their own titles (see Screen in components/ui.tsx), so no navigator headers. */}
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="recovery" options={{ title: 'Recovery' }} />
+            <Stack.Screen name="health" options={{ title: 'Health data' }} />
+            <Stack.Screen name="account" options={{ title: 'Account' }} />
+          </Stack>
+        </ScoresProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

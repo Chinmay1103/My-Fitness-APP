@@ -70,6 +70,49 @@ we add a library with native code; everyday code changes still reload over Wi-Fi
 **Every day after that:** `npm run mobile`, then open **My Fitness** (not Expo Go) on the phone
 and pick the dev server. Until the build is installed, use `npm run mobile:go` for Expo Go.
 
+## Supabase (backend: sign-in and cloud backup)
+
+The app works without this; it's needed for backup now, and for meal logging and the AI coach
+later. Free tier is enough.
+
+**1. Create the project** at [supabase.com](https://supabase.com): sign up, **New project**, name
+it `my-fitness`, pick region **Mumbai (ap-south-1)**, and save the database password somewhere safe
+(a password manager).
+
+**2. Turn on email codes.** Authentication -> **Emails** -> **Magic Link** template. Replace the
+body with:
+
+```html
+<h2>Your My Fitness sign-in code</h2>
+<p>{{ .Token }}</p>
+```
+
+(By default the email has a link; the app signs in with the code instead.)
+
+**3. Create the tables.** From the repo root:
+
+```bash
+npx supabase login
+npx supabase link --project-ref <your-project-ref>   # the ref is in the project URL
+npm run db:push                                      # creates the tables from supabase/migrations/
+```
+
+`link` asks for the database password from step 1.
+
+**4. Connect the app.** In `apps/mobile`, copy `.env.example` to `.env` and fill in the two values
+from **Project Settings -> API Keys** (the *publishable* key, never the secret one) and the project
+URL. Restart `npm run mobile`.
+
+**5. Sign in.** Today -> the person icon at the top right -> enter your email -> type the code.
+
+What's in the cloud: one summary row per day (resting HR, HRV, sleep times, the three scores and
+their breakdowns). Raw heart-rate samples stay on the phone, and demo data is never uploaded, so
+the table stays empty until the Fitbit Air data comes in. Every table has Row Level Security: each
+account can only read its own rows.
+
+> The development build started before Supabase was added doesn't include the part that remembers
+> the sign-in, so there you'll sign in again after closing the app. The next build fixes that.
+
 ## Day one with the Fitbit Air (milestone 1)
 
 1. Set up the band in the Google Health / Fitbit app, and in its settings turn on syncing to

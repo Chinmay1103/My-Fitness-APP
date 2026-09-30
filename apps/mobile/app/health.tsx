@@ -79,7 +79,7 @@ export default function HealthScreen() {
           <>
             <Muted>
               Allow the app to read your heart rate, HRV and sleep from Health Connect to replace the demo data with your
-              own. Nothing leaves your phone.
+              own. Raw readings stay on your phone; if you sign in, a daily summary is backed up to your account.
             </Muted>
             <Button label="Connect Health Connect" onPress={connect} disabled={busy} />
           </>

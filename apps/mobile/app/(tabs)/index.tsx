@@ -1,12 +1,14 @@
 import { CALIBRATED_DAYS } from '@fitness/scoring';
 import { router } from 'expo-router';
-import { StyleSheet, Text } from 'react-native';
+import { SymbolView } from 'expo-symbols';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Pill, Row, Screen, Stat } from '@/components/ui';
 import { colors, fonts, todayBackdrop } from '@/constants/theme';
 import { formatDate, formatMinutes } from '@/lib/format';
+import { tapHaptic } from '@/lib/haptics';
 import { todayHeadline } from '@/lib/insights';
 import { useScores } from '@/lib/ScoresProvider';
 
@@ -24,7 +26,26 @@ export default function TodayScreen() {
     <Screen
       overline="TODAY"
       title={formatDate(today.date)}
-      accessory={<Pill onPress={() => router.push('/health')}>{`${sourceLabel}  ›`}</Pill>}
+      accessory={
+        <View style={styles.accessory}>
+          <Pill onPress={() => router.push('/health')}>{`${sourceLabel}  ›`}</Pill>
+          <Pressable
+            onPress={() => {
+              tapHaptic();
+              router.push('/account');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Account"
+            hitSlop={10}
+            style={({ pressed }) => pressed && styles.pressed}>
+            <SymbolView
+              name={{ ios: 'person.crop.circle', android: 'account_circle', web: 'account_circle' }}
+              tintColor={colors.muted}
+              size={26}
+            />
+          </Pressable>
+        </View>
+      }
       background={todayBackdrop(recoveryColor)}>
 
       <Card>
@@ -94,5 +115,7 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
+  accessory: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  pressed: { opacity: 0.6 },
   headline: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 22 },
 });

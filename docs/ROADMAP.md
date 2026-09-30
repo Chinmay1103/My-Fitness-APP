@@ -78,10 +78,14 @@ The math computes the scores. The AI only explains them.
 
 ## 5. Data model (first pass)
 
-`profiles`, `hr_samples`, `hrv_daily`, `sleep_sessions` (with stages), `workouts`
-(from the tracker and manual logs), `workout_plans`, `meals` (items + macros + photo),
-`daily_scores`, `coach_messages`. Every table uses Row Level Security, so each user only
-sees their own rows.
+Built (Sep 30, 2026, `supabase/migrations/`): `profiles`, `daily_summaries` (one row per day:
+resting HR, HRV, sleep times, the three scores and their breakdowns), `workouts`,
+`workout_plans`, `meals` (items + macros + photo in a private `meal-photos` bucket),
+`coach_messages`. Every table uses Row Level Security, so each user only sees their own rows.
+
+**Changed from the first plan:** no `hr_samples` / `hrv_daily` / `sleep_sessions` tables. Raw
+heart-rate data stays on the phone; the phone computes the scores and uploads a daily summary,
+which is all the coach needs and far less sensitive.
 
 ## 6. Decisions so far
 

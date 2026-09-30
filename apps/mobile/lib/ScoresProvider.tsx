@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 
 import { mockSource } from './health/mockSource';
 import { pickHealthSource, type HealthSource } from './health';
+import { syncDailySummaries } from './sync';
 
 const HISTORY_DAYS = 45;
 
@@ -13,6 +14,8 @@ interface ScoresState {
   sourceId: HealthSource['id'];
   days: DayData[];
   scores: DailyScores[];
+  /** Result of the last upload to Supabase: 'ok', an error message, or null if nothing was sent. */
+  syncStatus: string | null;
   refresh: () => Promise<void>;
 }
 
@@ -24,6 +27,7 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<HealthSource>(mockSource);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -34,7 +38,12 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
       const loaded = await picked.getDays(HISTORY_DAYS);
       setDays(loaded);
       // TODO(milestone 3): use the user's real age and sleep need from their profile.
-      setScores(computeDailyScores(loaded, MOCK_PROFILE));
+      const computed = computeDailyScores(loaded, MOCK_PROFILE);
+      setScores(computed);
+      // A failed upload shouldn't hide the scores, so it's reported separately.
+      syncDailySummaries(picked.id, loaded, computed)
+        .then((sent) => setSyncStatus(sent ? 'ok' : null))
+        .catch((e) => setSyncStatus(e instanceof Error ? e.message : String(e)));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -48,7 +57,7 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
 
   return (
     <ScoresContext.Provider
-      value={{ loading, error, sourceLabel: source.label, sourceId: source.id, days, scores, refresh }}>
+      value={{ loading, error, sourceLabel: source.label, sourceId: source.id, days, scores, syncStatus, refresh }}>
       {children}
     </ScoresContext.Provider>
   );

@@ -18,8 +18,13 @@ Open design to-dos from the Sep 30 screen-recording review: [docs/design-review-
   `packages/scoring/src/mock.ts` produces seeded, realistic days. First job once the band arrives:
   check which data types it actually writes into Health Connect.
 - **Math computes scores, AI only explains them.** Scores must stay deterministic and tested.
-- **Backend: Supabase** (not set up yet). The Claude API is called only from Supabase Edge
-  Functions; API keys never ship in the app.
+- **Backend: Supabase.** Schema in `supabase/migrations/` (RLS on every table; deploy with
+  `npm run db:push`). The app talks to it through `apps/mobile/lib/supabase.ts` (null when `.env` is
+  missing, so the app still runs), signs in with an email code (`app/account.tsx`), and uploads one
+  summary row per day (`lib/sync.ts`); raw heart rate and demo data never leave the phone. The
+  Claude API is called only from Supabase Edge Functions; API keys never ship in the app.
+- **Native modules that throw on import** (Health Connect, AsyncStorage) are loaded lazily behind a
+  `TurboModuleRegistry.get` check, so an older build or Expo Go doesn't crash.
 - **The coach gives wellness guidance, not medical advice.**
 - **Dark mode only for now**; light mode later, once the screens settle (see ROADMAP).
 
@@ -78,7 +83,7 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 
 | # | Milestone | Status |
 |---|---|---|
-| 0 | Setup | Runs on the phone; design review done (docs/design-review-2026-09-30.md). To do: create Supabase project, verify Fitbit Air data types |
+| 0 | Setup | Runs on the phone; design review done; Supabase schema + sign-in + daily sync written. To do: Chinmay creates the Supabase project (docs/SETUP.md), verify Fitbit Air data types |
 | 1 | Health Connect data in | Code ready (`lib/health/healthConnectSource.ts`, Health data screen `app/health.tsx`); to do: first EAS dev build, then check real Fitbit Air data |
 | 2 | Scores + Today rings | Done on demo data; tune against real data |
 | 3 | Logging: workouts, plans, meals (AI macros) | Not started |
