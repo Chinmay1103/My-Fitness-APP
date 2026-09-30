@@ -54,7 +54,8 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
   Visual direction: `design-system/my-fitness-app/MASTER.md` (made with the ui-ux-pro-max skill in
   `.claude/skills/`; its "Project decisions" table overrides the generated parts). Rings and charts
   animate via Reanimated and skip motion when the phone's "reduce motion" setting is on; haptics go through
-  `lib/haptics.ts`. On Android, pick Barlow weights by `fontFamily` only (no `fontWeight`).
+  `lib/haptics.ts`. Fonts: Inter for words, Barlow Condensed only for numbers;
+  on Android pick weights by `fontFamily` only (no `fontWeight`).
   Also read `apps/mobile/AGENTS.md`: Expo APIs change every SDK, so check the installed version's
   docs or types, not memory.
 

@@ -8,7 +8,7 @@ Its Fitness/Gym match leans towards marketing sites, so this app keeps only part
 
 | Area | Decision | Why |
 |---|---|---|
-| Typography | **Kept:** Barlow Condensed (numbers, headings, overlines) + Barlow (body) | Compact, sporty numerals that fit inside rings; body stays readable at small sizes |
+| Typography | **Changed (Sep 30, 2026):** Inter for all words (titles, overlines, body, tab bar); Barlow Condensed only for numbers (ring values, stats, deltas) | Condensed numerals look sporty and fit inside rings, but condensed words looked cramped next to wide body text. Inter was picked over Manrope after the Sep 30 design review |
 | Colors | **Not kept:** orange primary. Uses the skill's *Financial Dashboard* dark palette instead (navy-black `#05070D` background, `#0E1223` cards, `#94A3B8` muted text) | Score colors carry meaning (recovery green/yellow/red, strain blue, sleep lavender); an orange brand color would compete with them |
 | Score colors | Unchanged; each gets a two-stop gradient (light end → the flat color) | Gradients add depth without changing what a color means |
 | Layout | **Not kept:** landing-page "hero + feature grid + CTA" pattern | This is a native dashboard app with tabs, not a marketing page |
@@ -63,14 +63,15 @@ haptics in `apps/mobile/lib/haptics.ts`.
 
 ### Typography
 
-- **Heading Font:** Barlow Condensed
-- **Body Font:** Barlow
-- **Mood:** sports, fitness, athletic, energetic, condensed, action
-- **Google Fonts:** [Barlow Condensed + Barlow](https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@300;400;500;600;700&display=swap)
+- **Text Font:** Inter (400, 500, 600, 700): headings, overlines, body
+- **Number Font:** Barlow Condensed (600, 700): scores, stats, deltas only
+- **Overlines:** Inter SemiBold 12, letter-spacing 1, muted color
+- **Mood:** sports, fitness, athletic, clean
+- **Google Fonts:** [Inter + Barlow Condensed](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap)
 
 **CSS Import:**
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap');
 ```
 
 ### Spacing Variables

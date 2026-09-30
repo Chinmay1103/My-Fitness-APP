@@ -30,7 +30,11 @@ fonts, and each chart being styled differently. None of it is hard to fix.
 - The grey gear-in-a-circle at the top right is **Expo Go's developer menu button, not our UI**.
   Ignore it; it won't appear in a real build.
 
-## 2. Fonts
+## 2. Fonts ✅ done
+
+> Done: Inter for all words, Barlow Condensed kept only for numbers (`fonts.number` in
+> `constants/theme.ts`). Inter, Manrope and the old Barlow look were compared; Inter was kept.
+> Barlow (regular) and Manrope were removed. MASTER.md and CLAUDE.md updated.
 
 Right now three voices compete: Barlow Condensed Bold (titles, numbers), tracked uppercase Barlow
 Condensed (section labels), and Barlow (body text). Condensed titles like "Today" and
@@ -89,7 +93,7 @@ Condensed (section labels), and Barlow (body text). Condensed titles like "Today
 ## Suggested order
 
 1. ~~Transparent header + one title pattern on every tab (section 1).~~ Done.
-2. Font swap (section 2), with a before/after screenshot for Chinmay.
+2. ~~Font swap (section 2), with a before/after screenshot for Chinmay.~~ Done: Inter.
 3. Unify the three trend charts (section 3).
 4. Tab bar ripple and background (section 4).
 5. The small things (section 5).

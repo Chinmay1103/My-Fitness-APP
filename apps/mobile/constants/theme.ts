@@ -54,54 +54,24 @@ export function gradientFor(color: string): Gradient {
 }
 
 /**
- * TRYING OUT: which face words use. 'inter' is the design review's suggestion, 'manrope' its
- * alternative, 'barlow' the previous look (condensed titles and labels). Flip it, reload, compare,
- * then delete the losers.
- */
-const TEXT_FONT: 'inter' | 'manrope' | 'barlow' = 'manrope';
-
-const textFaces = {
-  inter: {
-    heading: 'Inter_700Bold',
-    label: 'Inter_600SemiBold',
-    body: 'Inter_400Regular',
-    bodyMedium: 'Inter_500Medium',
-    bodySemi: 'Inter_600SemiBold',
-  },
-  manrope: {
-    heading: 'Manrope_700Bold',
-    label: 'Manrope_600SemiBold',
-    body: 'Manrope_400Regular',
-    bodyMedium: 'Manrope_500Medium',
-    bodySemi: 'Manrope_600SemiBold',
-  },
-  barlow: {
-    heading: 'BarlowCondensed_700Bold',
-    label: 'BarlowCondensed_600SemiBold',
-    body: 'Barlow_400Regular',
-    bodyMedium: 'Barlow_500Medium',
-    bodySemi: 'Barlow_600SemiBold',
-  },
-};
-
-/**
- * Words (titles, labels, body) use the text face above; numbers (ring values, stats, deltas) use
- * Barlow Condensed, which looks sporty on digits but cramped on words.
+ * Inter for words (titles, labels, body, tab bar); Barlow Condensed only for numbers (ring values,
+ * stats, deltas), where a condensed face looks sporty. On words it looks cramped.
  * On Android a custom font must be picked by family name, so don't combine these with fontWeight.
  */
 export const fonts = {
-  ...textFaces[TEXT_FONT],
+  heading: 'Inter_700Bold',
+  label: 'Inter_600SemiBold',
+  body: 'Inter_400Regular',
+  bodyMedium: 'Inter_500Medium',
+  bodySemi: 'Inter_600SemiBold',
   number: 'BarlowCondensed_700Bold',
   numberSemi: 'BarlowCondensed_600SemiBold',
 };
 
-/** Inter and Manrope are much wider than Barlow Condensed, so they get smaller titles. */
-const wide = (TEXT_FONT as string) !== 'barlow';
-
 export const type = {
-  hero: { fontFamily: fonts.heading, fontSize: wide ? 26 : 30, letterSpacing: wide ? -0.3 : 0.2 },
-  title: { fontFamily: fonts.heading, fontSize: wide ? 20 : 22 },
-  overline: { fontFamily: fonts.label, fontSize: wide ? 12 : 13, letterSpacing: wide ? 1 : 1.4 },
+  hero: { fontFamily: fonts.heading, fontSize: 26, letterSpacing: -0.3 },
+  title: { fontFamily: fonts.heading, fontSize: 20 },
+  overline: { fontFamily: fonts.label, fontSize: 12, letterSpacing: 1 },
   body: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
   bodyStrong: { fontFamily: fonts.bodySemi, fontSize: 15, lineHeight: 21 },
   caption: { fontFamily: fonts.bodyMedium, fontSize: 12, lineHeight: 16 },
