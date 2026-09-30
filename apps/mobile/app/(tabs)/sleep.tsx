@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Breakdown, BreakdownFactor, BreakdownTotal } from '@/components/Breakdown';
 import { ScoreRing } from '@/components/ScoreRing';
-import { TrendLine } from '@/components/TrendLine';
+import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Row, Screen, Stat } from '@/components/ui';
 import { colors } from '@/constants/theme';
 import { formatMinutes } from '@/lib/format';
@@ -33,9 +33,6 @@ export default function SleepScreen() {
   const { ceiling, penalties } = sleep.breakdown;
   const penaltyScale = Math.max(penalties.efficiency, penalties.restorative, penalties.consistency, 1);
   const bedtimeDrift = Math.round((1 - sleep.consistency) * 120);
-  // Sleep scores cluster high; start the trend axis a bit below the lowest night so changes are visible.
-  const trendScores = scores.slice(-14).flatMap((s) => (s.sleep ? [s.sleep.score] : []));
-  const trendMin = Math.max(0, Math.floor((Math.min(...trendScores, 100) - 15) / 10) * 10);
 
   return (
     <Screen overline="SLEEP" title="Last night" glow={colors.sleep}>
@@ -136,9 +133,8 @@ export default function SleepScreen() {
       </Card>
 
       <Card title="SLEEP PERFORMANCE, LAST 14 DAYS">
-        <TrendLine
+        <TrendBars
           label="Sleep performance"
-          min={trendMin}
           max={100}
           color={colors.sleep}
           format={(v) => `${Math.round(v)}%`}

@@ -51,7 +51,15 @@ Condensed (section labels), and Barlow (body text). Condensed titles like "Today
 - Before switching, show Chinmay a before/after screenshot of the Today screen and let him pick.
 - `design-system/my-fitness-app/MASTER.md` says Barlow, so update it to match whatever he picks.
 
-## 3. Charts don't match each other
+## 3. Charts don't match each other ✅ done
+
+> Done: all three trends use `TrendBars`; the line chart is deleted. Only the selected bar is
+> labelled (today by default); tapping a bar shows that day's value and date, tapping again goes
+> back to today. The average is a dashed line with "avg" below the chart. Bars use the ring
+> gradients at full strength. **Changed from the suggestion:** past days aren't dimmed with
+> opacity, because dimmed yellow on navy is exactly what looked like mustard/olive. Instead the
+> selected day gets a faint column behind it. Sleep bars now start at 0 like the others (the old
+> line chart zoomed in on the top of the range).
 
 - Recovery (Today) is a **bar chart with a number on every bar**; Sleep and Strain are
   **line charts with only today's value labelled**. On a phone that reads as three different apps.
@@ -94,7 +102,7 @@ Condensed (section labels), and Barlow (body text). Condensed titles like "Today
 
 1. ~~Transparent header + one title pattern on every tab (section 1).~~ Done.
 2. ~~Font swap (section 2), with a before/after screenshot for Chinmay.~~ Done: Inter.
-3. Unify the three trend charts (section 3).
+3. ~~Unify the three trend charts (section 3).~~ Done.
 4. Tab bar ripple and background (section 4).
 5. The small things (section 5).
 

@@ -81,6 +81,7 @@ export default function TodayScreen() {
           label="Recovery"
           max={100}
           color={colors.muted}
+          format={(v) => `${Math.round(v)}%`}
           points={scores.slice(-14).map((s) => ({
             date: s.date,
             value: s.recovery?.score ?? null,

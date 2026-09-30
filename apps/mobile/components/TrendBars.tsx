@@ -1,10 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import Svg, { Line } from 'react-native-svg';
 
 import { colors, fonts, gradientFor, motion } from '@/constants/theme';
 import { useAnimatedTarget } from '@/lib/animation';
+import { tapHaptic } from '@/lib/haptics';
 import { shortDay } from '@/lib/format';
 
 interface Point {
@@ -24,24 +26,31 @@ interface Props {
   format?: (value: number) => string;
 }
 
-const VALUE_ROW = 18;
+const VALUE_ROW = 20;
 
 /**
- * Daily bar chart. Bars grow in one after another, the last (today) is full strength and the
- * others slightly dimmed; a dashed line marks the average of the period.
+ * The app's one trend chart: a bar per day, grown in one after another, with a dashed line at the
+ * period's average. Only the selected day is labelled (today, until you tap another bar), so the
+ * chart stays readable on a phone. Bars use the same gradients as the rings, at full strength.
  */
 export function TrendBars({ label, points, max, color, height = 110, format = (v) => String(Math.round(v)) }: Props) {
+  const [picked, setPicked] = useState<string | null>(null);
   const values = points.map((p) => p.value).filter((v): v is number => v !== null);
   const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
   const avgY = avg !== null ? VALUE_ROW + height - (avg / max) * height : null;
-  const today = points.at(-1)?.value;
+  const lastIndex = points.length - 1;
+  const pickedIndex = points.findIndex((p) => p.date === picked);
+  const selectedIndex = pickedIndex >= 0 ? pickedIndex : lastIndex;
+  const selected = points[selectedIndex];
+
+  const select = (i: number) => {
+    tapHaptic();
+    // Tapping the selected bar again goes back to today.
+    setPicked(i === selectedIndex || i === lastIndex ? null : points[i].date);
+  };
 
   return (
-    <View
-      accessible
-      accessibilityLabel={`${label}, last ${points.length} days. Average ${avg !== null ? format(avg) : 'none'}, today ${
-        today != null ? format(today) : 'no data'
-      }.`}>
+    <View>
       <View>
         <View style={styles.row}>
           {points.map((p, i) => (
@@ -49,11 +58,13 @@ export function TrendBars({ label, points, max, color, height = 110, format = (v
               key={p.date}
               point={p}
               index={i}
-              isToday={i === points.length - 1}
+              isSelected={i === selectedIndex}
+              isToday={i === lastIndex}
               max={max}
               color={p.color ?? color}
               height={height}
               format={format}
+              onPress={() => select(i)}
             />
           ))}
         </View>
@@ -65,59 +76,91 @@ export function TrendBars({ label, points, max, color, height = 110, format = (v
           </View>
         ) : null}
       </View>
-      {avg !== null ? <Text style={styles.avg}>avg {format(avg)}</Text> : null}
+      <View
+        style={styles.footer}
+        accessible
+        accessibilityLabel={`${label}, last ${points.length} days. Average ${avg !== null ? format(avg) : 'none'}.`}>
+        <Text style={styles.footerSelected}>
+          {selected ? dayName(selected.date, selectedIndex === lastIndex) : ''}
+        </Text>
+        {avg !== null ? <Text style={styles.footerAvg}>avg {format(avg)}</Text> : null}
+      </View>
     </View>
   );
+}
+
+function dayName(date: string, isToday: boolean): string {
+  if (isToday) return 'Today';
+  return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 function Bar({
   point,
   index,
+  isSelected,
   isToday,
   max,
   color,
   height,
   format,
+  onPress,
 }: {
   point: Point;
   index: number;
+  isSelected: boolean;
   isToday: boolean;
   max: number;
   color: string;
   height: number;
   format: (value: number) => string;
+  onPress: () => void;
 }) {
   const grow = useAnimatedTarget(point.value !== null ? 1 : 0, motion.bars, index * motion.barStagger);
   const barStyle = useAnimatedStyle(() => ({ transform: [{ scaleY: grow.value }] }));
   const barHeight = point.value !== null ? Math.max((point.value / max) * height, 3) : 0;
+  const valueText = point.value !== null ? format(point.value) : 'no data';
 
   return (
-    <View style={styles.col}>
-      <View style={[styles.track, { height: height + VALUE_ROW }]}>
+    <Pressable
+      style={styles.col}
+      onPress={onPress}
+      disabled={point.value === null}
+      accessibilityRole="button"
+      accessibilityLabel={`${dayName(point.date, isToday)}: ${valueText}`}
+      accessibilityState={{ selected: isSelected }}>
+      <View style={[styles.track, { height: height + VALUE_ROW }, isSelected && styles.trackSelected]}>
         {point.value !== null ? (
           <>
-            <Text style={[styles.value, isToday && styles.valueToday]} numberOfLines={1}>
-              {format(point.value)}
-            </Text>
-            <Animated.View style={[{ height: barHeight, opacity: isToday ? 1 : 0.6 }, styles.bar, barStyle]}>
+            {isSelected ? (
+              <View style={styles.valueWrap}>
+                <Text style={styles.value} numberOfLines={1}>
+                  {valueText}
+                </Text>
+              </View>
+            ) : null}
+            <Animated.View style={[{ height: barHeight }, styles.bar, barStyle]}>
               <LinearGradient colors={gradientFor(color)} style={StyleSheet.absoluteFill} />
             </Animated.View>
           </>
         ) : null}
       </View>
-      <Text style={[styles.day, isToday && styles.dayToday]}>{shortDay(point.date)}</Text>
-    </View>
+      <Text style={[styles.day, isSelected && styles.daySelected]}>{shortDay(point.date)}</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 4 },
   col: { flex: 1, alignItems: 'stretch', gap: 6 },
-  track: { justifyContent: 'flex-end' },
+  track: { justifyContent: 'flex-end', borderRadius: 4 },
+  trackSelected: { backgroundColor: colors.track },
   bar: { borderRadius: 4, overflow: 'hidden', transformOrigin: 'bottom' },
-  value: { color: colors.muted, fontFamily: fonts.numberSemi, fontSize: 11, textAlign: 'center', marginBottom: 3 },
-  valueToday: { color: colors.text, fontFamily: fonts.number, fontSize: 13 },
+  // Wider than the bar and centered on it, so labels like "14.2" or "100%" never get cut off.
+  valueWrap: { alignItems: 'center', marginBottom: 4, marginHorizontal: -16 },
+  value: { color: colors.text, fontFamily: fonts.number, fontSize: 14, fontVariant: ['tabular-nums'] },
   day: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 11, textAlign: 'center' },
-  dayToday: { color: colors.text, fontFamily: fonts.bodySemi },
-  avg: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 11, textAlign: 'right', marginTop: 6 },
+  daySelected: { color: colors.text, fontFamily: fonts.bodySemi },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  footerSelected: { color: colors.text, fontFamily: fonts.bodyMedium, fontSize: 12 },
+  footerAvg: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 12 },
 });

@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Breakdown, BreakdownFactor, BreakdownTotal } from '@/components/Breakdown';
 import { ScoreRing } from '@/components/ScoreRing';
-import { TrendLine } from '@/components/TrendLine';
+import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Screen, Stat } from '@/components/ui';
 import { colors } from '@/constants/theme';
 import { formatMinutes, formatTime } from '@/lib/format';
@@ -82,10 +82,11 @@ export default function StrainScreen() {
       </Card>
 
       <Card title="STRAIN, LAST 14 DAYS">
-        <TrendLine
+        <TrendBars
           label="Strain"
           max={21}
           color={colors.strain}
+          format={(v) => v.toFixed(1)}
           points={scores.slice(-14).map((s) => ({ date: s.date, value: s.strain.strain }))}
         />
       </Card>

@@ -88,6 +88,5 @@ export const motion = {
   ring: 1100,
   bars: 650,
   barStagger: 35,
-  chart: 900,
   countUp: 900,
 };
