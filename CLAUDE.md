@@ -84,7 +84,7 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | # | Milestone | Status |
 |---|---|---|
 | 0 | Setup | Runs on the phone; design review done; Supabase schema + sign-in + daily sync written. To do: Chinmay creates the Supabase project (docs/SETUP.md), verify Fitbit Air data types |
-| 1 | Health Connect data in | Code ready (`lib/health/healthConnectSource.ts`, Health data screen `app/health.tsx`); to do: first EAS dev build, then check real Fitbit Air data |
+| 1 | Health Connect data in | Code ready (`lib/health/healthConnectSource.ts`, Health data screen `app/health.tsx`); first EAS dev build done (Oct 1); to do: check real Fitbit Air data |
 | 2 | Scores + Today rings | Done on demo data; tune against real data |
 | 3 | Logging: workouts, plans, meals (AI macros) | Not started |
 | 4 | AI coach chat | Not started |
