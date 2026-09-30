@@ -57,6 +57,8 @@ export function Screen({ children, overline, title, accessory, back, glow }: Scr
               refreshHaptic();
               refresh();
             }}
+            // On Android the spinner would sit on top of the title; drop it just below instead.
+            progressViewOffset={insets.top + 64}
             tintColor={colors.text}
             colors={[colors.strain]}
             progressBackgroundColor={colors.card}
@@ -121,6 +123,15 @@ export function Stat({ label, value, hint, color }: { label: string; value: stri
   );
 }
 
+/** Small outlined label, e.g. "Demo data" or an example question. */
+export function Pill({ children }: { children: ReactNode }) {
+  return (
+    <View style={styles.pill}>
+      <Text style={styles.pillText}>{children}</Text>
+    </View>
+  );
+}
+
 export function Row({ children }: { children: ReactNode }) {
   return <View style={styles.row}>{children}</View>;
 }
@@ -156,4 +167,13 @@ const styles = StyleSheet.create({
   statValue: { ...type.stat, color: colors.text },
   statHint: { ...type.caption, fontSize: 11, color: colors.muted },
   muted: { ...type.body, color: colors.muted },
+  pill: {
+    alignSelf: 'flex-start',
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  pillText: { ...type.caption, color: colors.muted },
 });

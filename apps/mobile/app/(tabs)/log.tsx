@@ -1,8 +1,9 @@
 import { Card, Muted, Screen } from '@/components/ui';
+import { colors } from '@/constants/theme';
 
 export default function LogScreen() {
   return (
-    <Screen overline="LOG" title="Workouts and meals">
+    <Screen overline="LOG" title="Workouts and meals" glow={colors.muted}>
       <Card title="WORKOUTS">
         <Muted>Coming in milestone 3: log a session, or import your weekly workout plan.</Muted>
       </Card>

@@ -83,7 +83,13 @@ Condensed (section labels), and Barlow (body text). Condensed titles like "Today
 - The tab bar background (`colors.card`) is a slightly different navy from the screen background,
   so it reads as a separate block. Try `colors.background` with a hairline top border.
 
-## 5. Smaller things
+## 5. Smaller things (mostly done)
+
+> Done: refresh spinner offset below the title; Coach and Log get a neutral glow (Sleep already
+> had its lavender one in code); `colors.track` is a bit lighter so a ±0 row's empty track shows;
+> "Demo data" is an outlined pill (`Pill` in `components/ui.tsx`); Coach shows example questions.
+> **Still open:** the ring-tap behaviour (Recovery pushes a screen, Sleep/Strain switch tab). That
+> is a product choice for Chinmay, not a styling fix.
 
 - **Pull-to-refresh spinner** sits on top of the "Wednesday 30 Sept" title while refreshing. Once
   the header is transparent, set `progressViewOffset` on the `RefreshControl` in
@@ -107,7 +113,7 @@ Condensed (section labels), and Barlow (body text). Condensed titles like "Today
 2. ~~Font swap (section 2), with a before/after screenshot for Chinmay.~~ Done: Inter.
 3. ~~Unify the three trend charts (section 3).~~ Done.
 4. ~~Tab bar ripple and background (section 4).~~ Done.
-5. The small things (section 5).
+5. ~~The small things (section 5).~~ Done except the ring-tap behaviour.
 
 After each step: `npm run typecheck`, then check on the phone. Commit each step separately so it's
 easy to undo if Chinmay doesn't like it.

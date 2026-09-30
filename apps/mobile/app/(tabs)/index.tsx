@@ -4,8 +4,8 @@ import { StyleSheet, Text } from 'react-native';
 
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendBars } from '@/components/TrendBars';
-import { Card, Muted, Row, Screen, Stat } from '@/components/ui';
-import { colors, fonts, type } from '@/constants/theme';
+import { Card, Muted, Pill, Row, Screen, Stat } from '@/components/ui';
+import { colors, fonts } from '@/constants/theme';
 import { formatDate, formatMinutes } from '@/lib/format';
 import { todayHeadline } from '@/lib/insights';
 import { useScores } from '@/lib/ScoresProvider';
@@ -24,7 +24,7 @@ export default function TodayScreen() {
     <Screen
       overline="TODAY"
       title={formatDate(today.date)}
-      accessory={<Text style={styles.source}>{sourceLabel}</Text>}
+      accessory={<Pill>{sourceLabel}</Pill>}
       glow={recoveryColor}>
 
       <Card>
@@ -94,6 +94,5 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
-  source: { ...type.caption, color: colors.muted },
   headline: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 22 },
 });

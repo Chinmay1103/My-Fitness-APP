@@ -16,7 +16,8 @@ export const colors = {
   border: '#1E2638',
   text: '#F8FAFC',
   muted: '#94A3B8',
-  track: '#1B2233',
+  /** Empty part of rings and bars; light enough to see on a card even when nothing fills it. */
+  track: '#252E44',
   strain: '#1E9BF0',
   sleep: '#8E9CF5',
   recovery: {
