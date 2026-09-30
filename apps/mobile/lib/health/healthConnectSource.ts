@@ -1,0 +1,227 @@
+import type { DayData, HeartRateSample, SleepSession, SleepStageMinutes } from '@fitness/scoring';
+import { Platform, TurboModuleRegistry } from 'react-native';
+import type { Permission, ReadRecordsResult, RecordType } from 'react-native-health-connect';
+
+import type { HealthSource } from './types';
+
+/** What the scores need. Without these we fall back to demo data. */
+export const CORE_TYPES = ['HeartRate', 'RestingHeartRate', 'HeartRateVariabilityRmssd', 'SleepSession'] as const;
+
+/**
+ * Also read, but only shown on the Health data screen for now, to find out what the band writes.
+ * Each one needs a matching android.permission.health.READ_* line in app.json.
+ */
+export const EXTRA_TYPES = [
+  'Steps',
+  'ExerciseSession',
+  'ActiveCaloriesBurned',
+  'TotalCaloriesBurned',
+  'OxygenSaturation',
+  'RespiratoryRate',
+  'SkinTemperature',
+  'Vo2Max',
+] as const;
+
+const PERMISSIONS: Permission[] = [...CORE_TYPES, ...EXTRA_TYPES].map((recordType) => ({ accessType: 'read', recordType }));
+
+const DAY = 24 * 60 * 60 * 1000;
+
+// Copies of the library's constants: importing them would load the library (see `lib`).
+const SDK_AVAILABLE = 3;
+const Stage = { AWAKE: 1, OUT_OF_BED: 3, DEEP: 5, REM: 6 };
+
+type HealthConnectLib = typeof import('react-native-health-connect');
+let cachedLib: HealthConnectLib | null | undefined;
+
+/**
+ * The library, or null where it can't work (iOS, web, Expo Go). It looks up its native module as
+ * soon as it's imported and throws if it's missing, so it's only loaded once we know it's there.
+ */
+function lib(): HealthConnectLib | null {
+  if (cachedLib === undefined) {
+    cachedLib =
+      Platform.OS === 'android' && TurboModuleRegistry.get('HealthConnect')
+        ? (require('react-native-health-connect') as HealthConnectLib)
+        : null;
+  }
+  return cachedLib;
+}
+
+let initialized: Promise<boolean> | null = null;
+
+/** True once Health Connect is installed, up to date and initialized. */
+async function ready(): Promise<boolean> {
+  const hc = lib();
+  if (!hc) return false;
+  initialized ??= (async () => {
+    try {
+      if ((await hc.getSdkStatus()) !== SDK_AVAILABLE) return false;
+      return await hc.initialize();
+    } catch {
+      return false;
+    }
+  })();
+  return initialized;
+}
+
+/** Throws if Health Connect isn't ready; for calls that only make sense after `ready()`. */
+function hcOrThrow(): HealthConnectLib {
+  const hc = lib();
+  if (!hc) throw new Error('Health Connect is not available in this build');
+  return hc;
+}
+
+/** Reads every page of one record type in a time range. */
+export async function readAll<T extends RecordType>(recordType: T, from: Date, to: Date) {
+  const records: ReadRecordsResult<T>['records'] = [];
+  let pageToken: string | undefined;
+  do {
+    const page = await hcOrThrow().readRecords(recordType, {
+      timeRangeFilter: { operator: 'between', startTime: from.toISOString(), endTime: to.toISOString() },
+      pageSize: 5000,
+      pageToken,
+    });
+    records.push(...page.records);
+    pageToken = page.pageToken || undefined;
+  } while (pageToken);
+  return records;
+}
+
+/** Local calendar day, YYYY-MM-DD. */
+function localDate(time: number): string {
+  const d = new Date(time);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function toSleepSession(record: { startTime: string; endTime: string; stages?: { startTime: string; endTime: string; stage: number }[] }): SleepSession {
+  const start = Date.parse(record.startTime);
+  const end = Date.parse(record.endTime);
+  const stages: SleepStageMinutes = { awake: 0, light: 0, deep: 0, rem: 0 };
+  if (record.stages?.length) {
+    for (const s of record.stages) {
+      const minutes = (Date.parse(s.endTime) - Date.parse(s.startTime)) / 60000;
+      if (s.stage === Stage.DEEP) stages.deep += minutes;
+      else if (s.stage === Stage.REM) stages.rem += minutes;
+      else if (s.stage === Stage.AWAKE || s.stage === Stage.OUT_OF_BED) stages.awake += minutes;
+      // LIGHT, plain SLEEPING and UNKNOWN all count as light sleep.
+      else stages.light += minutes;
+    }
+  } else {
+    // No stages recorded: treat the whole session as sleep.
+    stages.light = (end - start) / 60000;
+  }
+  return { start, end, stages };
+}
+
+/** Opens Health Connect's own settings, e.g. to change permissions. */
+export function openHealthConnectSettings() {
+  lib()?.openHealthConnectSettings();
+}
+
+export const healthConnectSource: HealthSource = {
+  id: 'health-connect',
+  label: 'Health Connect',
+  isAvailable: ready,
+
+  async hasPermissions() {
+    if (!(await ready())) return false;
+    const granted = await hcOrThrow().getGrantedPermissions();
+    return CORE_TYPES.every((type) => granted.some((p) => p.accessType === 'read' && p.recordType === type));
+  },
+
+  async requestPermissions() {
+    if (!(await ready())) return false;
+    // Without the history permission Health Connect only returns data from the last 30 days.
+    await hcOrThrow().requestPermission([...PERMISSIONS, { accessType: 'read', recordType: 'ReadHealthDataHistory' }]);
+    return this.hasPermissions();
+  },
+
+  async getDays(days) {
+    const now = new Date();
+    const firstMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));
+    // Start a day earlier so the first day's sleep (which begins the evening before) is included.
+    const from = new Date(firstMidnight.getTime() - DAY);
+
+    const [heartRate, resting, hrv, sleep] = await Promise.all([
+      readAll('HeartRate', from, now),
+      readAll('RestingHeartRate', from, now),
+      readAll('HeartRateVariabilityRmssd', from, now),
+      readAll('SleepSession', from, now),
+    ]);
+
+    const result: DayData[] = [];
+    for (let i = 0; i < days; i++) {
+      const midnight = new Date(firstMidnight.getFullYear(), firstMidnight.getMonth(), firstMidnight.getDate() + i);
+      result.push({ date: localDate(midnight.getTime()), heartRate: [] });
+    }
+    const byDate = new Map(result.map((d) => [d.date, d]));
+
+    // Main sleep = the longest session ending on that day (naps are ignored for now).
+    for (const record of sleep) {
+      const session = toSleepSession(record);
+      const day = byDate.get(localDate(session.end));
+      if (day && (!day.sleep || session.end - session.start > day.sleep.end - day.sleep.start)) day.sleep = session;
+    }
+
+    // Resting HR and HRV describe the night that ended that morning; keep the latest reading per day.
+    for (const r of [...resting].sort((a, b) => Date.parse(a.time) - Date.parse(b.time))) {
+      const day = byDate.get(localDate(Date.parse(r.time)));
+      if (day) day.restingHr = Math.round(r.beatsPerMinute);
+    }
+    for (const r of [...hrv].sort((a, b) => Date.parse(a.time) - Date.parse(b.time))) {
+      const day = byDate.get(localDate(Date.parse(r.time)));
+      if (day) day.hrvRmssd = Math.round(r.heartRateVariabilityMillis);
+    }
+
+    // Heart rate for strain: the waking day, so samples during that day's main sleep are skipped.
+    for (const record of heartRate) {
+      for (const s of record.samples) {
+        const time = Date.parse(s.time);
+        const day = byDate.get(localDate(time));
+        if (!day || (day.sleep && time >= day.sleep.start && time <= day.sleep.end)) continue;
+        day.heartRate.push({ time, bpm: s.beatsPerMinute } satisfies HeartRateSample);
+      }
+    }
+    for (const day of result) day.heartRate.sort((a, b) => a.time - b.time);
+
+    return result;
+  },
+};
+
+export interface DataTypeCheck {
+  type: string;
+  /** Records in the checked period. */
+  count: number;
+  /** Package names of the apps that wrote them, e.g. com.google.android.apps.fitness. */
+  origins: string[];
+  /** Newest record's time, ISO. */
+  latest?: string;
+  /** Set when this type couldn't be read, usually a missing permission. */
+  error?: string;
+}
+
+/**
+ * For the Health data screen: which data types exist in Health Connect over the last `days`
+ * days, and which apps wrote them. This is how we find out what the Fitbit Air actually writes.
+ */
+export async function checkDataTypes(days = 7): Promise<DataTypeCheck[]> {
+  const to = new Date();
+  const from = new Date(to.getTime() - days * DAY);
+  return Promise.all(
+    [...CORE_TYPES, ...EXTRA_TYPES].map(async (type): Promise<DataTypeCheck> => {
+      try {
+        const records = await readAll(type, from, to);
+        const origins = new Set<string>();
+        let latest: string | undefined;
+        for (const r of records) {
+          if (r.metadata?.dataOrigin) origins.add(r.metadata.dataOrigin);
+          const time = 'time' in r ? r.time : 'endTime' in r ? r.endTime : undefined;
+          if (typeof time === 'string' && (!latest || time > latest)) latest = time;
+        }
+        return { type, count: records.length, origins: [...origins], latest };
+      } catch (e) {
+        return { type, count: 0, origins: [], error: e instanceof Error ? e.message : String(e) };
+      }
+    }),
+  );
+}

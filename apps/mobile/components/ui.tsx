@@ -129,12 +129,37 @@ export function Stat({ label, value, hint, color }: { label: string; value: stri
   );
 }
 
-/** Small outlined label, e.g. "Demo data" or an example question. */
-export function Pill({ children }: { children: ReactNode }) {
+/** Small outlined label, e.g. "Demo data" or an example question. Tappable when given `onPress`. */
+export function Pill({ children, onPress }: { children: ReactNode; onPress?: () => void }) {
+  const text = <Text style={styles.pillText}>{children}</Text>;
+  if (!onPress) return <View style={styles.pill}>{text}</View>;
   return (
-    <View style={styles.pill}>
-      <Text style={styles.pillText}>{children}</Text>
-    </View>
+    <Pressable
+      onPress={() => {
+        tapHaptic();
+        onPress();
+      }}
+      accessibilityRole="button"
+      hitSlop={8}
+      style={({ pressed }) => [styles.pill, pressed && styles.pressed]}>
+      {text}
+    </Pressable>
+  );
+}
+
+export function Button({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
+  return (
+    <Pressable
+      onPress={() => {
+        tapHaptic();
+        onPress();
+      }}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      style={({ pressed }) => [styles.button, (pressed || disabled) && styles.pressed]}>
+      <Text style={styles.buttonText}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -184,4 +209,14 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   pillText: { ...type.caption, color: colors.muted },
+  pressed: { opacity: 0.6 },
+  button: {
+    backgroundColor: colors.text,
+    borderRadius: 999,
+    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    minHeight: 44,
+  },
+  buttonText: { ...type.bodyStrong, color: colors.background },
 });

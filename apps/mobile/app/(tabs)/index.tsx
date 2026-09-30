@@ -24,7 +24,7 @@ export default function TodayScreen() {
     <Screen
       overline="TODAY"
       title={formatDate(today.date)}
-      accessory={<Pill>{sourceLabel}</Pill>}
+      accessory={<Pill onPress={() => router.push('/health')}>{`${sourceLabel}  ›`}</Pill>}
       glow={recoveryColor}>
 
       <Card>

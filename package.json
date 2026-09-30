@@ -8,6 +8,7 @@
   "scripts": {
     "test": "npm run test --workspace @fitness/scoring",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "mobile": "npm run start --workspace mobile"
+    "mobile": "npm run start --workspace mobile",
+    "mobile:go": "npm run start --workspace mobile -- --go"
   }
 }

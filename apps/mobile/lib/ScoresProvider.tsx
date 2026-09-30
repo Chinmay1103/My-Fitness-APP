@@ -1,7 +1,8 @@
 import { computeDailyScores, MOCK_PROFILE, type DailyScores, type DayData } from '@fitness/scoring';
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
-import { healthSource } from './health';
+import { mockSource } from './health/mockSource';
+import { pickHealthSource, type HealthSource } from './health';
 
 const HISTORY_DAYS = 45;
 
@@ -9,6 +10,7 @@ interface ScoresState {
   loading: boolean;
   error: string | null;
   sourceLabel: string;
+  sourceId: HealthSource['id'];
   days: DayData[];
   scores: DailyScores[];
   refresh: () => Promise<void>;
@@ -21,13 +23,15 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
   const [scores, setScores] = useState<DailyScores[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<HealthSource>(mockSource);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      await healthSource.requestPermissions();
-      const loaded = await healthSource.getDays(HISTORY_DAYS);
+      const picked = await pickHealthSource();
+      setSource(picked);
+      const loaded = await picked.getDays(HISTORY_DAYS);
       setDays(loaded);
       // TODO(milestone 3): use the user's real age and sleep need from their profile.
       setScores(computeDailyScores(loaded, MOCK_PROFILE));
@@ -44,7 +48,7 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
 
   return (
     <ScoresContext.Provider
-      value={{ loading, error, sourceLabel: healthSource.label, days, scores, refresh }}>
+      value={{ loading, error, sourceLabel: source.label, sourceId: source.id, days, scores, refresh }}>
       {children}
     </ScoresContext.Provider>
   );

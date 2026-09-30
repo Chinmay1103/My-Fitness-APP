@@ -32,7 +32,7 @@ If the phone can't connect (office/college Wi-Fi often blocks it), run
 ## 4. Run the scoring tests
 
 ```bash
-npm test             # 25 tests for strain, sleep and recovery
+npm test             # 31 tests for strain, sleep and recovery
 npm run typecheck    # type errors across the whole repo
 ```
 
@@ -44,11 +44,40 @@ npm run typecheck    # type errors across the whole repo
 | `packages/scoring/tests/` | Tests for the math |
 | `apps/mobile/app/(tabs)/` | One file per tab: `index.tsx` (Today), `sleep.tsx`, `strain.tsx`, `log.tsx`, `coach.tsx` |
 | `apps/mobile/components/` | Reusable UI: score rings, cards, bar charts |
-| `apps/mobile/lib/health/` | Where health data comes from. Today: demo data. Milestone 1: Health Connect |
+| `apps/mobile/lib/health/` | Where health data comes from: demo data, or Health Connect in the app's own build |
 
-## Later: when the Fitbit Air arrives (milestone 1)
+## Your own build (needed for Health Connect)
 
-Health Connect needs native code that Expo Go doesn't include, so from milestone 1 we build our
-own "development build" of the app with **EAS Build** (Expo's cloud builder, free tier) and
-install that APK instead of using Expo Go. You'll need a free account at
-[expo.dev](https://expo.dev) for that. No Android Studio required.
+Expo Go can't read Health Connect, so for real data you install the app's own **development
+build**. It's an APK built in Expo's cloud (free tier, no Android Studio). You only rebuild it when
+we add a library with native code; everyday code changes still reload over Wi-Fi like Expo Go.
+
+**Once:**
+
+1. Make a free account at [expo.dev](https://expo.dev).
+2. From `apps/mobile`, log in and link the project:
+   ```bash
+   npx eas-cli@latest login
+   npx eas-cli@latest init        # creates the project on expo.dev, adds its id to app.json
+   ```
+3. Start the build (10–20 minutes in the cloud):
+   ```bash
+   npx eas-cli@latest build --platform android --profile development
+   ```
+4. When it finishes, open the link or QR code it prints **on your phone**, download the APK and
+   install it (allow "install unknown apps" for your browser when Android asks).
+
+**Every day after that:** `npm run mobile`, then open **My Fitness** (not Expo Go) on the phone
+and pick the dev server. Until the build is installed, use `npm run mobile:go` for Expo Go.
+
+## Day one with the Fitbit Air (milestone 1)
+
+1. Set up the band in the Google Health / Fitbit app, and in its settings turn on syncing to
+   **Health Connect** for everything it offers.
+2. Wear it for a night so there's sleep, HRV and resting heart rate.
+3. In My Fitness: Today → tap the **Demo data ›** pill → **Connect Health Connect** → allow all.
+4. The **In Health Connect, last 7 days** list shows each data type, how many records exist and
+   which app wrote them. Screenshot it and share it with Claude: that's the "which data types does
+   the band write" check.
+5. Once the four types marked *scores* have data, the pill says **Health Connect** and the rings
+   use your own numbers. Recovery shows "calibrating" for the first two weeks.

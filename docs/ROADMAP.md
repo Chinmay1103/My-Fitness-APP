@@ -98,7 +98,7 @@ sees their own rows.
 | # | Milestone | Done when | Status |
 |---|---|---|---|
 | 0 | Setup | Expo app runs on your phone, Supabase project created, Fitbit Air data types verified | App runs on the phone (Expo Go) and got a design pass (Sep 30); Supabase and the Fitbit check are still to do |
-| 1 | Data in | App reads the last 30 days of HR/HRV/sleep/steps and shows raw numbers | Waiting for the Fitbit Air |
+| 1 | Data in | App reads the last 30 days of HR/HRV/sleep/steps and shows raw numbers | Health Connect reader and Health data screen built (Sep 30); needs the first dev build and the band |
 | 2 | Scores | `packages/scoring` implemented + tested; Today screen shows the 3 rings | Done on demo data; tune once real data arrives |
 | 3 | Logging | Log workouts, import a workout plan, log meals by text or photo (AI macros) | |
 | 4 | AI coach | Chat screen: Claude reads your scores, sleep, training and food through tools and gives advice | |

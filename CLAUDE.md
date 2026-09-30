@@ -12,7 +12,8 @@ Open design to-dos from the Sep 30 screen-recording review: [docs/design-review-
 
 - **Android first** (Health Connect); iOS (HealthKit) later from the same Expo codebase. All health
   reads go through the `HealthSource` interface in `apps/mobile/lib/health/`, so adding a platform
-  means adding one source.
+  means adding one source. `pickHealthSource()` uses Health Connect once it's reachable and the
+  core reads are allowed, else demo data. The library is loaded lazily: importing it in Expo Go crashes.
 - **Demo data until the Fitbit Air arrives** (launches Oct 2, 2026). `generateMockDays()` in
   `packages/scoring/src/mock.ts` produces seeded, realistic days. First job once the band arrives:
   check which data types it actually writes into Health Connect.
@@ -66,7 +67,8 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
 npm install          # npm workspaces
 npm test             # scoring tests
 npm run typecheck    # all workspaces
-npm run mobile       # Expo dev server; scan the QR with Expo Go
+npm run mobile       # dev server for the app's own build (development build)
+npm run mobile:go    # same, for Expo Go (no Health Connect)
 ```
 
 In `apps/mobile`, add packages with `npx expo install <pkg>`, not `npm install`.
@@ -77,7 +79,7 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | # | Milestone | Status |
 |---|---|---|
 | 0 | Setup | Runs on the phone; design review done (docs/design-review-2026-09-30.md). To do: create Supabase project, verify Fitbit Air data types |
-| 1 | Health Connect data in | Waiting for the Fitbit Air; needs an EAS development build (Expo Go lacks the native module) |
+| 1 | Health Connect data in | Code ready (`lib/health/healthConnectSource.ts`, Health data screen `app/health.tsx`); to do: first EAS dev build, then check real Fitbit Air data |
 | 2 | Scores + Today rings | Done on demo data; tune against real data |
 | 3 | Logging: workouts, plans, meals (AI macros) | Not started |
 | 4 | AI coach chat | Not started |

@@ -56,6 +56,7 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="recovery" options={{ title: 'Recovery' }} />
+          <Stack.Screen name="health" options={{ title: 'Health data' }} />
         </Stack>
       </ScoresProvider>
     </ThemeProvider>

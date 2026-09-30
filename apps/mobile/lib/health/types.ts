@@ -8,6 +8,9 @@ export interface HealthSource {
   id: 'mock' | 'health-connect' | 'healthkit';
   label: string;
   isAvailable(): Promise<boolean>;
+  /** Whether the reads the scores need are already allowed (no dialog). */
+  hasPermissions(): Promise<boolean>;
+  /** Shows the system permission dialog; resolves to `hasPermissions()` afterwards. */
   requestPermissions(): Promise<boolean>;
   /** The last `days` days, oldest first. */
   getDays(days: number): Promise<DayData[]>;
