@@ -3,7 +3,17 @@ import { BottomTabBarHeightContext } from 'expo-router/tabs';
 import { SymbolView } from 'expo-symbols';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useContext, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type TextInputProps,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { backdrop, colors, gradients, radius, spacing, type, type Backdrop } from '@/constants/theme';
@@ -49,6 +59,7 @@ export function Screen({ children, overline, title, accessory, back, glow, backg
     <View style={styles.screen}>
       <LinearGradient pointerEvents="none" colors={tint.colors} locations={tint.locations} style={StyleSheet.absoluteFill} />
       <ScrollView
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.content,
           { paddingTop: insets.top + spacing.sm, paddingBottom: tabBarHeight + spacing.xl },
@@ -149,7 +160,40 @@ export function Pill({ children, onPress }: { children: ReactNode; onPress?: () 
   );
 }
 
-export function Button({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
+/** Selectable option, e.g. a workout type. The selected one is filled. */
+export function Chip({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={() => {
+        tapHaptic();
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      hitSlop={4}
+      style={({ pressed }) => [styles.chip, selected && styles.chipSelected, pressed && styles.pressed]}>
+      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+/** Text field in the app's style. */
+export function Input({ style, ...props }: TextInputProps) {
+  return <TextInput placeholderTextColor={colors.muted} {...props} style={[styles.input, style]} />;
+}
+
+export function Button({
+  label,
+  onPress,
+  disabled,
+  variant = 'primary',
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  /** 'secondary' is outlined, for less important actions next to a primary one. */
+  variant?: 'primary' | 'secondary';
+}) {
   return (
     <Pressable
       onPress={() => {
@@ -159,8 +203,12 @@ export function Button({ label, onPress, disabled }: { label: string; onPress: (
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
-      style={({ pressed }) => [styles.button, (pressed || disabled) && styles.pressed]}>
-      <Text style={styles.buttonText}>{label}</Text>
+      style={({ pressed }) => [
+        styles.button,
+        variant === 'secondary' && styles.buttonSecondary,
+        (pressed || disabled) && styles.pressed,
+      ]}>
+      <Text style={[styles.buttonText, variant === 'secondary' && styles.buttonTextSecondary]}>{label}</Text>
     </Pressable>
   );
 }
@@ -220,4 +268,29 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   buttonText: { ...type.bodyStrong, color: colors.background },
+  buttonSecondary: { backgroundColor: 'transparent', borderColor: colors.border, borderWidth: 1 },
+  buttonTextSecondary: { color: colors.text },
+  chip: {
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minHeight: 36,
+    justifyContent: 'center',
+  },
+  chipSelected: { backgroundColor: colors.text, borderColor: colors.text },
+  chipText: { ...type.caption, fontSize: 13, color: colors.text },
+  chipTextSelected: { color: colors.background },
+  input: {
+    ...type.body,
+    fontSize: 16,
+    color: colors.text,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    minHeight: 46,
+  },
 });

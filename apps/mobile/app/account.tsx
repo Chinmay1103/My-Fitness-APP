@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
-import { Button, Card, Muted, Screen } from '@/components/ui';
-import { colors, fonts, radius, spacing, type } from '@/constants/theme';
+import { Button, Card, Input, Muted, Screen } from '@/components/ui';
+import { colors, type } from '@/constants/theme';
 import { useAuth } from '@/lib/AuthProvider';
 import { useScores } from '@/lib/ScoresProvider';
 import { supabase } from '@/lib/supabase';
@@ -91,24 +91,20 @@ export default function AccountScreen() {
               : 'Enter your email and we’ll send you a one-time code. No password needed.'}
           </Muted>
           {codeSent ? (
-            <TextInput
-              style={styles.input}
+            <Input
               value={code}
               onChangeText={setCode}
               placeholder="Code from the email"
-              placeholderTextColor={colors.muted}
               keyboardType="number-pad"
               autoComplete="one-time-code"
               textContentType="oneTimeCode"
               maxLength={10}
             />
           ) : (
-            <TextInput
-              style={styles.input}
+            <Input
               value={email}
               onChangeText={setEmail}
               placeholder="you@example.com"
-              placeholderTextColor={colors.muted}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
@@ -133,17 +129,5 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   email: { ...type.title, color: colors.text },
   status: { ...type.caption, color: colors.text },
-  input: {
-    ...type.body,
-    fontFamily: fonts.bodyMedium,
-    fontSize: 16,
-    color: colors.text,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 12,
-    minHeight: 48,
-  },
   error: { ...type.body, color: colors.recovery.red },
 });

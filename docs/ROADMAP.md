@@ -104,7 +104,7 @@ which is all the coach needs and far less sensitive.
 | 0 | Setup | Expo app runs on your phone, Supabase project created, Fitbit Air data types verified | App runs on the phone (Expo Go) and got a design pass (Sep 30); Supabase and the Fitbit check are still to do |
 | 1 | Data in | App reads the last 30 days of HR/HRV/sleep/steps and shows raw numbers | Health Connect reader and Health data screen built (Sep 30); first dev build done (Oct 1); needs the band |
 | 2 | Scores | `packages/scoring` implemented + tested; Today screen shows the 3 rings | Done on demo data; tune once real data arrives |
-| 3 | Logging | Log workouts, import a workout plan, log meals by text or photo (AI macros) | |
+| 3 | Logging | Log workouts, import a workout plan, log meals by text or photo (AI macros) | Workout logging built (Oct 1): gym sets, distance/pace, effort, labels band-detected activities; stored on the phone. Plans and meals next |
 | 4 | AI coach | Chat screen: Claude reads your scores, sleep, training and food through tools and gives advice | |
 | 5 | Polish | Trends, weekly report, notifications, optional MCP server to use your data from the Claude app | |
 

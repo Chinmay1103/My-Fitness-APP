@@ -14,6 +14,7 @@ import 'react-native-reanimated';
 import { colors } from '@/constants/theme';
 import { AuthProvider } from '@/lib/AuthProvider';
 import { ScoresProvider } from '@/lib/ScoresProvider';
+import { WorkoutsProvider } from '@/lib/WorkoutsProvider';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -53,14 +54,17 @@ export default function RootLayout() {
     <ThemeProvider value={theme}>
       <AuthProvider>
         <ScoresProvider>
-          <StatusBar style="light" />
-          {/* Screens draw their own titles (see Screen in components/ui.tsx), so no navigator headers. */}
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="recovery" options={{ title: 'Recovery' }} />
-            <Stack.Screen name="health" options={{ title: 'Health data' }} />
-            <Stack.Screen name="account" options={{ title: 'Account' }} />
-          </Stack>
+          <WorkoutsProvider>
+            <StatusBar style="light" />
+            {/* Screens draw their own titles (see Screen in components/ui.tsx), so no navigator headers. */}
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="recovery" options={{ title: 'Recovery' }} />
+              <Stack.Screen name="health" options={{ title: 'Health data' }} />
+              <Stack.Screen name="account" options={{ title: 'Account' }} />
+              <Stack.Screen name="workout" options={{ title: 'Workout' }} />
+            </Stack>
+          </WorkoutsProvider>
         </ScoresProvider>
       </AuthProvider>
     </ThemeProvider>
