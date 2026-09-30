@@ -2,7 +2,6 @@ import { Tabs } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import type { ColorValue } from 'react-native';
 
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { colors, fonts } from '@/constants/theme';
 import { tapHaptic } from '@/lib/haptics';
 
@@ -23,11 +22,8 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
         tabBarLabelStyle: { fontFamily: fonts.bodyMedium, fontSize: 11 },
-        headerTitleStyle: { fontFamily: fonts.display, fontSize: 22 },
-        headerShadowVisible: false,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
+        // Screens draw their own titles (see Screen in components/ui.tsx).
+        headerShown: false,
       }}>
       <Tabs.Screen name="index" options={{ title: 'Today', tabBarIcon: tabIcon('heart.circle', 'monitor_heart') }} />
       <Tabs.Screen name="sleep" options={{ title: 'Sleep', tabBarIcon: tabIcon('moon.zzz', 'bedtime') }} />

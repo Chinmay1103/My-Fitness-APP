@@ -2,7 +2,7 @@ import { Card, Muted, Screen } from '@/components/ui';
 
 export default function LogScreen() {
   return (
-    <Screen>
+    <Screen overline="LOG" title="Workouts and meals">
       <Card title="WORKOUTS">
         <Muted>Coming in milestone 3: log a session, or import your weekly workout plan.</Muted>
       </Card>

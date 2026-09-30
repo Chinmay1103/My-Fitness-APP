@@ -2,7 +2,7 @@ import { Card, Muted, Screen } from '@/components/ui';
 
 export default function CoachScreen() {
   return (
-    <Screen>
+    <Screen overline="COACH" title="Ask about your day">
       <Card title="AI COACH">
         <Muted>
           Coming in milestone 4: chat with a coach that sees your recovery, sleep, strain, workout plan and meals.

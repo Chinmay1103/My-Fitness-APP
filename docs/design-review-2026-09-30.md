@@ -9,7 +9,12 @@ items off as they're done.
 the screens don't feel like one app yet. Most of the inconsistency comes from the header area, the
 fonts, and each chart being styled differently. None of it is hard to fix.
 
-## 1. Header strip (biggest visual problem)
+## 1. Header strip (biggest visual problem) ✅ done
+
+> Done: navigator headers are hidden everywhere; `Screen` draws an overline + title (and a back
+> arrow on Recovery) under the status bar, so the glow runs to the top edge. Titles: TODAY + date,
+> SLEEP + "Last night", STRAIN + "Today so far", LOG + "Workouts and meals", COACH + "Ask about
+> your day", RECOVERY + "This morning". Needs a check on the phone.
 
 - Every screen has a flat black header bar ("Today", "Sleep", ...) sitting above the tinted
   background. Where the yellow/blue glow starts there's a hard horizontal seam just under the header.
@@ -83,7 +88,7 @@ Condensed (section labels), and Barlow (body text). Condensed titles like "Today
 
 ## Suggested order
 
-1. Transparent header + one title pattern on every tab (section 1).
+1. ~~Transparent header + one title pattern on every tab (section 1).~~ Done.
 2. Font swap (section 2), with a before/after screenshot for Chinmay.
 3. Unify the three trend charts (section 3).
 4. Tab bar ripple and background (section 4).

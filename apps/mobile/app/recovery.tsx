@@ -15,7 +15,7 @@ export default function RecoveryScreen() {
 
   if (!recovery || recovery.score === null || !recovery.zone || !recovery.breakdown) {
     return (
-      <Screen>
+      <Screen back overline="RECOVERY" title="This morning">
         <Card title="NOT ENOUGH DATA YET">
           <Muted>
             Recovery compares last night with your own normal, so it needs at least {MIN_BASELINE_DAYS} nights of HRV and
@@ -32,7 +32,7 @@ export default function RecoveryScreen() {
   const guidance = RECOVERY_GUIDANCE[recovery.zone];
 
   return (
-    <Screen glow={color}>
+    <Screen back overline="RECOVERY" title="This morning" glow={color}>
       <Card>
         <View style={styles.hero}>
           <ScoreRing label="RECOVERY" value={recovery.score} suffix="%" progress={recovery.score / 100} color={color} size={150} />

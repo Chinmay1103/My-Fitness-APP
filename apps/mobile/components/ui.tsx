@@ -1,17 +1,35 @@
+import { router } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, gradients, radius, spacing, type } from '@/constants/theme';
-import { refreshHaptic } from '@/lib/haptics';
+import { refreshHaptic, tapHaptic } from '@/lib/haptics';
 import { useScores } from '@/lib/ScoresProvider';
+
+type ScreenProps = {
+  children: ReactNode;
+  /** Small uppercase label above the title, e.g. "SLEEP". */
+  overline?: string;
+  title?: string;
+  /** Shown to the right of the title, e.g. the "Demo data" label. */
+  accessory?: ReactNode;
+  /** Show a back arrow (for screens pushed on top of the tabs). */
+  back?: boolean;
+  /** Tints the top of the screen with the screen's main color (e.g. today's recovery zone). */
+  glow?: string;
+};
 
 /**
  * Scrollable screen with pull-to-refresh and shared loading and error states.
- * `glow` tints the top of the screen with the screen's main color (e.g. today's recovery zone).
+ * Navigator headers are hidden app-wide; every screen draws its own title here, so the glow runs
+ * all the way up behind the status bar instead of stopping under a flat header bar.
  */
-export function Screen({ children, glow }: { children: ReactNode; glow?: string }) {
+export function Screen({ children, overline, title, accessory, back, glow }: ScreenProps) {
   const { loading, error, scores, refresh } = useScores();
+  const insets = useSafeAreaInsets();
 
   if (loading && scores.length === 0) {
     return (
@@ -31,7 +49,7 @@ export function Screen({ children, glow }: { children: ReactNode; glow?: string 
         />
       ) : null}
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.sm }]}
         refreshControl={
           <RefreshControl
             refreshing={loading}
@@ -44,6 +62,32 @@ export function Screen({ children, glow }: { children: ReactNode; glow?: string 
             progressBackgroundColor={colors.card}
           />
         }>
+        {back || overline || title ? (
+          <View style={styles.header}>
+            {back ? (
+              <Pressable
+                onPress={() => {
+                  tapHaptic();
+                  router.back();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Back"
+                hitSlop={12}
+                style={styles.back}>
+                <SymbolView name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }} tintColor={colors.text} size={24} />
+              </Pressable>
+            ) : null}
+            {overline ? <Text style={styles.overline}>{overline}</Text> : null}
+            <View style={styles.titleRow}>
+              {title ? (
+                <Text style={styles.title} accessibilityRole="header">
+                  {title}
+                </Text>
+              ) : null}
+              {accessory}
+            </View>
+          </View>
+        ) : null}
         {error ? <Text style={styles.error}>Couldn't load health data: {error}</Text> : null}
         {children}
       </ScrollView>
@@ -89,6 +133,11 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   glow: { position: 'absolute', top: 0, left: 0, right: 0, height: 360 },
   content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xl * 2 },
+  header: { gap: 2, marginBottom: spacing.xs },
+  back: { alignSelf: 'flex-start', marginLeft: -2, marginBottom: spacing.sm },
+  overline: { ...type.overline, color: colors.muted },
+  titleRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', columnGap: 8 },
+  title: { ...type.hero, color: colors.text },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
   error: { ...type.body, color: colors.recovery.red },
   card: {

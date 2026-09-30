@@ -1,6 +1,6 @@
 import { CALIBRATED_DAYS } from '@fitness/scoring';
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendBars } from '@/components/TrendBars';
@@ -14,18 +14,18 @@ export default function TodayScreen() {
   const { scores, days, sourceLabel } = useScores();
   const today = scores.at(-1);
   const todayData = days.at(-1);
-  if (!today) return <Screen><Muted>No data yet.</Muted></Screen>;
+  if (!today) return <Screen overline="TODAY" title="No data yet"><Muted>Pull down to refresh.</Muted></Screen>;
 
   const recovery = today.recovery;
   const recoveryColor = recovery?.zone ? colors.recovery[recovery.zone] : colors.muted;
   const headline = todayHeadline(today);
 
   return (
-    <Screen glow={recoveryColor}>
-      <View style={styles.header}>
-        <Text style={styles.date}>{formatDate(today.date)}</Text>
-        <Text style={styles.source}>{sourceLabel}</Text>
-      </View>
+    <Screen
+      overline="TODAY"
+      title={formatDate(today.date)}
+      accessory={<Text style={styles.source}>{sourceLabel}</Text>}
+      glow={recoveryColor}>
 
       <Card>
         <Row>
@@ -93,8 +93,6 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', columnGap: 8 },
-  date: { ...type.hero, color: colors.text },
   source: { ...type.caption, color: colors.muted },
   headline: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 22 },
 });

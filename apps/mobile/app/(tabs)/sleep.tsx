@@ -21,7 +21,13 @@ export default function SleepScreen() {
   const need = scores.at(-1)?.sleepNeed;
   const priorStrain = scores.at(-2)?.strain.strain;
   const session = days.at(-1)?.sleep;
-  if (!sleep || !session) return <Screen><Muted>No sleep recorded last night.</Muted></Screen>;
+  if (!sleep || !session) {
+    return (
+      <Screen overline="SLEEP" title="Last night">
+        <Muted>No sleep recorded last night.</Muted>
+      </Screen>
+    );
+  }
 
   const totalStages = STAGES.reduce((sum, s) => sum + session.stages[s.key], 0);
   const { ceiling, penalties } = sleep.breakdown;
@@ -32,7 +38,7 @@ export default function SleepScreen() {
   const trendMin = Math.max(0, Math.floor((Math.min(...trendScores, 100) - 15) / 10) * 10);
 
   return (
-    <Screen glow={colors.sleep}>
+    <Screen overline="SLEEP" title="Last night" glow={colors.sleep}>
       <Card>
         <View style={styles.hero}>
           <ScoreRing label="SLEEP PERFORMANCE" value={sleep.score} suffix="%" progress={sleep.score / 100} color={colors.sleep} size={140} />

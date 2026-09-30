@@ -50,14 +50,10 @@ export default function RootLayout() {
     <ThemeProvider value={theme}>
       <ScoresProvider>
         <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerTintColor: colors.text,
-            headerTitleStyle: { fontFamily: fonts.display, fontSize: 22 },
-            headerShadowVisible: false,
-          }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="recovery" options={{ title: 'Recovery', headerBackTitle: 'Today' }} />
+        {/* Screens draw their own titles (see Screen in components/ui.tsx), so no navigator headers. */}
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="recovery" options={{ title: 'Recovery' }} />
         </Stack>
       </ScoresProvider>
     </ThemeProvider>

@@ -19,14 +19,14 @@ function strainLabel(strain: number): string {
 export default function StrainScreen() {
   const { scores } = useScores();
   const today = scores.at(-1);
-  if (!today) return <Screen><Muted>No data yet.</Muted></Screen>;
+  if (!today) return <Screen overline="STRAIN" title="Today so far"><Muted>No data yet.</Muted></Screen>;
 
   const { strain, zoneMinutes, activities, everydayStrain } = today.strain;
   const strainScale = Math.max(...activities.map((a) => a.strain), everydayStrain, 0.1);
   const maxZone = Math.max(...zoneMinutes, 1);
 
   return (
-    <Screen glow={colors.strain}>
+    <Screen overline="STRAIN" title="Today so far" glow={colors.strain}>
       <Card>
         <View style={styles.hero}>
           <ScoreRing label="DAY STRAIN" value={strain} decimals={1} progress={strain / 21} color={colors.strain} size={140} />
