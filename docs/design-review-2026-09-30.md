@@ -70,7 +70,10 @@ Condensed (section labels), and Barlow (body text). Condensed titles like "Today
   saturated green and red. Use the same gradients as the ring (`gradients.recovery.*`) at
   full strength, and dim past days with opacity (~0.55) rather than a different color.
 
-## 4. Tab bar
+## 4. Tab bar ✅ done
+
+> Done: a custom `TabButton` in `app/(tabs)/_layout.tsx` has no ripple; the active tab is
+> marked by color only. The bar uses `colors.background` with a hairline top border.
 
 - On Strain and Coach, the active tab shows a large grey circle (the Android ripple) that spills
   above the tab bar. On Today it doesn't appear, so the tabs behave differently.
@@ -103,7 +106,7 @@ Condensed (section labels), and Barlow (body text). Condensed titles like "Today
 1. ~~Transparent header + one title pattern on every tab (section 1).~~ Done.
 2. ~~Font swap (section 2), with a before/after screenshot for Chinmay.~~ Done: Inter.
 3. ~~Unify the three trend charts (section 3).~~ Done.
-4. Tab bar ripple and background (section 4).
+4. ~~Tab bar ripple and background (section 4).~~ Done.
 5. The small things (section 5).
 
 After each step: `npm run typecheck`, then check on the phone. Commit each step separately so it's

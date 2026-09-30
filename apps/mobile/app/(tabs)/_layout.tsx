@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
+import type { BottomTabBarButtonProps } from 'expo-router/tabs';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import type { ColorValue } from 'react-native';
+import { Pressable, StyleSheet, type ColorValue } from 'react-native';
 
 import { colors, fonts } from '@/constants/theme';
 import { tapHaptic } from '@/lib/haptics';
@@ -13,6 +14,15 @@ function tabIcon(ios: SymbolNames['ios'], android: SymbolNames['android']) {
   );
 }
 
+/**
+ * Tab button without the Android ripple. The default one uses a borderless ripple, which draws a
+ * big grey circle spilling above the tab bar on some tabs. The active tab is shown by color only.
+ * The dropped props belong to the default button (or to web links) and mean nothing to Pressable.
+ */
+function TabButton({ ref, href, android_ripple, hoverEffect, pressColor, pressOpacity, ...props }: BottomTabBarButtonProps) {
+  return <Pressable {...props} />;
+}
+
 export default function TabLayout() {
   return (
     <Tabs
@@ -20,7 +30,9 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: colors.text,
         tabBarInactiveTintColor: colors.muted,
-        tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
+        // Same color as the screens, so the bar doesn't read as a separate block; a hairline marks the edge.
+        tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth },
+        tabBarButton: TabButton,
         tabBarLabelStyle: { fontFamily: fonts.bodyMedium, fontSize: 11 },
         // Screens draw their own titles (see Screen in components/ui.tsx).
         headerShown: false,
