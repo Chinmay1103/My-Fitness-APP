@@ -9,19 +9,6 @@ import type { TextStyle } from 'react-native';
 type Gradient = readonly [string, string];
 
 /**
- * TRYING OUT: the strain color. It has to stay clear of recovery green/yellow/red and sleep violet.
- * Flip it, save, compare on the phone, then delete the losers. Light end first, flat color second.
- */
-const STRAIN_COLOR: 'orange' | 'magenta' | 'teal' | 'silver' = 'magenta';
-const strainOptions = {
-  orange: ['#FFC078', '#FF8A1F'],
-  magenta: ['#FF8CC6', '#FF2E93'],
-  teal: ['#8AF5E3', '#17C9AC'],
-  silver: ['#FFFFFF', '#BDB8B4'],
-} satisfies Record<string, Gradient>;
-const strainGradient = strainOptions[STRAIN_COLOR];
-
-/**
  * No blue or navy anywhere: a near-black page with warm greys, and see-through "glass" cards that
  * let each screen's color tint show through. Hex values that get an alpha suffix appended
  * (score colors, `muted`, `hrZones`) must stay 6-digit hex.
@@ -42,7 +29,7 @@ export const colors = {
   muted: '#A8A29E',
   /** Empty part of rings and bars. */
   track: 'rgba(255,255,255,0.10)',
-  strain: strainGradient[1],
+  strain: '#FF8A1F',
   sleep: '#9D7CFF',
   recovery: {
     green: '#2ED573',
@@ -61,7 +48,7 @@ export const colors = {
 
 /** Two-stop gradients, light end first. The dark end matches the flat color above. */
 export const gradients = {
-  strain: strainGradient,
+  strain: ['#FFC078', colors.strain],
   sleep: ['#D2C2FF', colors.sleep],
   recovery: {
     green: ['#8BF7B4', colors.recovery.green],
