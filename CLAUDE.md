@@ -20,6 +20,7 @@ Open design to-dos from the Sep 30 screen-recording review: [docs/design-review-
 - **Backend: Supabase** (not set up yet). The Claude API is called only from Supabase Edge
   Functions; API keys never ship in the app.
 - **The coach gives wellness guidance, not medical advice.**
+- **Dark mode only for now**; light mode later, once the screens settle (see ROADMAP).
 
 ## How the scores work (`packages/scoring/src/`)
 
@@ -75,7 +76,7 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 
 | # | Milestone | Status |
 |---|---|---|
-| 0 | Setup | App scaffolded. To do: run on phone, create Supabase project, verify Fitbit Air data types |
+| 0 | Setup | Runs on the phone; design review done (docs/design-review-2026-09-30.md). To do: create Supabase project, verify Fitbit Air data types |
 | 1 | Health Connect data in | Waiting for the Fitbit Air; needs an EAS development build (Expo Go lacks the native module) |
 | 2 | Scores + Today rings | Done on demo data; tune against real data |
 | 3 | Logging: workouts, plans, meals (AI macros) | Not started |

@@ -89,12 +89,15 @@ sees their own rows.
   codebase, so the health adapter sits behind one interface from day one.
 - **Fitbit Air arrives after Oct 2.** Until then we build against realistic mock data and
   whatever the phone's Health Connect already holds, then switch to real band data.
+- **Dark mode only for now** (decided Sep 30, 2026). Light mode, following the phone's setting,
+  comes later once the screens settle (after milestones 3–4): the glows, rings and yellow
+  recovery color are tuned for dark, and theming every screen twice slows down design changes.
 
 ## 7. Milestones
 
 | # | Milestone | Done when | Status |
 |---|---|---|---|
-| 0 | Setup | Expo app runs on your phone, Supabase project created, Fitbit Air data types verified | App scaffolded; running it on the phone, Supabase and the Fitbit check are still to do |
+| 0 | Setup | Expo app runs on your phone, Supabase project created, Fitbit Air data types verified | App runs on the phone (Expo Go) and got a design pass (Sep 30); Supabase and the Fitbit check are still to do |
 | 1 | Data in | App reads the last 30 days of HR/HRV/sleep/steps and shows raw numbers | Waiting for the Fitbit Air |
 | 2 | Scores | `packages/scoring` implemented + tested; Today screen shows the 3 rings | Done on demo data; tune once real data arrives |
 | 3 | Logging | Log workouts, import a workout plan, log meals by text or photo (AI macros) | |
