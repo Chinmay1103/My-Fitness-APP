@@ -6,6 +6,7 @@ rusty on hands-on coding) together with Claude. Explain changes in plain terms a
 concrete; Chinmay runs the app on his phone and judges how the scores feel.
 
 Full plan: [docs/ROADMAP.md](docs/ROADMAP.md). Run instructions: [docs/SETUP.md](docs/SETUP.md).
+Open design to-dos from the Sep 30 screen-recording review: [docs/design-review-2026-09-30.md](docs/design-review-2026-09-30.md).
 
 ## Decisions so far
 
