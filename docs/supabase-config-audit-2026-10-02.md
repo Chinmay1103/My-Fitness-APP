@@ -104,8 +104,24 @@ Last migration: `initial_schema`. Optional: turn on the "auto-enable RLS on new 
 
 ## To-do (priority order)
 
-- [ ] Create a new Gmail app password, paste it into SMTP settings and save (fixes Send code)
-- [ ] Expose the 6 tables in Data API settings, if the client queries them directly
-- [ ] Revoke EXECUTE on `handle_new_user()` from anon and authenticated
-- [ ] Set a size limit and MIME types on the `meal-photos` bucket
+- [x] Create a new Gmail app password, paste it into SMTP settings and save (fixes Send code)
+- [x] ~~Expose the 6 tables in Data API settings~~ not needed (see follow-up)
+- [x] Revoke EXECUTE on `handle_new_user()` from anon and authenticated
+- [x] Set a size limit and MIME types on the `meal-photos` bucket
 - [ ] Before launch: production Site URL and redirect URLs, a transactional SMTP provider, and backups
+
+## Follow-up (2 Oct, later the same day)
+
+- **SMTP:** fixed. Sign-in codes arrive (first ones in spam). The first sign-in of a new email uses
+  the **Confirm signup** template, so that one now carries `{{ .Token }}` too; its default link went
+  to the `localhost:3000` Site URL.
+- **Data API:** no change needed. The dashboard's "API DISABLED" reflects that `anon` has no grants,
+  which is deliberate. The initial migration grants select/insert/update/delete to `authenticated`,
+  and a signed-out request to `/rest/v1/daily_summaries` returns `42501 permission denied` (table
+  found, role refused) rather than `PGRST205` (table not exposed).
+- **`handle_new_user()`:** wasn't reachable over the API (trigger functions aren't exposed:
+  `/rpc/handle_new_user` returns `PGRST202`), but EXECUTE is revoked anyway in migration
+  `20261002120000_hardening.sql`, which also limits `meal-photos` to 10 MB JPEG/PNG/WebP/HEIC.
+- **Site URL / redirects:** not needed while sign-in uses codes. Revisit if we add links (password
+  reset, web app).
+- Still open: transactional SMTP and backups before anyone else uses the app.
