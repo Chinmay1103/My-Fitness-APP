@@ -122,6 +122,35 @@ account can only read its own rows.
 > The development build started before Supabase was added doesn't include the part that remembers
 > the sign-in, so there you'll sign in again after closing the app. The next build fixes that.
 
+## Coach connector (Claude reads your data and logs workouts and meals)
+
+The connector lets a chat in the Claude app read your scores and record what you tell it ("push
+day, 45 min", "2 rotis and dal"). It's an MCP server in `supabase/functions/mcp/`; Claude signs you
+in through Supabase with the page in `docs/oauth/consent.html`. A free Claude plan allows one custom
+connector.
+
+**Once:**
+
+1. **Supabase -> Authentication -> OAuth Server:** turn it on, set the authorization path to
+   `/oauth/consent`, and turn on **dynamic client registration**.
+2. **Supabase -> Authentication -> URL Configuration:** set the Site URL to
+   `https://chinmay1103.github.io/My-Fitness-APP`.
+3. **GitHub -> the repo -> Settings -> Pages:** *Deploy from a branch*, pick the branch with this code
+   and the `/docs` folder. After a minute,
+   `https://chinmay1103.github.io/My-Fitness-APP/oauth/consent` shows "Start from Claude instead".
+4. **Deploy the connector** (from the repo root):
+   ```bash
+   npx supabase functions deploy mcp --no-verify-jwt --use-api
+   ```
+   Redeploy the same way after changing `supabase/functions/mcp/index.ts`.
+5. **claude.ai -> Customize -> Connectors -> Add custom connector:** name `My Fitness`, URL
+   `https://uhbgogzfelkbnrqthutg.supabase.co/functions/v1/mcp`. If it asks how Claude registers,
+   pick **Register automatically**. Click **Connect**, sign in with your email code, tap **Allow**.
+
+**Using it:** in a chat, make sure My Fitness is on (**+** -> Connectors). Ask "how did I recover
+today?" or say what you trained or ate. Scores show up once real band data has synced; demo data is
+never uploaded.
+
 ## Day one with the Fitbit Air (milestone 1)
 
 1. Set up the band in the Google Health / Fitbit app, and in its settings turn on syncing to
