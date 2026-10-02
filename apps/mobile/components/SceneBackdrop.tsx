@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused } from 'expo-router';
 import { useEffect } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -15,23 +15,17 @@ import Animated, {
 import { colors, timeOfDay, withAlpha, type TimeOfDay } from '@/constants/theme';
 import { useHour } from '@/lib/useHour';
 
-/** Chinmay's photos, converted to WebP (up to 3300 px tall); sources in assets/scenes/CREDITS.md. */
+/**
+ * Chinmay's photos, pre-cropped to the screen's shape around their subject (which sits about a
+ * third of the way down) and at most 2048 px tall: Android halves anything taller before drawing
+ * it, which made bigger files look blurrier. Sources in assets/scenes/CREDITS.md.
+ */
 const SCENES: Record<TimeOfDay, number> = {
   dawn: require('@/assets/scenes/dawn.webp'),
   day: require('@/assets/scenes/day.webp'),
   dusk: require('@/assets/scenes/dusk.webp'),
   night: require('@/assets/scenes/night.webp'),
 };
-
-/**
- * Where each photo's best part is (mountain, horizon), as a fraction of its height. The photo is
- * lifted so that point lands at FOCUS_AT of the screen, in the open space at the top instead of
- * behind the cards further down.
- */
-// dawn: horizon and pier; day: the tree; dusk: lamp and bridge; night: the Milky Way fills the
-// whole photo, so it isn't lifted.
-const FOCUS: Record<TimeOfDay, number> = { dawn: 0.52, day: 0.48, dusk: 0.56, night: 0.3 };
-const FOCUS_AT = 0.3;
 
 /** One slow push-in and back, ms. */
 const DRIFT_MS = 40000;
@@ -48,9 +42,6 @@ export function SceneBackdrop({ color }: { color: string }) {
   const reduced = useReducedMotion();
   const scene = timeOfDay(useHour(focused));
   const clock = colors.timeOfDay[scene];
-  const { height } = useWindowDimensions();
-  // Only ever lift the photo; pushing it down would leave a gap at the top.
-  const lift = Math.min(0, (FOCUS_AT - FOCUS[scene]) * height);
   const t = useSharedValue(0);
 
   useEffect(() => {
@@ -63,8 +54,7 @@ export function SceneBackdrop({ color }: { color: string }) {
   }, [focused, reduced, t]);
 
   const drift = useAnimatedStyle(() => ({
-    // A slow sideways drift; the 3% zoom just hides the edges. Photos 3300 px tall are never shown
-    // enlarged even on a 1440 x 3200 screen (enlarging is what makes them blurry).
+    // A slow sideways drift; the 3% zoom just hides the edges.
     transform: [{ scale: 1.03 }, { translateX: -5 + 10 * t.value }],
   }));
 
@@ -73,11 +63,9 @@ export function SceneBackdrop({ color }: { color: string }) {
       <Animated.Image
         source={SCENES[scene]}
         resizeMode="cover"
-        // Android otherwise halves any image taller than 2048 px before drawing it (Fresco's
-        // automatic downsampling), which is what made the photos blurry. "none" keeps full
-        // resolution: ~20 MB for the one photo on screen, shared by every screen.
+        // Never let Android shrink the photo before drawing it; at <= 2048 px it wouldn't anyway.
         resizeMethod="none"
-        style={[{ position: 'absolute', left: 0, right: 0, top: lift, height }, drift]}
+        style={[StyleSheet.absoluteFill, drift]}
       />
       <LinearGradient
         colors={[withAlpha(color, 0.24), withAlpha(color, 0.06), 'transparent']}
