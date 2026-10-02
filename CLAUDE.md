@@ -57,7 +57,7 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
   Sleep, Strain, Coach; `app/recovery.tsx` is the Recovery detail screen.
   **No logging forms or Log tab** (Chinmay's call, Oct 1). **The coach is the Claude app, not an
   in-app chat** (Chinmay has no paid Claude plan or API key): the Coach tab opens a new claude.ai chat
-  with just the question (`lib/claudeHandoff.ts`; the latest scores are synced first and Claude reads them through the connector, so no numbers show in the chat). The **coach connector** (`supabase/functions/mcp/`, an
+  with just the question (`lib/claudeHandoff.ts`; the latest scores are synced first and Claude reads them through the connector, so no numbers show in the chat). The user can save one chat's link (`lib/coachChat.ts`); then questions go to that chat instead, copied to the clipboard to paste, since claude.ai links can't prefill an existing chat (`lib/clipboard.ts`, loaded lazily). The **coach connector** (`supabase/functions/mcp/`, an
   MCP server; free plans allow one custom connector) lets that chat read the scores and record workouts
   and meals the user types or speaks. Claude signs in via Supabase Auth's OAuth server; the consent page
   is `docs/oauth/consent.html` on GitHub Pages (Edge Functions can't serve HTML). Type-check it with
