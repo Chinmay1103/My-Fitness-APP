@@ -79,15 +79,23 @@ later. Free tier is enough.
 it `my-fitness`, pick region **Mumbai (ap-south-1)**, and save the database password somewhere safe
 (a password manager).
 
-**2. Turn on email codes.** Authentication -> **Emails** -> **Magic Link** template. Replace the
-body with:
+**2. Turn on email codes.** The default sign-in email only has a link, and the app signs in with a
+code instead. Supabase only lets you edit the email after you set up your own sender (SMTP), so
+send it through Gmail (free):
+
+- Turn on 2-Step Verification in your Google account, then create an **app password** at
+  [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
+- Authentication -> **Emails** -> **SMTP Settings**: turn on custom SMTP. Sender email and username:
+  your Gmail address; sender name `My Fitness`; host `smtp.gmail.com`; port `465`; password: the
+  16-letter app password (no spaces).
+- Authentication -> **Emails** -> **Magic link or OTP** *and* **Confirm signup** (a new email gets the
+  second one on its first sign-in): subject `Your My Fitness sign-in code`, and in **Source** replace
+  the body with:
 
 ```html
 <h2>Your My Fitness sign-in code</h2>
 <p>{{ .Token }}</p>
 ```
-
-(By default the email has a link; the app signs in with the code instead.)
 
 **3. Create the tables.** From the repo root:
 
@@ -97,13 +105,14 @@ npx supabase link --project-ref <your-project-ref>   # the ref is in the project
 npm run db:push                                      # creates the tables from supabase/migrations/
 ```
 
-`link` asks for the database password from step 1.
+`link` may ask for the database password from step 1.
 
 **4. Connect the app.** In `apps/mobile`, copy `.env.example` to `.env` and fill in the two values
 from **Project Settings -> API Keys** (the *publishable* key, never the secret one) and the project
 URL. Restart `npm run mobile`.
 
-**5. Sign in.** Today -> the person icon at the top right -> enter your email -> type the code.
+**5. Sign in.** Today -> the person icon at the top right -> enter your email -> type the code. The
+first emails may land in spam (Gmail address sent via Supabase); mark them "Not spam".
 
 What's in the cloud: one summary row per day (resting HR, HRV, sleep times, the three scores and
 their breakdowns). Raw heart-rate samples stay on the phone, and demo data is never uploaded, so
