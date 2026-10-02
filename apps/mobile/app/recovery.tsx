@@ -2,6 +2,7 @@ import { CALIBRATED_DAYS, MIN_BASELINE_DAYS } from '@fitness/scoring';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Breakdown, BreakdownFactor, BreakdownTotal } from '@/components/Breakdown';
+import { LineChart } from '@/components/charts/LineChart';
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Screen } from '@/components/ui';
@@ -10,7 +11,7 @@ import { FACTOR_LABELS, RECOVERY_GUIDANCE, recoveryFactorDetail } from '@/lib/in
 import { useScores } from '@/lib/ScoresProvider';
 
 export default function RecoveryScreen() {
-  const { scores } = useScores();
+  const { scores, days } = useScores();
   const recovery = scores.at(-1)?.recovery;
 
   if (!recovery || recovery.score === null || !recovery.zone || !recovery.breakdown) {
@@ -70,13 +71,33 @@ export default function RecoveryScreen() {
         </Card>
       ) : null}
 
-      <Card title="RECOVERY, LAST 14 DAYS">
+      <Card title="HEART RATE VARIABILITY">
+        <LineChart
+          label="HRV"
+          points={days.slice(-30).map((d) => ({ date: d.date, value: d.hrvRmssd ?? null }))}
+          color={colors.hrv}
+          format={(v) => `${Math.round(v)} ms`}
+          higherIsBetter
+        />
+      </Card>
+
+      <Card title="RESTING HEART RATE">
+        <LineChart
+          label="Resting HR"
+          points={days.slice(-30).map((d) => ({ date: d.date, value: d.restingHr ?? null }))}
+          color={colors.restingHr}
+          format={(v) => `${Math.round(v)} bpm`}
+          higherIsBetter={false}
+        />
+      </Card>
+
+      <Card title="RECOVERY TREND">
         <TrendBars
           label="Recovery"
           max={100}
           color={colors.muted}
           format={(v) => `${Math.round(v)}%`}
-          points={scores.slice(-14).map((s) => ({
+          points={scores.slice(-30).map((s) => ({
             date: s.date,
             value: s.recovery?.score ?? null,
             color: s.recovery?.zone ? colors.recovery[s.recovery.zone] : undefined,

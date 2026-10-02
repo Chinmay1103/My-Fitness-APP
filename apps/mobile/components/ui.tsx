@@ -16,7 +16,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { backdrop, colors, gradients, radius, spacing, type, type Backdrop } from '@/constants/theme';
+import { Aurora } from '@/components/Aurora';
+import { SceneBackdrop } from '@/components/SceneBackdrop';
+import { colors, gradients, radius, spacing, type } from '@/constants/theme';
+import { useBackgroundStyle } from '@/lib/backgroundStyle';
 import { refreshHaptic, tapHaptic } from '@/lib/haptics';
 import { useScores } from '@/lib/ScoresProvider';
 
@@ -29,10 +32,10 @@ type ScreenProps = {
   accessory?: ReactNode;
   /** Show a back arrow (for screens pushed on top of the tabs). */
   back?: boolean;
-  /** Tints the whole screen with its main color (e.g. today's recovery zone); neutral if left out. */
+  /** The screen's main color for the moving background (e.g. today's recovery zone); grey if left out. */
   glow?: string;
-  /** A ready-made background instead of `glow`, e.g. `todayBackdrop()`. */
-  background?: Backdrop;
+  /** A second background color lower down; the time-of-day color if left out. */
+  glow2?: string;
 };
 
 /**
@@ -40,12 +43,12 @@ type ScreenProps = {
  * Navigator headers are hidden app-wide; every screen draws its own title here, so the glow runs
  * all the way up behind the status bar instead of stopping under a flat header bar.
  */
-export function Screen({ children, overline, title, accessory, back, glow, background }: ScreenProps) {
+export function Screen({ children, overline, title, accessory, back, glow, glow2 }: ScreenProps) {
   const { loading, error, scores, refresh } = useScores();
+  const backgroundStyle = useBackgroundStyle();
   const insets = useSafeAreaInsets();
   // The tab bar floats over the content (see app/(tabs)/_layout.tsx); undefined outside the tabs.
   const tabBarHeight = useContext(BottomTabBarHeightContext) ?? insets.bottom;
-  const tint = background ?? backdrop(glow ?? colors.muted);
 
   if (loading && scores.length === 0) {
     return (
@@ -57,7 +60,11 @@ export function Screen({ children, overline, title, accessory, back, glow, backg
 
   return (
     <View style={styles.screen}>
-      <LinearGradient pointerEvents="none" colors={tint.colors} locations={tint.locations} style={StyleSheet.absoluteFill} />
+      {backgroundStyle === 'scenes' ? (
+        <SceneBackdrop color={glow ?? colors.muted} />
+      ) : (
+        <Aurora color={glow ?? colors.muted} second={glow2} strength={glow ? 1 : 0.7} />
+      )}
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[

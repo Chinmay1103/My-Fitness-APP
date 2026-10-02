@@ -1,11 +1,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 
 import { Breakdown, BreakdownFactor, BreakdownTotal } from '@/components/Breakdown';
 import { ScoreRing } from '@/components/ScoreRing';
-import { TrendBars } from '@/components/TrendBars';
+import { ComboChart } from '@/components/charts/ComboChart';
 import { Card, Muted, Screen, Stat } from '@/components/ui';
-import { colors } from '@/constants/theme';
+import { colors, motion } from '@/constants/theme';
+import { useAnimatedTarget } from '@/lib/animation';
 import { formatMinutes, formatTime } from '@/lib/format';
 import { useScores } from '@/lib/ScoresProvider';
 
@@ -69,34 +71,46 @@ export default function StrainScreen() {
         {zoneMinutes.map((minutes, i) => (
           <View key={i} style={styles.zoneRow}>
             <Stat label={`Zone ${i + 1}`} value={formatMinutes(minutes)} color={colors.hrZones[i]} />
-            <View style={styles.zoneTrack}>
-              <LinearGradient
-                colors={[`${colors.hrZones[i]}80`, colors.hrZones[i]]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={{ flex: minutes / maxZone, borderRadius: 5 }}
-              />
-            </View>
+            <ZoneBar index={i} fraction={minutes / maxZone} color={colors.hrZones[i]} />
           </View>
         ))}
       </Card>
 
-      <Card title="STRAIN, LAST 14 DAYS">
-        <TrendBars
-          label="Strain"
-          max={21}
-          color={colors.strain}
-          format={(v) => v.toFixed(1)}
-          points={scores.slice(-14).map((s) => ({ date: s.date, value: s.strain.strain }))}
+      <Card title="STRAIN VS RECOVERY">
+        <ComboChart
+          points={scores.slice(-30).map((s) => ({
+            date: s.date,
+            bar: s.strain.strain,
+            line: s.recovery?.score ?? null,
+            lineColor: s.recovery?.zone ? colors.recovery[s.recovery.zone] : undefined,
+          }))}
+          bar={{ label: 'Strain', color: colors.strain, max: 21, format: (v) => v.toFixed(1) }}
+          line={{ label: 'Recovery', color: colors.text, max: 100, format: (v) => `${Math.round(v)}%` }}
+          describe={(p) => `${strainLabel(p.bar ?? 0)} day · woke up ${p.line != null ? `${Math.round(p.line)}% recovered` : 'not scored yet'}`}
         />
+        <Muted>Push on green days, go easier on red ones: when strain stays high while recovery keeps dropping, you&apos;re overreaching.</Muted>
       </Card>
 
     </Screen>
   );
 }
 
+/** One heart-rate zone's bar, growing in from the left after the one above it. */
+function ZoneBar({ index, fraction, color }: { index: number; fraction: number; color: string }) {
+  const grow = useAnimatedTarget(fraction, motion.bars, index * motion.barStagger * 2);
+  const style = useAnimatedStyle(() => ({ width: `${grow.value * 100}%` }));
+  return (
+    <View style={styles.zoneTrack}>
+      <Animated.View style={[styles.zoneFill, style]}>
+        <LinearGradient colors={[`${color}80`, color]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
+      </Animated.View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: 12 },
   zoneRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  zoneTrack: { flex: 2, height: 10, flexDirection: 'row', backgroundColor: colors.track, borderRadius: 5, overflow: 'hidden' },
+  zoneTrack: { flex: 2, height: 10, backgroundColor: colors.track, borderRadius: 5, overflow: 'hidden' },
+  zoneFill: { height: '100%', borderRadius: 5, overflow: 'hidden' },
 });

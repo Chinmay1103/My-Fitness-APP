@@ -1,6 +1,9 @@
 import { StyleSheet, View } from 'react-native';
 
 import { Breakdown, BreakdownFactor, BreakdownTotal } from '@/components/Breakdown';
+import { ComboChart } from '@/components/charts/ComboChart';
+import { Donut } from '@/components/charts/Donut';
+import { Hypnogram } from '@/components/charts/Hypnogram';
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Row, Screen, Stat } from '@/components/ui';
@@ -9,10 +12,10 @@ import { formatMinutes } from '@/lib/format';
 import { useScores } from '@/lib/ScoresProvider';
 
 const STAGES = [
-  { key: 'awake', label: 'Awake' },
-  { key: 'light', label: 'Light' },
   { key: 'deep', label: 'Deep' },
   { key: 'rem', label: 'REM' },
+  { key: 'light', label: 'Light' },
+  { key: 'awake', label: 'Awake' },
 ] as const;
 
 export default function SleepScreen() {
@@ -29,7 +32,6 @@ export default function SleepScreen() {
     );
   }
 
-  const totalStages = STAGES.reduce((sum, s) => sum + session.stages[s.key], 0);
   const { ceiling, penalties } = sleep.breakdown;
   const penaltyScale = Math.max(penalties.efficiency, penalties.restorative, penalties.consistency, 1);
   const bedtimeDrift = Math.round((1 - sleep.consistency) * 120);
@@ -44,6 +46,12 @@ export default function SleepScreen() {
           </Muted>
         </View>
       </Card>
+
+      {session.segments?.length ? (
+        <Card title="LAST NIGHT, STAGE BY STAGE">
+          <Hypnogram segments={session.segments} />
+        </Card>
+      ) : null}
 
       <Card title={`WHY ${sleep.score}%`}>
         <Breakdown>
@@ -112,16 +120,18 @@ export default function SleepScreen() {
       ) : null}
 
       <Card title="STAGES">
-        <View style={styles.stageBar}>
-          {STAGES.map((s) => (
-            <View key={s.key} style={{ flex: session.stages[s.key] / totalStages, backgroundColor: colors.sleepStages[s.key] }} />
-          ))}
-        </View>
-        <Row>
-          {STAGES.map((s) => (
-            <Stat key={s.key} label={s.label} value={formatMinutes(session.stages[s.key])} color={colors.sleepStages[s.key]} />
-          ))}
-        </Row>
+        <Donut
+          center={formatMinutes(sleep.asleepMinutes)}
+          centerLabel="asleep"
+          slices={STAGES.map((s) => ({
+            key: s.key,
+            label: s.label,
+            value: session.stages[s.key],
+            color: colors.sleepStages[s.key],
+            valueText: formatMinutes(session.stages[s.key]),
+          }))}
+        />
+        <Muted>Tap a stage to see its share. Deep and REM together around 40% of sleep is a good night.</Muted>
       </Card>
 
       <Card title="QUALITY">
@@ -132,13 +142,26 @@ export default function SleepScreen() {
         </Row>
       </Card>
 
-      <Card title="SLEEP PERFORMANCE, LAST 14 DAYS">
+      <Card title="HOURS SLEPT VS NEEDED">
+        <ComboChart
+          points={scores.slice(-30).map((s) => ({ date: s.date, bar: s.sleep?.asleepMinutes ?? null, line: s.sleep?.needMinutes ?? null }))}
+          bar={{ label: 'Slept', color: colors.sleep, max: 11 * 60, format: formatMinutes }}
+          line={{ label: 'Needed', color: colors.text, max: 11 * 60, format: formatMinutes, dashed: true }}
+          describe={(p) => {
+            if (p.bar == null || p.line == null) return 'no sleep recorded';
+            const gap = p.bar - p.line;
+            return `needed ${formatMinutes(p.line)} · ${Math.abs(gap) < 5 ? 'right on it' : `${formatMinutes(Math.abs(gap))} ${gap > 0 ? 'extra' : 'short'}`}`;
+          }}
+        />
+      </Card>
+
+      <Card title="SLEEP TREND">
         <TrendBars
           label="Sleep performance"
           max={100}
           color={colors.sleep}
           format={(v) => `${Math.round(v)}%`}
-          points={scores.slice(-14).map((s) => ({ date: s.date, value: s.sleep?.score ?? null }))}
+          points={scores.slice(-30).map((s) => ({ date: s.date, value: s.sleep?.score ?? null }))}
         />
       </Card>
     </Screen>
@@ -147,5 +170,4 @@ export default function SleepScreen() {
 
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: 12 },
-  stageBar: { flexDirection: 'row', height: 14, borderRadius: 7, overflow: 'hidden', gap: 2 },
 });

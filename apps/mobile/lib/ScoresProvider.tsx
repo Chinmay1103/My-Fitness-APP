@@ -17,6 +17,8 @@ interface ScoresState {
   /** Result of the last upload to Supabase: 'ok', an error message, or null if nothing was sent. */
   syncStatus: string | null;
   refresh: () => Promise<void>;
+  /** Uploads the current scores again, so the coach connector sees the latest numbers. */
+  syncNow: () => Promise<void>;
 }
 
 const ScoresContext = createContext<ScoresState | null>(null);
@@ -55,9 +57,18 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh]);
 
+  const syncNow = useCallback(async () => {
+    try {
+      const sent = await syncDailySummaries(source.id, days, scores);
+      setSyncStatus(sent ? 'ok' : null);
+    } catch (e) {
+      setSyncStatus(e instanceof Error ? e.message : String(e));
+    }
+  }, [source, days, scores]);
+
   return (
     <ScoresContext.Provider
-      value={{ loading, error, sourceLabel: source.label, sourceId: source.id, days, scores, syncStatus, refresh }}>
+      value={{ loading, error, sourceLabel: source.label, sourceId: source.id, days, scores, syncStatus, refresh, syncNow }}>
       {children}
     </ScoresContext.Provider>
   );

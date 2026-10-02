@@ -57,7 +57,7 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
   Sleep, Strain, Coach; `app/recovery.tsx` is the Recovery detail screen.
   **No logging forms or Log tab** (Chinmay's call, Oct 1). **The coach is the Claude app, not an
   in-app chat** (Chinmay has no paid Claude plan or API key): the Coach tab opens a new claude.ai chat
-  with the question plus today's numbers (`lib/claudeHandoff.ts`). The **coach connector** (`supabase/functions/mcp/`, an
+  with just the question (`lib/claudeHandoff.ts`; the latest scores are synced first and Claude reads them through the connector, so no numbers show in the chat). The **coach connector** (`supabase/functions/mcp/`, an
   MCP server; free plans allow one custom connector) lets that chat read the scores and record workouts
   and meals the user types or speaks. Claude signs in via Supabase Auth's OAuth server; the consent page
   is `docs/oauth/consent.html` on GitHub Pages (Edge Functions can't serve HTML). Type-check it with
@@ -67,7 +67,11 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
   explains; it never changes a score. `lib/workouts.ts` holds the workout model
   and matches workouts to band-detected activities. Shared data comes from
   `lib/ScoresProvider.tsx`; UI pieces live in `components/`; design tokens (colors, gradients,
-  fonts, motion) in `constants/theme.ts`. Use tokens, not raw hex, in screens.
+  fonts, motion) in `constants/theme.ts`. Charts are in `components/charts/` (bars, line, combo, donut, sleep-stage
+  hypnogram; all react-native-svg, no chart library). The background behind every screen is either
+  **Scenes** (bundled public-domain photos per time of day, `components/SceneBackdrop.tsx`) or
+  **Aurora** (moving lights), picked on the Account screen (`lib/backgroundStyle.ts`); the tab bar is
+  `components/TabBar.tsx`. Use tokens, not raw hex, in screens.
   Visual direction: `design-system/my-fitness-app/MASTER.md` (made with the ui-ux-pro-max skill in
   `.claude/skills/`; its "Project decisions" table overrides the generated parts). Rings and charts
   animate via Reanimated and skip motion when the phone's "reduce motion" setting is on; haptics go through

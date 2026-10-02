@@ -1,7 +1,9 @@
 import 'react-native-url-polyfill/auto';
 
 import { createClient, processLock, type SupabaseClient } from '@supabase/supabase-js';
-import { AppState, Platform, TurboModuleRegistry } from 'react-native';
+import { AppState, Platform } from 'react-native';
+
+import { localStore } from './storage';
 
 /**
  * The Supabase client, or null when the project isn't configured (no .env yet), so the app still
@@ -11,34 +13,11 @@ import { AppState, Platform, TurboModuleRegistry } from 'react-native';
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const key = process.env.EXPO_PUBLIC_SUPABASE_KEY;
 
-interface SessionStorage {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-  removeItem(key: string): Promise<void>;
-}
-
-/**
- * Where the sign-in is kept between launches: AsyncStorage. Like Health Connect, AsyncStorage
- * throws as soon as it's imported if its native part isn't in the build (an APK built before it was
- * added), so it's only loaded when present. Without it the sign-in lasts until the app closes.
- */
-function sessionStorage(): SessionStorage {
-  if (TurboModuleRegistry.get('RNCAsyncStorage')) {
-    return require('@react-native-async-storage/async-storage').default as SessionStorage;
-  }
-  const memory = new Map<string, string>();
-  return {
-    getItem: async (k) => memory.get(k) ?? null,
-    setItem: async (k, v) => void memory.set(k, v),
-    removeItem: async (k) => void memory.delete(k),
-  };
-}
-
 export const supabase: SupabaseClient | null =
   url && key
     ? createClient(url, key, {
         auth: {
-          storage: Platform.OS === 'web' ? undefined : sessionStorage(),
+          storage: Platform.OS === 'web' ? undefined : localStore,
           autoRefreshToken: true,
           persistSession: true,
           detectSessionInUrl: false,

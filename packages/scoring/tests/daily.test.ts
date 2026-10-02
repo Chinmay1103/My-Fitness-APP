@@ -42,3 +42,18 @@ describe("daily scores on mock data", () => {
     expect(Math.max(...strains)).toBeGreaterThan(12);
   });
 });
+
+describe("mock sleep segments", () => {
+  it("run back to back in time order and add up to the stage totals", () => {
+    for (const day of generateMockDays({ days: 20, endDate: "2026-09-30" })) {
+      const sleep = day.sleep!;
+      const segs = sleep.segments!;
+      expect(segs[0]!.start).toBe(sleep.start);
+      expect(segs.at(-1)!.end).toBe(sleep.end);
+      for (let i = 1; i < segs.length; i++) expect(segs[i]!.start).toBe(segs[i - 1]!.end);
+      const totals = { awake: 0, light: 0, deep: 0, rem: 0 };
+      for (const s of segs) totals[s.stage] += (s.end - s.start) / 60_000;
+      expect(totals).toEqual(sleep.stages);
+    }
+  });
+});

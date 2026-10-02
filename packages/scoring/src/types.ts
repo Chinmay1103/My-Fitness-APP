@@ -14,10 +14,21 @@ export interface SleepStageMinutes {
   rem: number;
 }
 
+export type SleepStage = keyof SleepStageMinutes;
+
+/** One stretch of a single stage, e.g. 01:40–02:05 deep. */
+export interface SleepSegment {
+  start: Timestamp;
+  end: Timestamp;
+  stage: SleepStage;
+}
+
 export interface SleepSession {
   start: Timestamp;
   end: Timestamp;
   stages: SleepStageMinutes;
+  /** The night stage by stage, in time order, when the band recorded it. Only drawn, never scored. */
+  segments?: SleepSegment[];
 }
 
 export interface UserProfile {

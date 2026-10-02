@@ -7,7 +7,7 @@ import { CoachNoteCard } from '@/components/CoachNoteCard';
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Pill, Row, Screen, Stat } from '@/components/ui';
-import { colors, fonts, todayBackdrop } from '@/constants/theme';
+import { colors, fonts } from '@/constants/theme';
 import { formatDate, formatMinutes } from '@/lib/format';
 import { tapHaptic } from '@/lib/haptics';
 import { useCoachNote } from '@/lib/coachNote';
@@ -49,7 +49,7 @@ export default function TodayScreen() {
           </Pressable>
         </View>
       }
-      background={todayBackdrop(recoveryColor)}>
+      glow={recoveryColor}>
 
       <Card>
         <Row>
@@ -102,13 +102,13 @@ export default function TodayScreen() {
         </Row>
       </Card>
 
-      <Card title="RECOVERY, LAST 14 DAYS">
+      <Card title="RECOVERY TREND">
         <TrendBars
           label="Recovery"
           max={100}
           color={colors.muted}
           format={(v) => `${Math.round(v)}%`}
-          points={scores.slice(-14).map((s) => ({
+          points={scores.slice(-30).map((s) => ({
             date: s.date,
             value: s.recovery?.score ?? null,
             color: s.recovery?.zone ? colors.recovery[s.recovery.zone] : undefined,

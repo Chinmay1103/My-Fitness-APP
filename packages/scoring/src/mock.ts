@@ -1,4 +1,4 @@
-import type { DayData, HeartRateSample, UserProfile } from "./types";
+import type { DayData, HeartRateSample, SleepSegment, SleepStageMinutes, UserProfile } from "./types";
 
 /**
  * Realistic fake data so we can build and test before the Fitbit Air arrives.
@@ -35,6 +35,50 @@ const WORKOUT: Record<Load, { minutes: number; effort: number }> = {
   hard: { minutes: 70, effort: 0.78 },
 };
 
+/** Splits `total` whole minutes by `weights`, so the parts always add back up to `total`. */
+function split(total: number, weights: number[]): number[] {
+  const sum = weights.reduce((a, b) => a + b, 0) || 1;
+  const parts = weights.map((w) => Math.floor((total * w) / sum));
+  let left = total - parts.reduce((a, b) => a + b, 0);
+  for (let i = 0; left > 0; i = (i + 1) % parts.length, left--) parts[i] = (parts[i] ?? 0) + 1;
+  return parts;
+}
+
+/**
+ * A believable night, stage by stage, that adds up exactly to `stages`: roughly 90-minute cycles of
+ * light → deep → light → REM, with most deep sleep early and REM growing towards morning, a few
+ * minutes awake falling asleep and short wake-ups between cycles. Uses no randomness, so adding it
+ * didn't change any other mock numbers.
+ */
+function mockSegments(start: number, stages: SleepStageMinutes): SleepSegment[] {
+  const asleep = stages.light + stages.deep + stages.rem;
+  const cycles = Math.max(3, Math.round(asleep / 90));
+  const index = Array.from({ length: cycles }, (_, i) => i);
+  const deep = split(stages.deep, index.map((i) => Math.max(0, 4 - i)));
+  const rem = split(stages.rem, index.map((i) => i + 1));
+  const light = split(stages.light, index.map(() => 1));
+  // A third of the awake time is falling asleep; the rest is brief wake-ups between cycles.
+  const [latency = 0, ...wakeups] = split(stages.awake, [cycles - 1, ...index.slice(1).map(() => 2)]);
+
+  const segments: SleepSegment[] = [];
+  let t = start;
+  const add = (stage: SleepSegment["stage"], minutes: number) => {
+    if (minutes <= 0) return;
+    segments.push({ start: t, end: t + minutes * MINUTE, stage });
+    t += minutes * MINUTE;
+  };
+  add("awake", latency);
+  for (const i of index) {
+    const [lightA = 0, lightB = 0] = split(light[i] ?? 0, [3, 2]);
+    add("light", lightA);
+    add("deep", deep[i] ?? 0);
+    add("light", lightB);
+    add("rem", rem[i] ?? 0);
+    if (i > 0) add("awake", wakeups[i - 1] ?? 0);
+  }
+  return segments;
+}
+
 export interface MockOptions {
   days?: number;
   seed?: number;
@@ -69,10 +113,12 @@ export function generateMockDays(options: MockOptions = {}): DayData[] {
     const awake = Math.round(25 + Math.abs(noise(20)));
     const deep = Math.round(asleep * (0.17 + noise(0.04)));
     const rem = Math.round(asleep * (0.22 + noise(0.05)));
+    const stages = { awake, light: asleep - deep - rem, deep, rem };
     const sleep = {
       start: sleepStart,
       end: sleepStart + (asleep + awake) * MINUTE,
-      stages: { awake, light: asleep - deep - rem, deep, rem },
+      stages,
+      segments: mockSegments(sleepStart, stages),
     };
 
     const loadEffect = prevLoad === "hard" ? 1 : prevLoad === "moderate" ? 0.3 : -0.4;

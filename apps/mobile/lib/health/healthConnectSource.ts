@@ -1,4 +1,4 @@
-import type { DayData, HeartRateSample, SleepSession, SleepStageMinutes } from '@fitness/scoring';
+import type { DayData, HeartRateSample, SleepSegment, SleepSession, SleepStage, SleepStageMinutes } from '@fitness/scoring';
 import { Platform, TurboModuleRegistry } from 'react-native';
 import type { Permission, ReadRecordsResult, RecordType } from 'react-native-health-connect';
 
@@ -93,24 +93,36 @@ function localDate(time: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function toStage(code: number): SleepStage {
+  if (code === Stage.DEEP) return 'deep';
+  if (code === Stage.REM) return 'rem';
+  if (code === Stage.AWAKE || code === Stage.OUT_OF_BED) return 'awake';
+  // LIGHT, plain SLEEPING and UNKNOWN all count as light sleep.
+  return 'light';
+}
+
 function toSleepSession(record: { startTime: string; endTime: string; stages?: { startTime: string; endTime: string; stage: number }[] }): SleepSession {
   const start = Date.parse(record.startTime);
   const end = Date.parse(record.endTime);
   const stages: SleepStageMinutes = { awake: 0, light: 0, deep: 0, rem: 0 };
+  const segments: SleepSegment[] = [];
   if (record.stages?.length) {
-    for (const s of record.stages) {
-      const minutes = (Date.parse(s.endTime) - Date.parse(s.startTime)) / 60000;
-      if (s.stage === Stage.DEEP) stages.deep += minutes;
-      else if (s.stage === Stage.REM) stages.rem += minutes;
-      else if (s.stage === Stage.AWAKE || s.stage === Stage.OUT_OF_BED) stages.awake += minutes;
-      // LIGHT, plain SLEEPING and UNKNOWN all count as light sleep.
-      else stages.light += minutes;
+    const sorted = [...record.stages].sort((a, b) => Date.parse(a.startTime) - Date.parse(b.startTime));
+    for (const s of sorted) {
+      const segStart = Date.parse(s.startTime);
+      const segEnd = Date.parse(s.endTime);
+      const stage = toStage(s.stage);
+      stages[stage] += (segEnd - segStart) / 60000;
+      // Join back-to-back pieces of the same stage, so the chart draws one block.
+      const last = segments.at(-1);
+      if (last && last.stage === stage && segStart - last.end < 60000) last.end = segEnd;
+      else segments.push({ start: segStart, end: segEnd, stage });
     }
   } else {
     // No stages recorded: treat the whole session as sleep.
     stages.light = (end - start) / 60000;
   }
-  return { start, end, stages };
+  return { start, end, stages, segments: segments.length ? segments : undefined };
 }
 
 /** Opens Health Connect's own settings, e.g. to change permissions. */

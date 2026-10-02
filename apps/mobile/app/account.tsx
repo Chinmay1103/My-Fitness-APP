@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, Input, Muted, Screen } from '@/components/ui';
+import { Button, Card, Chip, Input, Muted, Screen } from '@/components/ui';
+import { setBackgroundStyle, useBackgroundStyle } from '@/lib/backgroundStyle';
 import { colors, type } from '@/constants/theme';
 import { useAuth } from '@/lib/AuthProvider';
 import { useScores } from '@/lib/ScoresProvider';
@@ -12,6 +13,7 @@ import { supabase } from '@/lib/supabase';
  * scores work without it. It's needed for backup, and later for meal logging and the coach.
  */
 export default function AccountScreen() {
+  const background = useBackgroundStyle();
   const { enabled, session } = useAuth();
   const { sourceId, syncStatus, refresh } = useScores();
   const [email, setEmail] = useState('');
@@ -122,11 +124,23 @@ export default function AccountScreen() {
         </Card>
       )}
       {message ? <Text style={styles.error}>{message}</Text> : null}
+      <Card title="BACKGROUND">
+        <View style={styles.chips}>
+          <Chip label="Scenes" selected={background === 'scenes'} onPress={() => setBackgroundStyle('scenes')} />
+          <Chip label="Aurora" selected={background === 'aurora'} onPress={() => setBackgroundStyle('aurora')} />
+        </View>
+        <Muted>
+          {background === 'scenes'
+            ? 'Mountain photos that follow the time of day: dawn, day, dusk and night.'
+            : 'Soft moving lights in your score colors, shifting with the time of day.'}
+        </Muted>
+      </Card>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  chips: { flexDirection: 'row', gap: 8 },
   email: { ...type.title, color: colors.text },
   status: { ...type.caption, color: colors.text },
   error: { ...type.body, color: colors.recovery.red },

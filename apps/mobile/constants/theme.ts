@@ -22,8 +22,10 @@ export const colors = {
   cardEdge: 'rgba(255,255,255,0.22)',
   /** Solid dark grey, for the few things that can't be see-through (the refresh spinner's disc). */
   surface: '#1C1A19',
-  /** Tab bar: see-through, so the screen's gradient carries on behind it. */
-  tabBar: 'rgba(5,5,5,0.72)',
+  /** Floating tab bar: dark glass, so the moving background still shows through a little. */
+  tabBar: 'rgba(16,15,14,0.86)',
+  /** The pill behind the selected tab icon. */
+  tabActive: 'rgba(255,255,255,0.12)',
   border: 'rgba(255,255,255,0.10)',
   text: '#FAFAF9',
   muted: '#A8A29E',
@@ -42,6 +44,19 @@ export const colors = {
     deep: '#5A3CC8',
     rem: '#C9B2FF',
   },
+  /**
+   * Third light in the moving background, following the clock so the app looks different through
+   * the day: amber at dawn, coral in the day, pink at dusk, violet at night. Still no blue.
+   */
+  timeOfDay: {
+    dawn: '#FFB36B',
+    day: '#FF9E7A',
+    dusk: '#FF6FA3',
+    night: '#7B5CFF',
+  },
+  /** Line charts on the Recovery screen. */
+  hrv: '#2ED573',
+  restingHr: '#FF6B81',
   /** Heart-rate zones 1–5, easy to hard. */
   hrZones: ['#78716C', '#2ED573', '#F5C518', '#FF8A1F', '#FF4757'],
 };
@@ -59,34 +74,24 @@ export const gradients = {
   neutral: ['#E7E5E4', colors.muted],
 } as const;
 
-export interface Backdrop {
-  colors: readonly [string, string, string];
-  locations: readonly [number, number, number];
-}
-
 /** `hex` (6-digit) at `opacity` 0–1, as 8-digit hex. */
-function withAlpha(hex: string, opacity: number): string {
+export function withAlpha(hex: string, opacity: number): string {
   return `${hex}${Math.round(Math.min(Math.max(opacity, 0), 1) * 255).toString(16).padStart(2, '0')}`;
 }
 
-/**
- * Full-screen background tint: strongest at the top, never quite gone at the bottom, so the
- * screen's color (e.g. today's recovery zone) washes over the whole page. `lower` lets the bottom
- * fade into a second color.
- */
-export function backdrop(tint: string, strength = 1, lower = tint): Backdrop {
-  return {
-    colors: [withAlpha(tint, 0.3 * strength), withAlpha(lower, 0.1 * strength), withAlpha(lower, 0.05 * strength)],
-    locations: [0, 0.45, 1],
-  };
+export type TimeOfDay = keyof typeof colors.timeOfDay;
+
+/** Which part of the day `hour` (0–23, the phone's local time) falls in. */
+export function timeOfDay(hour: number): TimeOfDay {
+  if (hour >= 5 && hour < 10) return 'dawn';
+  if (hour >= 10 && hour < 17) return 'day';
+  if (hour >= 17 && hour < 21) return 'dusk';
+  return 'night';
 }
 
-/**
- * The Today screen's background ("aurora"): today's recovery color at the top, melting into sleep
- * violet lower down. Chosen over a flat zone tint, a softer one, neutral grey and plain black.
- */
-export function todayBackdrop(recoveryColor: string): Backdrop {
-  return backdrop(recoveryColor, 1, colors.sleep);
+/** The background's time-of-day color for `hour`. */
+export function timeOfDayTint(hour: number): string {
+  return colors.timeOfDay[timeOfDay(hour)];
 }
 
 /** Picks a gradient whose dark end is `color`, falling back to a flat one. */
@@ -131,4 +136,8 @@ export const motion = {
   bars: 650,
   barStagger: 35,
   countUp: 900,
+  /** One drift of a background light; each light uses a different multiple so they never sync up. */
+  aurora: 16000,
+  /** Tab bar's selected pill sliding between tabs. */
+  tabSlide: 260,
 };
