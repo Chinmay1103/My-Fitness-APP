@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { Button, Card, Input, Muted, Pill, Screen } from '@/components/ui';
-import { colors, spacing, type } from '@/constants/theme';
-import { buildContext, buildMessage, openInClaude, shareToClaude } from '@/lib/claudeHandoff';
+import { colors, spacing } from '@/constants/theme';
+import { openInClaude, shareToClaude } from '@/lib/claudeHandoff';
 import { useScores } from '@/lib/ScoresProvider';
 
 const QUESTIONS = [
@@ -13,17 +13,29 @@ const QUESTIONS = [
   'How was my week?',
 ];
 
+/** Only bounds the wait before opening Claude; a slow upload still finishes in the background. */
+const SYNC_WAIT_MS = 4000;
+
 /**
  * The coach lives in the Claude app: ask here (type, or use the keyboard's mic) and the app opens
- * Claude with your question and today's numbers attached. Later a connector (MCP server) will let
- * that same Claude chat record workouts and meals back into the app.
+ * Claude with just your question. Claude reads your scores, workouts and meals itself through the
+ * My Fitness connector, so no numbers clutter the chat. The latest scores are uploaded first.
  */
 export default function CoachScreen() {
-  const { scores, days, sourceId } = useScores();
+  const { sourceId, syncNow } = useScores();
   const [question, setQuestion] = useState('');
-  const context = useMemo(() => buildContext(scores, days, sourceId), [scores, days, sourceId]);
+  const [opening, setOpening] = useState(false);
 
-  const ask = (q: string) => openInClaude(buildMessage(context, q));
+  const handOff = async (send: (q: string) => Promise<void>, q: string) => {
+    setOpening(true);
+    try {
+      await Promise.race([syncNow(), new Promise((resolve) => setTimeout(resolve, SYNC_WAIT_MS))]);
+      await send(q.trim());
+    } finally {
+      setOpening(false);
+    }
+  };
+  const ask = (q: string) => handOff(openInClaude, q);
 
   return (
     <Screen overline="COACH" title="Ask Claude" glow={colors.muted}>
@@ -36,12 +48,12 @@ export default function CoachScreen() {
           style={styles.question}
           maxLength={500}
         />
-        <Button label="Ask Claude" onPress={() => ask(question)} disabled={!question.trim()} />
+        <Button label={opening ? 'Opening Claude…' : 'Ask Claude'} onPress={() => ask(question)} disabled={!question.trim() || opening} />
         <Button
           label="Share to Claude instead"
           variant="secondary"
-          onPress={() => shareToClaude(buildMessage(context, question))}
-          disabled={!question.trim()}
+          onPress={() => handOff(shareToClaude, question)}
+          disabled={!question.trim() || opening}
         />
         <View style={styles.wrap}>
           {QUESTIONS.map((q) => (
@@ -52,17 +64,15 @@ export default function CoachScreen() {
         </View>
       </Card>
 
-      <Card title="CLAUDE WILL SEE">
-        <Muted>Sent with your question, so Claude answers from your own numbers:</Muted>
-        <Text style={styles.context}>{context || 'No data yet.'}</Text>
-      </Card>
-
-      <Card title="COMING: RECORD WHAT YOU DID">
+      <Card title="HOW CLAUDE KNOWS YOUR DAY">
         <Muted>
-          Once the My Fitness connector is added to your Claude account, you&apos;ll also be able to tell Claude what you
-          trained or ate (&quot;Push day, bench 3×8 at 60&quot;, &quot;2 rotis and dal for lunch&quot;) and it will save it
-          here. Needs Supabase set up first.
+          Only your question goes into the chat. Claude reads your recovery, strain, sleep, workouts and meals itself
+          through the My Fitness connector, and you can tell it what you trained or ate (&quot;Push day, bench 3×8 at
+          60&quot;, &quot;2 rotis and dal for lunch&quot;) to have it saved.
         </Muted>
+        {sourceId === 'mock' && (
+          <Muted>You&apos;re on demo data, which is never uploaded, so Claude won&apos;t see these scores yet.</Muted>
+        )}
       </Card>
     </Screen>
   );
@@ -71,5 +81,4 @@ export default function CoachScreen() {
 const styles = StyleSheet.create({
   question: { minHeight: 80, textAlignVertical: 'top' },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  context: { ...type.caption, lineHeight: 18, color: colors.text },
 });
