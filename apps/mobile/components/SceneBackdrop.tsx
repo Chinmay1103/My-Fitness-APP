@@ -15,7 +15,7 @@ import Animated, {
 import { colors, timeOfDay, withAlpha, type TimeOfDay } from '@/constants/theme';
 import { useHour } from '@/lib/useHour';
 
-/** Public-domain / CC0 photos at full phone resolution (1200 x 2600); sources in assets/scenes/CREDITS.md. */
+/** Public-domain / CC0 photos at 1500 x 3300, sharp on QHD phones too; sources in assets/scenes/CREDITS.md. */
 const SCENES: Record<TimeOfDay, number> = {
   dawn: require('@/assets/scenes/dawn.webp'),
   day: require('@/assets/scenes/day.webp'),
@@ -61,8 +61,9 @@ export function SceneBackdrop({ color }: { color: string }) {
   }, [focused, reduced, t]);
 
   const drift = useAnimatedStyle(() => ({
-    // Stays under the photo's own 1200 px width on a typical phone, so it never gets blurry.
-    transform: [{ scale: 1.04 + 0.04 * t.value }, { translateX: -8 + 16 * t.value }],
+    // A slow sideways drift; the 3% zoom just hides the edges. Photos are 1500 x 3300, so even a
+    // 1440 x 3200 screen never shows them enlarged (which is what made them blurry).
+    transform: [{ scale: 1.03 }, { translateX: -5 + 10 * t.value }],
   }));
 
   return (
@@ -83,13 +84,13 @@ export function SceneBackdrop({ color }: { color: string }) {
       {/* Clear over the photo's best part, then sinking into the page well before the photo ends. */}
       <LinearGradient
         colors={[
-          withAlpha(colors.background, 0.4),
-          withAlpha(colors.background, 0.05),
+          withAlpha(colors.background, 0.6),
+          withAlpha(colors.background, 0.18),
           withAlpha(colors.background, 0.15),
           withAlpha(colors.background, 0.7),
           withAlpha(colors.background, 0.97),
         ]}
-        locations={[0, 0.16, 0.42, 0.66, 0.84]}
+        locations={[0, 0.13, 0.42, 0.66, 0.84]}
         style={StyleSheet.absoluteFill}
       />
       <LinearGradient

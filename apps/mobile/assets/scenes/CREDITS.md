@@ -1,7 +1,7 @@
 # Background photos
 
 All from Wikimedia Commons, public domain or CC0 (no attribution required; credited anyway).
-Cropped to portrait at full phone resolution (1200 x 2600) and saved as WebP, quality 84.
+Cropped to portrait at full phone resolution (1500 x 3300, sharp on 1440 px-wide screens) and saved as WebP, quality 80.
 
 | Scene | Photo | License |
 |---|---|---|
