@@ -97,7 +97,7 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | 1 | Health Connect data in | Code ready (`lib/health/healthConnectSource.ts`, Health data screen `app/health.tsx`); first EAS dev build done (Oct 1); to do: check real Fitbit Air data |
 | 2 | Scores + Today rings | Done on demo data; tune against real data |
 | 3 | Logging: workouts, plans, meals (AI macros) | Merged into 4: the user types or speaks what they did or ate in the Coach chat and the AI records it (no forms) |
-| 4 | AI coach (in the Claude app; also does all logging) | "Ask Claude" handoff done; coach connector written (read scores, log/list/delete workouts and meals, daily coach note on Today). To do: deploy + connect it (docs/SETUP.md), then the app reads logged workouts back |
+| 4 | AI coach (in the Claude app; also does all logging) | "Ask Claude" handoff done; coach connector live (read scores; log/list/delete workouts, meals, weight; profile; daily coach note on Today). To do: the app reads logged workouts back |
 | 5 | Trends, weekly report, notifications, MCP server | Not started |
 
 Keep this table up to date when a milestone moves.

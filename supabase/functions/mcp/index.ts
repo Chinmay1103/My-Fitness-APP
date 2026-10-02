@@ -19,7 +19,9 @@ const INSTRUCTIONS = `My Fitness is the user's Whoop-style app for their Fitbit.
 Recovery (0-100%, green >= 67, yellow 34-66, red < 34) from HRV and resting heart rate against their own 30-day normal plus sleep;
 Strain (0-21, logarithmic, like Whoop) from heart rate; Sleep (0-100%) from hours slept vs. need and sleep quality.
 The scores are deterministic math; your job is to explain them and coach, not to recompute them. Use get_day_breakdown for the "why".
-Record workouts and meals the user tells you about with log_workout / log_meal (estimate meal macros yourself; Indian home food is common).
+Record workouts, meals and weigh-ins the user tells you about with log_workout / log_meal / log_weight (estimate meal macros
+yourself; Indian home food is common), and facts about themselves (name, birth date, sleep need) with update_profile.
+The app has no forms: everything is recorded through you, so never tell the user to enter something in the app.
 Confirm what you logged in one short line. Times are in the user's time zone (see get_daily_scores). Give wellness guidance, not medical advice.
 When you explain a day, combine the score breakdown with the workouts and meals they logged (list_workouts, list_meals): the band can't
 see a late dinner or a leg day, you can. Then save the gist with save_daily_note so it shows on the app's Today screen.`;
@@ -54,7 +56,7 @@ function daysAgo(days: number): string {
   return new Date(Date.now() - days * 86_400_000).toISOString();
 }
 
-function buildServer(supabase: Db) {
+function buildServer(supabase: Db, userId: string) {
   const server = new McpServer({ name: 'my-fitness', version: '0.1.0' }, { instructions: INSTRUCTIONS });
 
   server.registerTool(
@@ -287,16 +289,107 @@ function buildServer(supabase: Db) {
   );
 
   server.registerTool(
+    'log_weight',
+    {
+      title: 'Log body weight',
+      description: "Record a weigh-in the user tells you, e.g. '61.1 kg this morning'. Convert pounds to kg.",
+      inputSchema: z.object({
+        weight_kg: z.number().min(20).max(400),
+        measured_at: z.string().optional().describe("ISO 8601 with the user's UTC offset; omit for now"),
+      }),
+    },
+    async ({ weight_kg, measured_at }) => {
+      const measuredAt = measured_at ? new Date(measured_at) : new Date();
+      if (Number.isNaN(measuredAt.getTime())) return fail(`Couldn't read measured_at "${measured_at}".`);
+      const { data, error } = await supabase
+        .from('body_weights')
+        .insert({ weight_kg, measured_at: measuredAt.toISOString() })
+        .select('id')
+        .single();
+      if (error) return fail(error.message);
+      return text({ logged: 'weight', id: data.id, weight_kg });
+    },
+  );
+
+  server.registerTool(
+    'list_weights',
+    {
+      title: 'Weight history',
+      description: 'Weigh-ins from the last N days, newest first.',
+      inputSchema: z.object({ days: z.number().int().min(1).max(365).default(30) }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ days }) => {
+      const timeZone = await timezoneOf(supabase);
+      const { data, error } = await supabase
+        .from('body_weights')
+        .select('id, measured_at, weight_kg')
+        .gte('measured_at', daysAgo(days))
+        .order('measured_at', { ascending: false });
+      if (error) return fail(error.message);
+      return text(data.map((w) => ({ ...w, measured_at: localTime(w.measured_at, timeZone) })));
+    },
+  );
+
+  server.registerTool(
+    'get_profile',
+    {
+      title: 'Profile',
+      description: "The user's name, birth date, time zone and base sleep need.",
+      inputSchema: z.object({}),
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('display_name, birth_date, timezone, base_sleep_need_minutes, max_hr')
+        .maybeSingle();
+      if (error) return fail(error.message);
+      return text(data ?? 'No profile yet.');
+    },
+  );
+
+  server.registerTool(
+    'update_profile',
+    {
+      title: 'Update profile',
+      description:
+        "Save facts the user states about themselves: their name, birth date, time zone, or how much sleep they need. Only what they said; don't guess.",
+      inputSchema: z.object({
+        display_name: z.string().min(1).max(60).optional(),
+        birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('YYYY-MM-DD'),
+        timezone: z.string().optional().describe("IANA name, e.g. 'Asia/Kolkata'"),
+        base_sleep_need_minutes: z.number().int().min(300).max(660).optional(),
+      }),
+      annotations: { idempotentHint: true },
+    },
+    async (fields) => {
+      if (fields.timezone) {
+        try {
+          new Intl.DateTimeFormat('en', { timeZone: fields.timezone });
+        } catch {
+          return fail(`"${fields.timezone}" isn't a time zone name like Asia/Kolkata.`);
+        }
+      }
+      const { error } = await supabase.from('profiles').upsert({ id: userId, ...fields });
+      if (error) return fail(error.message);
+      return text('Profile updated.');
+    },
+  );
+
+  server.registerTool(
     'delete_entry',
     {
-      title: 'Delete a logged workout or meal',
-      description: 'Remove a workout or meal, e.g. one logged by mistake. Get the id from list_workouts or list_meals.',
-      inputSchema: z.object({ type: z.enum(['workout', 'meal']), id: z.string().uuid() }),
+      title: 'Delete a logged workout, meal or weigh-in',
+      description:
+        'Remove a workout, meal or weigh-in, e.g. one logged by mistake. Get the id from list_workouts, list_meals or list_weights.',
+      inputSchema: z.object({ type: z.enum(['workout', 'meal', 'weight']), id: z.string().uuid() }),
       annotations: { destructiveHint: true },
     },
     async ({ type, id }) => {
+      const table = ({ workout: 'workouts', meal: 'meals', weight: 'body_weights' } as const)[type];
       const { data, error } = await supabase
-        .from(type === 'workout' ? 'workouts' : 'meals')
+        .from(table)
         .delete()
         .eq('id', id)
         .select('id');
@@ -309,8 +402,8 @@ function buildServer(supabase: Db) {
 }
 
 Deno.serve(
-  pipeline([withOAuthProtectedResource(), withSupabase<Database>({ auth: 'user' })], async (req, { supabase }) => {
-    const handler = createMcpHandler(() => buildServer(supabase), {
+  pipeline([withOAuthProtectedResource(), withSupabase<Database>({ auth: 'user' })], async (req, { supabase, userClaims }) => {
+    const handler = createMcpHandler(() => buildServer(supabase, userClaims!.id), {
       onerror: (error) => console.error('MCP request failed', error),
     });
     return handler.fetch(req);
