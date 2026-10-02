@@ -19,7 +19,7 @@ export const colors = {
   card: 'rgba(255,255,255,0.035)',
   cardHighlight: 'rgba(255,255,255,0.085)',
   /** Dark tint under the glass when the background is a photo, so text reads on bright skies. */
-  cardOverPhoto: 'rgba(8,8,8,0.45)',
+  cardOverPhoto: 'rgba(8,8,8,0.3)',
   /** Top edge of a card, as if lit from above. */
   cardEdge: 'rgba(255,255,255,0.22)',
   /** Solid dark grey, for the few things that can't be see-through (the refresh spinner's disc). */

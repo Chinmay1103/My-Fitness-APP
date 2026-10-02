@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused } from 'expo-router';
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -23,6 +23,14 @@ const SCENES: Record<TimeOfDay, number> = {
   night: require('@/assets/scenes/night.webp'),
 };
 
+/**
+ * Where each photo's best part is (mountain, horizon), as a fraction of its height. The photo is
+ * lifted so that point lands at FOCUS_AT of the screen, in the open space at the top instead of
+ * behind the cards further down.
+ */
+const FOCUS: Record<TimeOfDay, number> = { dawn: 0.32, day: 0.28, dusk: 0.56, night: 0.52 };
+const FOCUS_AT = 0.3;
+
 /** One slow push-in and back, ms. */
 const DRIFT_MS = 40000;
 
@@ -38,6 +46,9 @@ export function SceneBackdrop({ color }: { color: string }) {
   const reduced = useReducedMotion();
   const scene = timeOfDay(useHour(focused));
   const clock = colors.timeOfDay[scene];
+  const { height } = useWindowDimensions();
+  // Only ever lift the photo; pushing it down would leave a gap at the top.
+  const lift = Math.min(0, (FOCUS_AT - FOCUS[scene]) * height);
   const t = useSharedValue(0);
 
   useEffect(() => {
@@ -56,28 +67,34 @@ export function SceneBackdrop({ color }: { color: string }) {
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <Animated.Image source={SCENES[scene]} resizeMode="cover" resizeMethod="scale" style={[StyleSheet.absoluteFill, drift]} />
+      <Animated.Image
+        source={SCENES[scene]}
+        resizeMode="cover"
+        resizeMethod="scale"
+        style={[{ position: 'absolute', left: 0, right: 0, top: lift, height }, drift]}
+      />
       <LinearGradient
-        colors={[withAlpha(color, 0.42), withAlpha(color, 0.12), 'transparent']}
-        locations={[0, 0.35, 0.7]}
+        colors={[withAlpha(color, 0.24), withAlpha(color, 0.06), 'transparent']}
+        locations={[0, 0.3, 0.6]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0.9, y: 0.65 }}
         style={StyleSheet.absoluteFill}
       />
+      {/* Clear over the photo's best part, then sinking into the page well before the photo ends. */}
       <LinearGradient
         colors={[
-          withAlpha(colors.background, 0.5),
-          withAlpha(colors.background, 0.12),
-          withAlpha(colors.background, 0.35),
-          withAlpha(colors.background, 0.72),
-          withAlpha(colors.background, 0.94),
+          withAlpha(colors.background, 0.4),
+          withAlpha(colors.background, 0.05),
+          withAlpha(colors.background, 0.15),
+          withAlpha(colors.background, 0.7),
+          withAlpha(colors.background, 0.97),
         ]}
-        locations={[0, 0.18, 0.45, 0.75, 1]}
+        locations={[0, 0.16, 0.42, 0.66, 0.84]}
         style={StyleSheet.absoluteFill}
       />
       <LinearGradient
-        colors={['transparent', withAlpha(clock, 0.22)]}
-        locations={[0.55, 1]}
+        colors={['transparent', withAlpha(clock, 0.2)]}
+        locations={[0.6, 1]}
         style={StyleSheet.absoluteFill}
       />
     </View>
