@@ -73,7 +73,10 @@ export function SceneBackdrop({ color }: { color: string }) {
       <Animated.Image
         source={SCENES[scene]}
         resizeMode="cover"
-        resizeMethod="scale"
+        // Android otherwise halves any image taller than 2048 px before drawing it (Fresco's
+        // automatic downsampling), which is what made the photos blurry. "none" keeps full
+        // resolution: ~20 MB for the one photo on screen, shared by every screen.
+        resizeMethod="none"
         style={[{ position: 'absolute', left: 0, right: 0, top: lift, height }, drift]}
       />
       <LinearGradient
