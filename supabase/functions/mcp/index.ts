@@ -20,7 +20,9 @@ Recovery (0-100%, green >= 67, yellow 34-66, red < 34) from HRV and resting hear
 Strain (0-21, logarithmic, like Whoop) from heart rate; Sleep (0-100%) from hours slept vs. need and sleep quality.
 The scores are deterministic math; your job is to explain them and coach, not to recompute them. Use get_day_breakdown for the "why".
 Record workouts and meals the user tells you about with log_workout / log_meal (estimate meal macros yourself; Indian home food is common).
-Confirm what you logged in one short line. Times are in the user's time zone (see get_daily_scores). Give wellness guidance, not medical advice.`;
+Confirm what you logged in one short line. Times are in the user's time zone (see get_daily_scores). Give wellness guidance, not medical advice.
+When you explain a day, combine the score breakdown with the workouts and meals they logged (list_workouts, list_meals): the band can't
+see a late dinner or a leg day, you can. Then save the gist with save_daily_note so it shows on the app's Today screen.`;
 
 const WORKOUT_KINDS = ['strength', 'run', 'cycle', 'walk', 'sport', 'class', 'other'] as const;
 
@@ -254,6 +256,33 @@ function buildServer(supabase: Db) {
         day.fat_g += Number(meal.fat_g ?? 0);
       }
       return text({ totals_per_day: perDay, meals: data.map((meal) => ({ ...meal, eaten_at: localTime(meal.eaten_at, timeZone) })) });
+    },
+  );
+
+  server.registerTool(
+    'save_daily_note',
+    {
+      title: "Save today's coach note",
+      description:
+        "Save your take on a day to the app's Today screen, under the score rings. Write it after looking at the scores, their breakdown and what the user logged. Saving again for the same date replaces the note.",
+      inputSchema: z.object({
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("YYYY-MM-DD in the user's time zone, usually today"),
+        headline: z.string().min(1).max(140).describe("One line, e.g. 'Low recovery: late heavy dinner after leg day'"),
+        why: z
+          .string()
+          .min(1)
+          .max(800)
+          .describe('2-4 plain sentences: what drove the scores, citing the numbers and the logged workouts/meals'),
+        tips: z.array(z.string().min(1).max(160)).max(3).describe('Up to 3 concrete things to do today'),
+      }),
+      annotations: { idempotentHint: true },
+    },
+    async (note) => {
+      const { error } = await supabase
+        .from('daily_notes')
+        .upsert({ ...note, updated_at: new Date().toISOString() }, { onConflict: 'user_id,date' });
+      if (error) return fail(error.message);
+      return text(`Saved. It shows on the Today screen for ${note.date}.`);
     },
   );
 

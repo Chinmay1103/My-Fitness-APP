@@ -38,6 +38,33 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_notes: {
+        Row: {
+          date: string
+          headline: string
+          tips: string[]
+          updated_at: string
+          user_id: string
+          why: string
+        }
+        Insert: {
+          date: string
+          headline: string
+          tips?: string[]
+          updated_at?: string
+          user_id?: string
+          why: string
+        }
+        Update: {
+          date?: string
+          headline?: string
+          tips?: string[]
+          updated_at?: string
+          user_id?: string
+          why?: string
+        }
+        Relationships: []
+      }
       daily_summaries: {
         Row: {
           asleep_minutes: number | null

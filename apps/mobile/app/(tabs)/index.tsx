@@ -3,12 +3,14 @@ import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { CoachNoteCard } from '@/components/CoachNoteCard';
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Pill, Row, Screen, Stat } from '@/components/ui';
 import { colors, fonts, todayBackdrop } from '@/constants/theme';
 import { formatDate, formatMinutes } from '@/lib/format';
 import { tapHaptic } from '@/lib/haptics';
+import { useCoachNote } from '@/lib/coachNote';
 import { todayHeadline } from '@/lib/insights';
 import { useScores } from '@/lib/ScoresProvider';
 
@@ -16,6 +18,7 @@ export default function TodayScreen() {
   const { scores, days, sourceLabel } = useScores();
   const today = scores.at(-1);
   const todayData = days.at(-1);
+  const note = useCoachNote(today?.date);
   if (!today) return <Screen overline="TODAY" title="No data yet"><Muted>Pull down to refresh.</Muted></Screen>;
 
   const recovery = today.recovery;
@@ -84,6 +87,8 @@ export default function TodayScreen() {
           </Muted>
         ) : null}
       </Card>
+
+      {note ? <CoachNoteCard note={note} accent={recoveryColor} /> : null}
 
       <Card title="LAST NIGHT">
         <Row>

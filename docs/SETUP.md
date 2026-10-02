@@ -148,7 +148,8 @@ connector.
    pick **Register automatically**. Click **Connect**, sign in with your email code, tap **Allow**.
 
 **Using it:** in a chat, make sure My Fitness is on (**+** -> Connectors). Ask "how did I recover
-today?" or say what you trained or ate. Scores show up once real band data has synced; demo data is
+today?" or say what you trained or ate. After Claude explains a day it saves a short **coach
+note**, which appears on the Today screen under the rings when you switch back to the app. Scores show up once real band data has synced; demo data is
 never uploaded.
 
 ## Day one with the Fitbit Air (milestone 1)
