@@ -1,11 +1,15 @@
 # Background photos
 
-All from Wikimedia Commons, public domain or CC0 (no attribution required; credited anyway).
-Cropped to portrait at full phone resolution (1500 x 3300, sharp on 1440 px-wide screens) and saved as WebP, quality 80.
+Chosen by Chinmay (Oct 2, 2026). Full-size originals are kept locally in `originals/` (not in git).
+The `.webp` files are converted copies: trimmed to a 1:2 portrait, at most 3300 px tall, WebP
+quality 80.
 
-| Scene | Photo | License |
+| Scene | Original file | Source / license |
 |---|---|---|
-| dawn | [Morning Light on Grand Teton](https://commons.wikimedia.org/wiki/File:Morning_Light_on_Grand_Teton_(40323150280).jpg), Grand Teton National Park (NPS) | Public domain |
-| day | [Mountain reflection in a lake](https://commons.wikimedia.org/wiki/File:Mountain_reflection_in_a_lake_(Unsplash).jpg) | CC0 |
-| dusk | [Sunset across the Jackson Hole Valley](https://commons.wikimedia.org/wiki/File:Sunset_across_the_Jackson_Hole_Valley_(31836627360).jpg), Grand Teton National Park (NPS) | Public domain |
-| night | [Stars and Milky Way over Åbyfjorden 3](https://commons.wikimedia.org/wiki/File:Stars_and_Milky_Way_over_%C3%85byfjorden_3.jpg) | CC0 |
+| dawn | dawn-sunrise-early-1080x1920-11172.jpg (pier at sunrise, 1080 x 1920) | to fill in |
+| day | Day image.jpg (lone tree on a field, 3024 x 4032) | to fill in |
+| dusk | Dusk image.jpeg (lamp post and bridge, 3485 x 5227) | to fill in |
+| night | night image.jpg (Milky Way over a ridge, 2160 x 3840) | to fill in |
+
+To swap one: put the new photo in `originals/`, convert it to `<scene>.webp` (portrait, ideally
+3300 px tall), and adjust its `FOCUS` value in `components/SceneBackdrop.tsx`.

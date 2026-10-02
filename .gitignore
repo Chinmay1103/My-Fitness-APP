@@ -9,3 +9,6 @@ __pycache__/
 *.pyc
 .claude/settings.local.json
 **/.claude/settings.local.json
+
+# Full-size originals of the background photos (converted copies are the .webp files)
+apps/mobile/assets/scenes/originals/
