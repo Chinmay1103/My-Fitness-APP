@@ -121,10 +121,13 @@ export function Screen({ children, overline, title, accessory, back, glow, glow2
 /**
  * Glass tile: a see-through white gradient (a little brighter at the top) with a lit top edge,
  * so the screen's color tint shows through and the card still reads as a raised pane.
+ * Over the photo backgrounds it's tinted dark ("frosted dark glass").
  */
 export function Card({ title, children }: { title?: string; children: ReactNode }) {
+  // Over photos, the glass gets a dark tint so white text stays readable on bright skies and snow.
+  const overPhoto = useBackgroundStyle() === 'scenes';
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, overPhoto && styles.cardOverPhoto]}>
       <LinearGradient colors={gradients.card} style={styles.cardFill} />
       {title ? (
         <Text style={styles.cardTitle} accessibilityRole="header">
@@ -246,6 +249,7 @@ const styles = StyleSheet.create({
     padding: spacing.md + 2,
     gap: spacing.md,
   },
+  cardOverPhoto: { backgroundColor: colors.cardOverPhoto },
   cardFill: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: radius.lg },
   cardTitle: { ...type.overline, color: colors.muted },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },

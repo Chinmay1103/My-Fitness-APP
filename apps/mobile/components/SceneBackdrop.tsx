@@ -12,10 +12,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { timeOfDay, withAlpha, type TimeOfDay } from '@/constants/theme';
+import { colors, timeOfDay, withAlpha, type TimeOfDay } from '@/constants/theme';
 import { useHour } from '@/lib/useHour';
 
-/** Public-domain / CC0 photos, about 40–90 KB each; sources in assets/scenes/CREDITS.md. */
+/** Public-domain / CC0 photos at full phone resolution (1200 x 2600); sources in assets/scenes/CREDITS.md. */
 const SCENES: Record<TimeOfDay, number> = {
   dawn: require('@/assets/scenes/dawn.webp'),
   day: require('@/assets/scenes/day.webp'),
@@ -28,13 +28,16 @@ const DRIFT_MS = 40000;
 
 /**
  * The "Scenes" background: a mountain photo for the time of day (dawn, day, dusk, night),
- * drifting very slowly, washed with the screen's color at the top and darkened towards the bottom
- * so white text on the glass cards stays easy to read. Still when "reduce motion" is on.
+ * drifting very slowly under three gradients: the screen's color washing in from the top left, a
+ * fade that keeps the photo vivid near the top and sinks into the dark page lower down (where the
+ * cards are, so white text stays readable), and a faint glow of the time-of-day color at the
+ * bottom. Still when "reduce motion" is on.
  */
 export function SceneBackdrop({ color }: { color: string }) {
   const focused = useIsFocused();
   const reduced = useReducedMotion();
   const scene = timeOfDay(useHour(focused));
+  const clock = colors.timeOfDay[scene];
   const t = useSharedValue(0);
 
   useEffect(() => {
@@ -47,21 +50,34 @@ export function SceneBackdrop({ color }: { color: string }) {
   }, [focused, reduced, t]);
 
   const drift = useAnimatedStyle(() => ({
-    transform: [{ scale: 1.06 + 0.06 * t.value }, { translateX: -10 + 20 * t.value }],
+    // Stays under the photo's own 1200 px width on a typical phone, so it never gets blurry.
+    transform: [{ scale: 1.04 + 0.04 * t.value }, { translateX: -8 + 16 * t.value }],
   }));
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <Animated.Image source={SCENES[scene]} resizeMode="cover" style={[StyleSheet.absoluteFill, drift]} />
+      <Animated.Image source={SCENES[scene]} resizeMode="cover" resizeMethod="scale" style={[StyleSheet.absoluteFill, drift]} />
       <LinearGradient
-        colors={[withAlpha(color, 0.3), withAlpha(color, 0.08), 'transparent']}
-        locations={[0, 0.35, 0.6]}
+        colors={[withAlpha(color, 0.42), withAlpha(color, 0.12), 'transparent']}
+        locations={[0, 0.35, 0.7]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.9, y: 0.65 }}
         style={StyleSheet.absoluteFill}
       />
       <LinearGradient
-        // Darkest at the very top (titles) and bottom (tab bar); the daytime sky is bright.
-        colors={['rgba(5,5,5,0.55)', 'rgba(5,5,5,0.42)', 'rgba(5,5,5,0.5)', 'rgba(5,5,5,0.68)']}
-        locations={[0, 0.25, 0.6, 1]}
+        colors={[
+          withAlpha(colors.background, 0.5),
+          withAlpha(colors.background, 0.12),
+          withAlpha(colors.background, 0.35),
+          withAlpha(colors.background, 0.72),
+          withAlpha(colors.background, 0.94),
+        ]}
+        locations={[0, 0.18, 0.45, 0.75, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={['transparent', withAlpha(clock, 0.22)]}
+        locations={[0.55, 1]}
         style={StyleSheet.absoluteFill}
       />
     </View>
