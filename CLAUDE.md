@@ -106,7 +106,7 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | 1 | Health Connect data in | Band arrived Oct 3: heart rate flows from Google Health into Health Connect and strain scores on it; heart rate screen added. To do: check sleep, HRV and resting HR after the first nights |
 | 2 | Scores + Today rings | Done on demo data; tune against real data |
 | 3 | Logging: workouts, plans, meals (AI macros) | Merged into 4: the user types or speaks what they did or ate in the Coach chat and the AI records it (no forms) |
-| 4 | AI coach (in the Claude app; also does all logging) | "Ask Claude" handoff done; coach connector live (read scores; log/list/delete workouts, meals, weight; profile; daily coach note on Today). To do: the app reads logged workouts back |
+| 4 | AI coach (in the Claude app; also does all logging) | "Ask Claude" handoff done; coach connector live (read scores; log/list/delete workouts, meals, weight; profile; daily coach note on Today; `get_coach_notes` so each new chat picks up from earlier days). To do: the app reads logged workouts back |
 | 5 | Trends, weekly report, notifications, MCP server | Not started |
 
 Keep this table up to date when a milestone moves.
