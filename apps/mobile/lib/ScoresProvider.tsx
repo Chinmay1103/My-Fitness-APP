@@ -1,17 +1,22 @@
 import { computeDailyScores, MOCK_PROFILE, type DailyScores, type DayData } from '@fitness/scoring';
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { AppState } from 'react-native';
 
 import { mockSource } from './health/mockSource';
 import { pickHealthSource, type HealthSource } from './health';
 import { syncDailySummaries } from './sync';
 
 const HISTORY_DAYS = 45;
+/** Coming back to the app after this long re-reads everything, so the scores follow the day. */
+const STALE_MS = 5 * 60 * 1000;
 
 interface ScoresState {
   loading: boolean;
   error: string | null;
   sourceLabel: string;
   sourceId: HealthSource['id'];
+  /** Reads heart rate straight from the current source, for views that refresh more often than the scores. */
+  getHeartRate: HealthSource['getHeartRate'];
   days: DayData[];
   scores: DailyScores[];
   /** Result of the last upload to Supabase: 'ok', an error message, or null if nothing was sent. */
@@ -30,8 +35,10 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<HealthSource>(mockSource);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const loadedAt = useRef(0);
 
   const refresh = useCallback(async () => {
+    loadedAt.current = Date.now();
     setLoading(true);
     setError(null);
     try {
@@ -55,6 +62,10 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refresh();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && Date.now() - loadedAt.current > STALE_MS) refresh();
+    });
+    return () => subscription.remove();
   }, [refresh]);
 
   const syncNow = useCallback(async () => {
@@ -68,7 +79,7 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
 
   return (
     <ScoresContext.Provider
-      value={{ loading, error, sourceLabel: source.label, sourceId: source.id, days, scores, syncStatus, refresh, syncNow }}>
+      value={{ loading, error, sourceLabel: source.label, sourceId: source.id, getHeartRate: source.getHeartRate, days, scores, syncStatus, refresh, syncNow }}>
       {children}
     </ScoresContext.Provider>
   );

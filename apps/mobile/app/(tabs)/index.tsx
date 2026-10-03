@@ -4,6 +4,7 @@ import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CoachNoteCard } from '@/components/CoachNoteCard';
+import { HeartRateCard } from '@/components/HeartRateCard';
 import { ScoreRing } from '@/components/ScoreRing';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Pill, Row, Screen, Stat } from '@/components/ui';
@@ -89,6 +90,8 @@ export default function TodayScreen() {
       </Card>
 
       {note ? <CoachNoteCard note={note} accent={recoveryColor} /> : null}
+
+      <HeartRateCard date={today.date} />
 
       <Card title="LAST NIGHT">
         <Row>

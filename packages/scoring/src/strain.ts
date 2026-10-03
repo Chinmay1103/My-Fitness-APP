@@ -20,6 +20,14 @@ export function estimateMaxHr(profile: UserProfile): number {
   return profile.maxHr ?? Math.round(208 - 0.7 * profile.age);
 }
 
+/** Zone 0-4 (zone 1-5) for a heart rate, or -1 below zone 1 (resting and easy everyday movement). */
+export function heartRateZone(bpm: number, restingHr: number, maxHr: number): number {
+  const fraction = (bpm - restingHr) / Math.max(maxHr - restingHr, 1);
+  let zone = -1;
+  while (zone < ZONE_BOUNDS.length - 1 && fraction >= ZONE_BOUNDS[zone + 1]!) zone++;
+  return zone;
+}
+
 export interface StrainResult {
   /** 0 to 21, one decimal. */
   strain: number;

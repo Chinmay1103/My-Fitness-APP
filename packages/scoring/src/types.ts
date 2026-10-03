@@ -42,11 +42,14 @@ export interface UserProfile {
 /**
  * Everything we know about one calendar day.
  * `sleep`, `restingHr` and `hrvRmssd` describe the night that ended on the morning of `date`;
- * `heartRate` covers the waking day.
+ * `heartRate` covers the waking day; `sleepHeartRate` the part of the main sleep after midnight.
+ * Together they are the whole calendar day.
  */
 export interface DayData {
   date: string; // YYYY-MM-DD
   heartRate: HeartRateSample[];
+  /** Heart rate during the main sleep. Only shown and summarized, never counted toward strain. */
+  sleepHeartRate?: HeartRateSample[];
   sleep?: SleepSession;
   restingHr?: number;
   hrvRmssd?: number;

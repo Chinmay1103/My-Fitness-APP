@@ -1,4 +1,4 @@
-import type { DayData } from '@fitness/scoring';
+import type { DayData, HeartRateSample } from '@fitness/scoring';
 
 /**
  * Where health data comes from. The rest of the app only talks to this interface,
@@ -14,4 +14,6 @@ export interface HealthSource {
   requestPermissions(): Promise<boolean>;
   /** The last `days` days, oldest first. */
   getDays(days: number): Promise<DayData[]>;
+  /** Every heart-rate sample in a time range, oldest first. Cheap enough to call every minute for today. */
+  getHeartRate(from: Date, to: Date): Promise<HeartRateSample[]>;
 }
