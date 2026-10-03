@@ -48,7 +48,7 @@ export default function CoachScreen() {
           const copied = await continueInClaude(chat, text);
           setNote(
             copied
-              ? 'Your question is copied: paste it into the chat and send.'
+              ? 'Copied — long-press the box in the chat and tap Paste.'
               : "This build can't copy text yet (it needs the next app build), so type your question in the chat.",
           );
         }, q)
