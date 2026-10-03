@@ -25,7 +25,9 @@ The app has no forms: everything is recorded through you, so never tell the user
 Confirm what you logged in one short line. Times are in the user's time zone (see get_daily_scores). Give wellness guidance, not medical advice.
 When you explain a day, combine the score breakdown with the workouts and meals they logged (list_workouts, list_meals): the band can't
 see a late dinner or a leg day, you can. Whenever the user asks how their day is going, or for advice, end by saving the gist with
-save_daily_note so it shows on the app's Today screen. Do this even when no scores have synced yet: then base it on what they logged.`;
+save_daily_note so it shows on the app's Today screen. Do this even when no scores have synced yet: then base it on what they logged.
+The app opens a new chat for each question, so at the start of a conversation call get_coach_notes to see what you told
+them on recent days and pick up from there (e.g. "yesterday you planned a rest day; recovery agrees").`;
 
 const WORKOUT_KINDS = ['strength', 'run', 'cycle', 'walk', 'sport', 'class', 'other'] as const;
 
@@ -315,6 +317,28 @@ function buildServer(supabase: Db, userId: string) {
         .upsert({ ...note, updated_at: new Date().toISOString() }, { onConflict: 'user_id,date' });
       if (error) return fail(error.message);
       return text(`Saved. It shows on the Today screen for ${note.date}.`);
+    },
+  );
+
+  server.registerTool(
+    'get_coach_notes',
+    {
+      title: 'Earlier coach notes',
+      description:
+        'The notes you saved with save_daily_note over the last N days, newest first: your headline, why, and tips for each day. Read them at the start of a conversation, since each question may arrive in a new chat.',
+      inputSchema: z.object({ days: z.number().int().min(1).max(30).default(7) }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ days }) => {
+      const timeZone = await timezoneOf(supabase);
+      const { data, error } = await supabase
+        .from('daily_notes')
+        .select('date, headline, why, tips, updated_at')
+        .gte('date', localDate(new Date(Date.now() - days * 86_400_000), timeZone))
+        .order('date', { ascending: false });
+      if (error) return fail(error.message);
+      if (data.length === 0) return text(`No coach notes in the last ${days} days.`);
+      return text(data.map((note) => ({ ...note, updated_at: localTime(note.updated_at, timeZone) })));
     },
   );
 
