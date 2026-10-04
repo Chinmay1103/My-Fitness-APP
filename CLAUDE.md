@@ -20,7 +20,7 @@ Open design to-dos from the Sep 30 screen-recording review: [docs/design-review-
 - **Math computes scores, AI only explains them.** Scores must stay deterministic and tested.
 - **Backend: Supabase.** Schema in `supabase/migrations/` (RLS on every table; deploy with
   `npm run db:push`). The app talks to it through `apps/mobile/lib/supabase.ts` (null when `.env` is
-  missing, so the app still runs), signs in with an email code (`app/account.tsx`), and uploads one
+  missing, so the app still runs), signs in with Google or an email code (`app/account.tsx`, `lib/googleSignIn.ts`; PKCE, the session stays saved until Sign out; the Google button shows once Google is enabled in Supabase), and uploads one
   summary row per day (`lib/sync.ts`); raw heart rate and demo data never leave the phone. The
   Claude API is called only from Supabase Edge Functions; API keys never ship in the app.
 - **Native modules that throw on import** (Health Connect, AsyncStorage) are loaded lazily behind a

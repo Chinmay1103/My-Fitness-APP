@@ -21,6 +21,8 @@ export const supabase: SupabaseClient | null =
           autoRefreshToken: true,
           persistSession: true,
           detectSessionInUrl: false,
+          // Google sign-in returns a one-time code that only this app can trade for a session.
+          flowType: 'pkce',
           lock: processLock,
         },
       })

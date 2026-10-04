@@ -5,12 +5,13 @@ import { Button, Card, Chip, Input, Muted, Screen } from '@/components/ui';
 import { setBackgroundStyle, useBackgroundStyle } from '@/lib/backgroundStyle';
 import { colors, type } from '@/constants/theme';
 import { useAuth } from '@/lib/AuthProvider';
+import { signInWithGoogle, useGoogleEnabled } from '@/lib/googleSignIn';
 import { useScores } from '@/lib/ScoresProvider';
 import { supabase } from '@/lib/supabase';
 
 /**
- * Sign in with an email code (no password), see what syncs, sign out. Signing in is optional:
- * scores work without it. It's needed for backup, and later for meal logging and the coach.
+ * Sign in with Google or an email code (no password), see what syncs, sign out. The sign-in stays
+ * saved on the phone until Sign out. Signing in is optional: scores work without it. It's needed for backup, and later for meal logging and the coach.
  */
 export default function AccountScreen() {
   const background = useBackgroundStyle();
@@ -21,6 +22,7 @@ export default function AccountScreen() {
   const [codeSent, setCodeSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const googleEnabled = useGoogleEnabled();
 
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
@@ -48,6 +50,12 @@ export default function AccountScreen() {
       setCode('');
       setCodeSent(false);
       await refresh(); // uploads today's summaries if real data is loaded
+    });
+
+  const google = () =>
+    run(async () => {
+      await signInWithGoogle();
+      await refresh();
     });
 
   const signOut = () =>
@@ -86,42 +94,49 @@ export default function AccountScreen() {
           </Card>
         </>
       ) : (
-        <Card title="EMAIL CODE">
-          <Muted>
-            {codeSent
-              ? `We sent a code to ${email.trim()}. Enter it below.`
-              : 'Enter your email and we’ll send you a one-time code. No password needed.'}
-          </Muted>
-          {codeSent ? (
-            <Input
-              value={code}
-              onChangeText={setCode}
-              placeholder="Code from the email"
-              keyboardType="number-pad"
-              autoComplete="one-time-code"
-              textContentType="oneTimeCode"
-              maxLength={10}
-            />
-          ) : (
-            <Input
-              value={email}
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              textContentType="emailAddress"
-            />
-          )}
-          {codeSent ? (
-            <>
-              <Button label="Sign in" onPress={verify} disabled={busy || code.trim().length < 6} />
-              <Button label="Use a different email" onPress={() => setCodeSent(false)} disabled={busy} />
-            </>
-          ) : (
-            <Button label="Send code" onPress={sendCode} disabled={busy || !email.includes('@')} />
-          )}
-        </Card>
+        <>
+          {googleEnabled && !codeSent ? (
+            <Card title="GOOGLE">
+              <Button label="Continue with Google" onPress={google} disabled={busy} />
+            </Card>
+          ) : null}
+          <Card title="EMAIL CODE">
+            <Muted>
+              {codeSent
+                ? `We sent a code to ${email.trim()}. Enter it below.`
+                : 'Enter your email and we’ll send you a one-time code. No password needed.'}
+            </Muted>
+            {codeSent ? (
+              <Input
+                value={code}
+                onChangeText={setCode}
+                placeholder="Code from the email"
+                keyboardType="number-pad"
+                autoComplete="one-time-code"
+                textContentType="oneTimeCode"
+                maxLength={10}
+              />
+            ) : (
+              <Input
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                textContentType="emailAddress"
+              />
+            )}
+            {codeSent ? (
+              <>
+                <Button label="Sign in" onPress={verify} disabled={busy || code.trim().length < 6} />
+                <Button label="Use a different email" onPress={() => setCodeSent(false)} disabled={busy} />
+              </>
+            ) : (
+              <Button label="Send code" onPress={sendCode} disabled={busy || !email.includes('@')} />
+            )}
+          </Card>
+        </>
       )}
       {message ? <Text style={styles.error}>{message}</Text> : null}
       <Card title="BACKGROUND">
