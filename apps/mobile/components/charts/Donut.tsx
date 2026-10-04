@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedProps } from 'react-native-reanimated';
 import Svg, { Circle, G } from 'react-native-svg';
 
-import { colors, fonts, motion } from '@/constants/theme';
+import { colors, fonts, motion, spacing } from '@/constants/theme';
 import { useAnimatedTarget } from '@/lib/animation';
 import { tapHaptic } from '@/lib/haptics';
 
@@ -32,8 +32,14 @@ const GAP_DEG = 3;
  * Share-of-the-whole chart: a ring cut into slices, with a legend whose rows (or the slices) you
  * tap to bring one forward and see its share in the middle. Slices sweep in together on first show.
  */
-export function Donut({ slices, center, centerLabel, size = 132 }: Props) {
+/** Room the legend next to the donut needs: dot, stage name, time and share. */
+const LEGEND_MIN = 175;
+
+export function Donut({ slices, center, centerLabel, size: maxSize = 132 }: Props) {
   const [picked, setPicked] = useState<string | null>(null);
+  // On narrow phones the donut shrinks so the legend keeps its room (card inside ≈ screen − 70).
+  const { width } = useWindowDimensions();
+  const size = Math.max(88, Math.min(maxSize, width - 2 * spacing.md - 2 * (spacing.md + 3) - 18 - LEGEND_MIN));
   const total = slices.reduce((s, x) => s + x.value, 0) || 1;
   const stroke = size * 0.13;
   const r = (size - stroke) / 2;
