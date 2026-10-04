@@ -22,6 +22,8 @@ export default function TabLayout() {
       screenOptions={{
         // Screens draw their own titles (see Screen in components/ui.tsx).
         headerShown: false,
+        // Slide sideways between tabs, so tapping and swiping (see Screen in components/ui.tsx) feel alike.
+        animation: 'shift',
       }}>
       <Tabs.Screen name="index" options={{ title: 'Today', tabBarIcon: tabIcon('heart.circle', 'monitor_heart') }} />
       <Tabs.Screen name="sleep" options={{ title: 'Sleep', tabBarIcon: tabIcon('moon.zzz', 'bedtime') }} />

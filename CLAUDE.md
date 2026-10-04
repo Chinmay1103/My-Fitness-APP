@@ -76,7 +76,10 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
   hypnogram; all react-native-svg, no chart library). The background behind every screen is either
   **Scenes** (bundled public-domain photos per time of day, `components/SceneBackdrop.tsx`) or
   **Aurora** (moving lights), picked on the Account screen (`lib/backgroundStyle.ts`); the tab bar is
-  `components/TabBar.tsx`. Use tokens, not raw hex, in screens.
+  `components/TabBar.tsx`.
+  **Swiping** (`components/Swipe.tsx`, plain PanResponder): left/right anywhere on a tab screen changes tab;
+  on the score rings (`DayPager`) it changes day. The picked day (`dayBack`, `useSelectedDay()` in
+  `lib/ScoresProvider.tsx`) is shared by Today, Sleep, Strain, Recovery and Heart rate. Use tokens, not raw hex, in screens.
   Visual direction: `design-system/my-fitness-app/MASTER.md` (made with the ui-ux-pro-max skill in
   `.claude/skills/`; its "Project decisions" table overrides the generated parts). Rings and charts
   animate via Reanimated and skip motion when the phone's "reduce motion" setting is on; haptics go through

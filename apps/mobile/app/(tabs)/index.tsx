@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CoachNoteCard } from '@/components/CoachNoteCard';
 import { HeartRateCard } from '@/components/HeartRateCard';
 import { ScoreRing } from '@/components/ScoreRing';
+import { DayPager } from '@/components/Swipe';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Pill, Row, Screen, Stat } from '@/components/ui';
 import { colors, fonts } from '@/constants/theme';
@@ -13,12 +14,12 @@ import { formatDate, formatMinutes } from '@/lib/format';
 import { tapHaptic } from '@/lib/haptics';
 import { useCoachNote } from '@/lib/coachNote';
 import { todayHeadline } from '@/lib/insights';
-import { useScores } from '@/lib/ScoresProvider';
+import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 
 export default function TodayScreen() {
-  const { scores, days, sourceLabel } = useScores();
-  const today = scores.at(-1);
-  const todayData = days.at(-1);
+  const { scores, sourceLabel, dayBack } = useScores();
+  // "today" is whichever day is picked with the day pager; the latest day unless swiped back.
+  const { score: today, day: todayData, isLatest } = useSelectedDay();
   const note = useCoachNote(today?.date);
   if (!today) return <Screen overline="TODAY" title="No data yet"><Muted>Pull down to refresh.</Muted></Screen>;
 
@@ -28,7 +29,7 @@ export default function TodayScreen() {
 
   return (
     <Screen
-      overline="TODAY"
+      overline={isLatest ? 'TODAY' : dayBack === 1 ? 'YESTERDAY' : `${dayBack} DAYS AGO`}
       title={formatDate(today.date)}
       accessory={
         <View style={styles.accessory}>
@@ -53,32 +54,34 @@ export default function TodayScreen() {
       glow={recoveryColor}>
 
       <Card>
-        <Row>
-          <ScoreRing
-            label="RECOVERY"
-            value={recovery?.score ?? null}
-            suffix="%"
-            progress={(recovery?.score ?? 0) / 100}
-            color={recoveryColor}
-            onPress={() => router.push('/recovery')}
-          />
-          <ScoreRing
-            label="STRAIN"
-            value={today.strain.strain}
-            decimals={1}
-            progress={today.strain.strain / 21}
-            color={colors.strain}
-            onPress={() => router.navigate('/strain')}
-          />
-          <ScoreRing
-            label="SLEEP"
-            value={today.sleep?.score ?? null}
-            suffix="%"
-            progress={(today.sleep?.score ?? 0) / 100}
-            color={colors.sleep}
-            onPress={() => router.navigate('/sleep')}
-          />
-        </Row>
+        <DayPager>
+          <Row>
+            <ScoreRing
+              label="RECOVERY"
+              value={recovery?.score ?? null}
+              suffix="%"
+              progress={(recovery?.score ?? 0) / 100}
+              color={recoveryColor}
+              onPress={() => router.push('/recovery')}
+            />
+            <ScoreRing
+              label="STRAIN"
+              value={today.strain.strain}
+              decimals={1}
+              progress={today.strain.strain / 21}
+              color={colors.strain}
+              onPress={() => router.navigate('/strain')}
+            />
+            <ScoreRing
+              label="SLEEP"
+              value={today.sleep?.score ?? null}
+              suffix="%"
+              progress={(today.sleep?.score ?? 0) / 100}
+              color={colors.sleep}
+              onPress={() => router.navigate('/sleep')}
+            />
+          </Row>
+        </DayPager>
         {headline ? <Text style={[styles.headline, { color: recoveryColor }]}>{headline}</Text> : null}
         <Muted>Tap a score to see what drove it.</Muted>
         {recovery?.calibrating ? (
@@ -93,7 +96,7 @@ export default function TodayScreen() {
 
       <HeartRateCard date={today.date} />
 
-      <Card title="LAST NIGHT">
+      <Card title={isLatest ? 'LAST NIGHT' : 'THAT NIGHT'}>
         <Row>
           <Stat label="HRV" value={todayData?.hrvRmssd ? `${todayData.hrvRmssd} ms` : '--'} />
           <Stat label="Resting HR" value={todayData?.restingHr ? `${todayData.restingHr} bpm` : '--'} />

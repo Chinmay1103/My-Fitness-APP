@@ -24,6 +24,9 @@ interface ScoresState {
   refresh: () => Promise<void>;
   /** Uploads the current scores again, so the coach connector sees the latest numbers. */
   syncNow: () => Promise<void>;
+  /** Which day the screens show, in days back from the latest: 0 = today. Shared, so Sleep and Strain follow Today. */
+  dayBack: number;
+  setDayBack: (back: number) => void;
 }
 
 const ScoresContext = createContext<ScoresState | null>(null);
@@ -35,6 +38,7 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<HealthSource>(mockSource);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [dayBack, setDayBackRaw] = useState(0);
   const loadedAt = useRef(0);
 
   const refresh = useCallback(async () => {
@@ -63,7 +67,10 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refresh();
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active' && Date.now() - loadedAt.current > STALE_MS) refresh();
+      if (state === 'active' && Date.now() - loadedAt.current > STALE_MS) {
+        setDayBackRaw(0); // back after a while: start from today again
+        refresh();
+      }
     });
     return () => subscription.remove();
   }, [refresh]);
@@ -77,9 +84,27 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
     }
   }, [source, days, scores]);
 
+  const setDayBack = useCallback(
+    (back: number) => setDayBackRaw(Math.min(Math.max(back, 0), Math.max(scores.length - 1, 0))),
+    [scores.length],
+  );
+
   return (
     <ScoresContext.Provider
-      value={{ loading, error, sourceLabel: source.label, sourceId: source.id, getHeartRate: source.getHeartRate, days, scores, syncStatus, refresh, syncNow }}>
+      value={{
+        loading,
+        error,
+        sourceLabel: source.label,
+        sourceId: source.id,
+        getHeartRate: source.getHeartRate,
+        days,
+        scores,
+        syncStatus,
+        refresh,
+        syncNow,
+        dayBack: Math.min(dayBack, Math.max(scores.length - 1, 0)),
+        setDayBack,
+      }}>
       {children}
     </ScoresContext.Provider>
   );
@@ -89,4 +114,23 @@ export function useScores(): ScoresState {
   const value = useContext(ScoresContext);
   if (!value) throw new Error('useScores must be used inside ScoresProvider');
   return value;
+}
+
+/**
+ * The day the screens are showing (see dayBack) and the one before it, for "yesterday's strain".
+ * `days` and `scores` line up one-to-one, oldest first.
+ */
+export function useSelectedDay() {
+  const { scores, days, dayBack, setDayBack } = useScores();
+  const index = scores.length - 1 - dayBack;
+  return {
+    score: scores[index] as DailyScores | undefined,
+    day: days[index] as DayData | undefined,
+    previous: index > 0 ? scores[index - 1] : undefined,
+    isLatest: dayBack === 0,
+    dayBack,
+    setDayBack,
+    /** How many days there are to go back to. */
+    count: scores.length,
+  };
 }

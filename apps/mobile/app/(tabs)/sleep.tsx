@@ -5,11 +5,12 @@ import { ComboChart } from '@/components/charts/ComboChart';
 import { Donut } from '@/components/charts/Donut';
 import { Hypnogram } from '@/components/charts/Hypnogram';
 import { ScoreRing } from '@/components/ScoreRing';
+import { DayPager } from '@/components/Swipe';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Row, Screen, Stat } from '@/components/ui';
 import { colors } from '@/constants/theme';
-import { formatMinutes } from '@/lib/format';
-import { useScores } from '@/lib/ScoresProvider';
+import { formatDate, formatMinutes } from '@/lib/format';
+import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 
 const STAGES = [
   { key: 'deep', label: 'Deep' },
@@ -19,15 +20,21 @@ const STAGES = [
 ] as const;
 
 export default function SleepScreen() {
-  const { scores, days } = useScores();
-  const sleep = scores.at(-1)?.sleep;
-  const need = scores.at(-1)?.sleepNeed;
-  const priorStrain = scores.at(-2)?.strain.strain;
-  const session = days.at(-1)?.sleep;
+  const { scores } = useScores();
+  const { score, day, previous, isLatest } = useSelectedDay();
+  const sleep = score?.sleep;
+  const need = score?.sleepNeed;
+  const priorStrain = previous?.strain.strain;
+  const session = day?.sleep;
+  // The night that ended on the picked day's morning.
+  const title = isLatest || !score ? 'Last night' : `Night into ${formatDate(score.date)}`;
   if (!sleep || !session) {
     return (
-      <Screen overline="SLEEP" title="Last night">
-        <Muted>No sleep recorded last night.</Muted>
+      <Screen overline="SLEEP" title={title}>
+        <Card>
+          <DayPager />
+          <Muted>No sleep recorded that night.</Muted>
+        </Card>
       </Screen>
     );
   }
@@ -37,18 +44,20 @@ export default function SleepScreen() {
   const bedtimeDrift = Math.round((1 - sleep.consistency) * 120);
 
   return (
-    <Screen overline="SLEEP" title="Last night" glow={colors.sleep}>
+    <Screen overline="SLEEP" title={title} glow={colors.sleep}>
       <Card>
-        <View style={styles.hero}>
-          <ScoreRing label="SLEEP PERFORMANCE" value={sleep.score} suffix="%" progress={sleep.score / 100} color={colors.sleep} size={140} />
-          <Muted>
-            You slept {formatMinutes(sleep.asleepMinutes)} of the {formatMinutes(sleep.needMinutes)} your body needed.
-          </Muted>
-        </View>
+        <DayPager>
+          <View style={styles.hero}>
+            <ScoreRing label="SLEEP PERFORMANCE" value={sleep.score} suffix="%" progress={sleep.score / 100} color={colors.sleep} size={140} />
+            <Muted>
+              You slept {formatMinutes(sleep.asleepMinutes)} of the {formatMinutes(sleep.needMinutes)} your body needed.
+            </Muted>
+          </View>
+        </DayPager>
       </Card>
 
       {session.segments?.length ? (
-        <Card title="LAST NIGHT, STAGE BY STAGE">
+        <Card title={isLatest ? 'LAST NIGHT, STAGE BY STAGE' : 'STAGE BY STAGE'}>
           <Hypnogram segments={session.segments} />
         </Card>
       ) : null}
@@ -88,11 +97,11 @@ export default function SleepScreen() {
       </Card>
 
       {need ? (
-        <Card title={`LAST NIGHT YOU NEEDED ${formatMinutes(need.total).toUpperCase()}`}>
+        <Card title={`${isLatest ? 'LAST NIGHT ' : ''}YOU NEEDED ${formatMinutes(need.total).toUpperCase()}`}>
           <Breakdown>
             <BreakdownTotal label="Base need" detail="What an average adult needs; adjustable later" value={formatMinutes(need.base)} />
             <BreakdownFactor
-              label="Yesterday's strain"
+              label={isLatest ? "Yesterday's strain" : "The day before's strain"}
               detail={
                 need.strain > 0
                   ? `Strain of ${priorStrain?.toFixed(1)} needs extra recovery (anything over 8 adds time)`

@@ -1,11 +1,11 @@
 import { daySamples, summarizeHeartRate } from '@fitness/scoring';
-import { SymbolView } from 'expo-symbols';
-import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { HeartRateChart } from '@/components/charts/HeartRateChart';
 import { LineChart } from '@/components/charts/LineChart';
 import { dayName } from '@/components/charts/parts';
+import { StepButton } from '@/components/Swipe';
 import { Card, Muted, Row, Screen, Stat } from '@/components/ui';
 import { colors, fonts } from '@/constants/theme';
 import { formatTime } from '@/lib/format';
@@ -14,9 +14,8 @@ import { ago, heartRateLimits, useDayHeartRate } from '@/lib/heartRate';
 import { useScores } from '@/lib/ScoresProvider';
 
 export default function HeartRateScreen() {
-  const { days, sourceId } = useScores();
-  // Days back from today: 0 = today.
-  const [back, setBack] = useState(0);
+  // Days back from today (0 = today), shared with the day pager on Today, Sleep and Strain.
+  const { days, sourceId, dayBack: back, setDayBack: setBack } = useScores();
   const index = Math.max(days.length - 1 - back, 0);
   const date = days[index]?.date;
   const { samples, checkedAt, isToday, day } = useDayHeartRate(date);
@@ -85,28 +84,7 @@ export default function HeartRateScreen() {
   );
 }
 
-function StepButton({ icon, label, disabled, onPress }: { icon: 'left' | 'right'; label: string; disabled: boolean; onPress: () => void }) {
-  const name =
-    icon === 'left'
-      ? ({ ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' } as const)
-      : ({ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' } as const);
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      hitSlop={10}
-      style={({ pressed }) => [styles.stepButton, (disabled || pressed) && styles.dim]}>
-      <SymbolView name={name} tintColor={colors.text} size={22} />
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   stepperText: { flex: 1, textAlign: 'center', color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 12 },
-  stepButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.track, alignItems: 'center', justifyContent: 'center' },
-  dim: { opacity: 0.35 },
 });
