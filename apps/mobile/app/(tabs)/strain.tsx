@@ -1,11 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 
 import { Breakdown, BreakdownFactor, BreakdownTotal } from '@/components/Breakdown';
 import { ScoreRing } from '@/components/ScoreRing';
 import { ComboChart } from '@/components/charts/ComboChart';
-import { Card, Muted, Screen, Stat } from '@/components/ui';
+import { Button, Card, Muted, Screen, Stat } from '@/components/ui';
 import { colors, motion } from '@/constants/theme';
 import { useAnimatedTarget } from '@/lib/animation';
 import { formatMinutes, formatTime } from '@/lib/format';
@@ -65,6 +66,11 @@ export default function StrainScreen() {
           Only time above 30% of your heart-rate reserve counts, and a hard minute counts several times more than an
           easy one. Each activity gets its share of the day's total.
         </Muted>
+      </Card>
+
+      <Card title="LIVE HEART RATE">
+        <Muted>Watch your heart rate and zone second by second during a workout, straight from the band.</Muted>
+        <Button label="Open live heart rate" variant="secondary" onPress={() => router.push('/live')} />
       </Card>
 
       <Card title="TIME IN HEART RATE ZONES">

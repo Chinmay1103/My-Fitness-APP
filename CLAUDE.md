@@ -66,7 +66,13 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
   Today screen shows under the rings (`lib/coachNote.ts`, `components/CoachNoteCard.tsx`). The note
   explains; it never changes a score. `lib/workouts.ts` holds the workout model
   and matches workouts to band-detected activities. Shared data comes from
-  `lib/ScoresProvider.tsx`; UI pieces live in `components/`; design tokens (colors, gradients,
+  `lib/ScoresProvider.tsx`; UI pieces live in `components/`;
+  **live heart rate** (`app/live.tsx`, `lib/liveHeartRate.ts`) reads the band's standard Bluetooth
+  heart-rate signal ("Share heart rate" in Google Health) via react-native-ble-plx, kept alive in
+  the background by a foreground service (react-native-background-actions; service type set in
+  `plugins/withLiveHeartRateService.js`). It's for watching, never for scores. The Android
+  home-screen **Heart rate widget** (`lib/heartRateWidget.ts`, drawing in `lib/widget/`,
+  react-native-android-widget) is registered in the entry file `index.ts`. Design tokens (colors, gradients,
   fonts, motion) in `constants/theme.ts`. Charts are in `components/charts/` (bars, line, combo, donut, sleep-stage
   hypnogram; all react-native-svg, no chart library). The background behind every screen is either
   **Scenes** (bundled public-domain photos per time of day, `components/SceneBackdrop.tsx`) or
@@ -102,6 +108,7 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | 2 | Scores + Today rings | Done on demo data; tune against real data |
 | 3 | Logging: workouts, plans, meals (AI macros) | Merged into 4: the user types or speaks what they did or ate in the Coach chat and the AI records it (no forms) |
 | 4 | AI coach (in the Claude app; also does all logging) | "Ask Claude" handoff done; coach connector live (read scores; log/list/delete workouts, meals, weight; profile; daily coach note on Today). To do: the app reads logged workouts back |
+| 4b | Live heart rate + home-screen widget | Code ready (Oct 6); needs a new EAS build and a test with the band |
 | 5 | Trends, weekly report, notifications, MCP server | Not started |
 
 Keep this table up to date when a milestone moves.

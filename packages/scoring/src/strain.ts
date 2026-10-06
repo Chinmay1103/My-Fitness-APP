@@ -43,6 +43,17 @@ export interface StrainActivity {
   strain: number;
 }
 
+/**
+ * Heart-rate zone for one reading: 0 below zone 1 (under 30% of heart-rate reserve), else 1 to 5.
+ * Same bounds as the strain score's zones, for the live heart-rate screen.
+ */
+export function heartRateZone(bpm: number, restingHr: number, maxHr: number): number {
+  const fraction = (bpm - restingHr) / Math.max(maxHr - restingHr, 1);
+  let zone = 0;
+  while (zone < ZONE_BOUNDS.length && fraction >= ZONE_BOUNDS[zone]!) zone++;
+  return zone;
+}
+
 export function strainFromTrimp(trimp: number): number {
   return round(21 * (1 - Math.exp(-trimp / STRAIN_SCALE)), 1);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeStrain, estimateMaxHr, strainFromTrimp, type HeartRateSample } from "../src";
+import { computeStrain, estimateMaxHr, heartRateZone, strainFromTrimp, type HeartRateSample } from "../src";
 
 const profile = { age: 28 }; // max HR 188
 const steady = (bpm: number, minutes: number, stepMinutes = 1): HeartRateSample[] =>
@@ -9,6 +9,14 @@ describe("strain", () => {
   it("estimates max HR with the Tanaka formula", () => {
     expect(estimateMaxHr(profile)).toBe(188);
     expect(estimateMaxHr({ age: 28, maxHr: 195 })).toBe(195);
+  });
+
+  it("puts a reading in its heart-rate-reserve zone", () => {
+    // Resting 60, max 188: zone 1 starts at 98 bpm, zone 4 at 150, zone 5 at 163.
+    expect(heartRateZone(70, 60, 188)).toBe(0);
+    expect(heartRateZone(98.4, 60, 188)).toBe(1);
+    expect(heartRateZone(156, 60, 188)).toBe(4);
+    expect(heartRateZone(200, 60, 188)).toBe(5);
   });
 
   it("scores a hard hour at 75% of heart-rate reserve around 13", () => {
