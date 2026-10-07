@@ -5,12 +5,13 @@ import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 
 import { Breakdown, BreakdownFactor, BreakdownTotal } from '@/components/Breakdown';
 import { ScoreRing } from '@/components/ScoreRing';
+import { DayPager } from '@/components/Swipe';
 import { ComboChart } from '@/components/charts/ComboChart';
 import { Button, Card, Muted, Screen, Stat } from '@/components/ui';
 import { colors, motion } from '@/constants/theme';
 import { useAnimatedTarget } from '@/lib/animation';
-import { formatMinutes, formatTime } from '@/lib/format';
-import { useScores } from '@/lib/ScoresProvider';
+import { formatDate, formatMinutes, formatTime } from '@/lib/format';
+import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 
 function strainLabel(strain: number): string {
   if (strain < 10) return 'Light';
@@ -21,7 +22,7 @@ function strainLabel(strain: number): string {
 
 export default function StrainScreen() {
   const { scores } = useScores();
-  const today = scores.at(-1);
+  const { score: today, isLatest } = useSelectedDay();
   if (!today) return <Screen overline="STRAIN" title="Today so far"><Muted>No data yet.</Muted></Screen>;
 
   const { strain, zoneMinutes, activities, everydayStrain } = today.strain;
@@ -29,14 +30,16 @@ export default function StrainScreen() {
   const maxZone = Math.max(...zoneMinutes, 1);
 
   return (
-    <Screen overline="STRAIN" title="Today so far" glow={colors.strain}>
+    <Screen overline="STRAIN" title={isLatest ? 'Today so far' : formatDate(today.date)} glow={colors.strain}>
       <Card>
-        <View style={styles.hero}>
-          <ScoreRing label="DAY STRAIN" value={strain} decimals={1} progress={strain / 21} color={colors.strain} size={140} />
-          <Muted>
-            {strainLabel(strain)} day. Strain runs from 0 to 21 and gets harder to raise the higher it goes.
-          </Muted>
-        </View>
+        <DayPager>
+          <View style={styles.hero}>
+            <ScoreRing label="DAY STRAIN" value={strain} decimals={1} progress={strain / 21} color={colors.strain} size={140} />
+            <Muted>
+              {strainLabel(strain)} day. Strain runs from 0 to 21 and gets harder to raise the higher it goes.
+            </Muted>
+          </View>
+        </DayPager>
       </Card>
 
       <Card title={`WHY ${strain.toFixed(1)}`}>

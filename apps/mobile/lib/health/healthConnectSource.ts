@@ -185,20 +185,31 @@ export const healthConnectSource: HealthSource = {
       if (day) day.hrvRmssd = Math.round(r.heartRateVariabilityMillis);
     }
 
-    // Heart rate for strain: the waking day, so samples during that day's main sleep are skipped.
-    for (const record of heartRate) {
-      for (const s of record.samples) {
-        const time = Date.parse(s.time);
-        const day = byDate.get(localDate(time));
-        if (!day || (day.sleep && time >= day.sleep.start && time <= day.sleep.end)) continue;
-        day.heartRate.push({ time, bpm: s.beatsPerMinute } satisfies HeartRateSample);
-      }
+    // Heart rate for strain is the waking day; samples during that day's main sleep go to
+    // `sleepHeartRate` instead, which is only charted.
+    for (const s of heartRateSamples(heartRate)) {
+      const day = byDate.get(localDate(s.time));
+      if (!day) continue;
+      if (day.sleep && s.time >= day.sleep.start && s.time <= day.sleep.end) (day.sleepHeartRate ??= []).push(s);
+      else day.heartRate.push(s);
     }
-    for (const day of result) day.heartRate.sort((a, b) => a.time - b.time);
 
     return result;
   },
+
+  async getHeartRate(from, to) {
+    return heartRateSamples(await readAll('HeartRate', from, to)).filter(
+      (s) => s.time >= from.getTime() && s.time <= to.getTime(),
+    );
+  },
 };
+
+/** Health Connect stores heart rate as records holding many samples; flattened, oldest first. */
+function heartRateSamples(records: { samples: { time: string; beatsPerMinute: number }[] }[]): HeartRateSample[] {
+  return records
+    .flatMap((r) => r.samples.map((s) => ({ time: Date.parse(s.time), bpm: s.beatsPerMinute })))
+    .sort((a, b) => a.time - b.time);
+}
 
 export interface DataTypeCheck {
   type: string;

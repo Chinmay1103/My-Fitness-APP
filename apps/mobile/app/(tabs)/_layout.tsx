@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import type { ColorValue } from 'react-native';
+import { Easing, useWindowDimensions, type ColorValue } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { TabBar } from '@/components/TabBar';
 import { tapHaptic } from '@/lib/haptics';
@@ -14,6 +15,8 @@ function tabIcon(ios: SymbolNames['ios'], android: SymbolNames['android']) {
 }
 
 export default function TabLayout() {
+  const { width } = useWindowDimensions();
+  const reduceMotion = useReducedMotion();
   return (
     <Tabs
       screenListeners={{ tabPress: tapHaptic }}
@@ -22,6 +25,17 @@ export default function TabLayout() {
       screenOptions={{
         // Screens draw their own titles (see Screen in components/ui.tsx).
         headerShown: false,
+        // Tabs slide in side by side like pages, so tapping and swiping (see Screen in components/ui.tsx)
+        // feel alike. No fade: a fade lets the black behind the screens show through mid-way.
+        animation: reduceMotion ? 'none' : 'shift',
+        transitionSpec: { animation: 'timing', config: { duration: 280, easing: Easing.out(Easing.cubic) } },
+        sceneStyleInterpolator: ({ current }) => ({
+          sceneStyle: {
+            transform: [{ translateX: current.progress.interpolate({ inputRange: [-1, 0, 1], outputRange: [-width, 0, width] }) }],
+          },
+        }),
+        // Build every tab at launch, so a tab opened for the first time doesn't slide in empty.
+        lazy: false,
       }}>
       <Tabs.Screen name="index" options={{ title: 'Today', tabBarIcon: tabIcon('heart.circle', 'monitor_heart') }} />
       <Tabs.Screen name="sleep" options={{ title: 'Sleep', tabBarIcon: tabIcon('moon.zzz', 'bedtime') }} />

@@ -96,6 +96,7 @@ export type Database = {
         Row: {
           asleep_minutes: number | null
           date: string
+          heart_rate: Json | null
           hrv_rmssd: number | null
           recovery_score: number | null
           recovery_zone: string | null
@@ -112,6 +113,7 @@ export type Database = {
         Insert: {
           asleep_minutes?: number | null
           date: string
+          heart_rate?: Json | null
           hrv_rmssd?: number | null
           recovery_score?: number | null
           recovery_zone?: string | null
@@ -128,6 +130,7 @@ export type Database = {
         Update: {
           asleep_minutes?: number | null
           date?: string
+          heart_rate?: Json | null
           hrv_rmssd?: number | null
           recovery_score?: number | null
           recovery_zone?: string | null

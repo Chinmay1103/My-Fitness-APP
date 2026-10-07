@@ -1,24 +1,32 @@
 import { CALIBRATED_DAYS } from '@fitness/scoring';
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { CoachNoteCard } from '@/components/CoachNoteCard';
+import { HeartRateCard } from '@/components/HeartRateCard';
 import { ScoreRing } from '@/components/ScoreRing';
+import { DayPager } from '@/components/Swipe';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Pill, Row, Screen, Stat } from '@/components/ui';
-import { colors, fonts } from '@/constants/theme';
+import { colors, fonts, spacing } from '@/constants/theme';
 import { formatDate, formatMinutes } from '@/lib/format';
 import { tapHaptic } from '@/lib/haptics';
 import { useCoachNote } from '@/lib/coachNote';
 import { todayHeadline } from '@/lib/insights';
-import { useScores } from '@/lib/ScoresProvider';
+import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 
 export default function TodayScreen() {
-  const { scores, days, sourceLabel } = useScores();
-  const today = scores.at(-1);
-  const todayData = days.at(-1);
+  const { scores, sourceLabel, dayBack } = useScores();
+  // "today" is whichever day is picked with the day pager; the latest day unless swiped back.
+  const { score: today, day: todayData, isLatest } = useSelectedDay();
   const note = useCoachNote(today?.date);
+  // Three rings side by side must fit narrow phones (or a large display-size setting): size them
+  // from the width the card actually has, up to 104. Until it's measured, estimate from the screen.
+  const { width: screenWidth } = useWindowDimensions();
+  const [rowWidth, setRowWidth] = useState(screenWidth - 2 * spacing.md - 2 * (spacing.md + 3));
+  const ringSize = Math.min(104, Math.floor((rowWidth - 2 * spacing.sm) / 3));
   if (!today) return <Screen overline="TODAY" title="No data yet"><Muted>Pull down to refresh.</Muted></Screen>;
 
   const recovery = today.recovery;
@@ -27,7 +35,7 @@ export default function TodayScreen() {
 
   return (
     <Screen
-      overline="TODAY"
+      overline={isLatest ? 'TODAY' : dayBack === 1 ? 'YESTERDAY' : `${dayBack} DAYS AGO`}
       title={formatDate(today.date)}
       accessory={
         <View style={styles.accessory}>
@@ -67,32 +75,40 @@ export default function TodayScreen() {
       glow={recoveryColor}>
 
       <Card>
-        <Row>
-          <ScoreRing
-            label="RECOVERY"
-            value={recovery?.score ?? null}
-            suffix="%"
-            progress={(recovery?.score ?? 0) / 100}
-            color={recoveryColor}
-            onPress={() => router.push('/recovery')}
-          />
-          <ScoreRing
-            label="STRAIN"
-            value={today.strain.strain}
-            decimals={1}
-            progress={today.strain.strain / 21}
-            color={colors.strain}
-            onPress={() => router.navigate('/strain')}
-          />
-          <ScoreRing
-            label="SLEEP"
-            value={today.sleep?.score ?? null}
-            suffix="%"
-            progress={(today.sleep?.score ?? 0) / 100}
-            color={colors.sleep}
-            onPress={() => router.navigate('/sleep')}
-          />
-        </Row>
+        <DayPager>
+          <View style={styles.rings} onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}>
+            <ScoreRing
+              label="RECOVERY"
+              size={ringSize}
+              labelWidth={ringSize}
+              value={recovery?.score ?? null}
+              suffix="%"
+              progress={(recovery?.score ?? 0) / 100}
+              color={recoveryColor}
+              onPress={() => router.push('/recovery')}
+            />
+            <ScoreRing
+              label="STRAIN"
+              size={ringSize}
+              labelWidth={ringSize}
+              value={today.strain.strain}
+              decimals={1}
+              progress={today.strain.strain / 21}
+              color={colors.strain}
+              onPress={() => router.navigate('/strain')}
+            />
+            <ScoreRing
+              label="SLEEP"
+              size={ringSize}
+              labelWidth={ringSize}
+              value={today.sleep?.score ?? null}
+              suffix="%"
+              progress={(today.sleep?.score ?? 0) / 100}
+              color={colors.sleep}
+              onPress={() => router.navigate('/sleep')}
+            />
+          </View>
+        </DayPager>
         {headline ? <Text style={[styles.headline, { color: recoveryColor }]}>{headline}</Text> : null}
         <Muted>Tap a score to see what drove it.</Muted>
         {recovery?.calibrating ? (
@@ -105,7 +121,9 @@ export default function TodayScreen() {
 
       {note ? <CoachNoteCard note={note} accent={recoveryColor} /> : null}
 
-      <Card title="LAST NIGHT">
+      <HeartRateCard date={today.date} />
+
+      <Card title={isLatest ? 'LAST NIGHT' : 'THAT NIGHT'}>
         <Row>
           <Stat label="HRV" value={todayData?.hrvRmssd ? `${todayData.hrvRmssd} ms` : '--'} />
           <Stat label="Resting HR" value={todayData?.restingHr ? `${todayData.restingHr} bpm` : '--'} />
@@ -135,6 +153,7 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
+  rings: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   accessory: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   pressed: { opacity: 0.6 },
   headline: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 22 },

@@ -21,11 +21,13 @@ interface Props {
   /** Flat score color; the ring uses the matching gradient from the theme. */
   color: string;
   size?: number;
+  /** Widest the label may be; it shrinks to fit (large system font, narrow phone). Unlimited if left out. */
+  labelWidth?: number;
   /** Makes the ring tappable, e.g. to open an explanation of the score. */
   onPress?: () => void;
 }
 
-export function ScoreRing({ label, value, decimals = 0, suffix = '', progress, color, size = 104, onPress }: Props) {
+export function ScoreRing({ label, value, decimals = 0, suffix = '', progress, color, size = 104, labelWidth, onPress }: Props) {
   const stroke = size * 0.09;
   const glowWidth = stroke * 1.6;
   // Leave room for the glow so it isn't clipped at the edge.
@@ -108,7 +110,7 @@ export function ScoreRing({ label, value, decimals = 0, suffix = '', progress, c
           </Text>
         </View>
       </View>
-      <Text style={styles.label}>
+      <Text style={[styles.label, labelWidth ? { maxWidth: labelWidth } : null]} numberOfLines={1} adjustsFontSizeToFit>
         {label}
         {onPress ? '  ›' : ''}
       </Text>

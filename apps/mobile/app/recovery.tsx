@@ -8,15 +8,18 @@ import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Screen } from '@/components/ui';
 import { colors, type } from '@/constants/theme';
 import { FACTOR_LABELS, RECOVERY_GUIDANCE, recoveryFactorDetail } from '@/lib/insights';
-import { useScores } from '@/lib/ScoresProvider';
+import { formatDate } from '@/lib/format';
+import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 
 export default function RecoveryScreen() {
   const { scores, days } = useScores();
-  const recovery = scores.at(-1)?.recovery;
+  const { score, isLatest } = useSelectedDay();
+  const recovery = score?.recovery;
+  const title = isLatest || !score ? 'This morning' : formatDate(score.date);
 
   if (!recovery || recovery.score === null || !recovery.zone || !recovery.breakdown) {
     return (
-      <Screen back overline="RECOVERY" title="This morning">
+      <Screen back overline="RECOVERY" title={title}>
         <Card title="NOT ENOUGH DATA YET">
           <Muted>
             Recovery compares last night with your own normal, so it needs at least {MIN_BASELINE_DAYS} nights of HRV and
@@ -33,7 +36,7 @@ export default function RecoveryScreen() {
   const guidance = RECOVERY_GUIDANCE[recovery.zone];
 
   return (
-    <Screen back overline="RECOVERY" title="This morning" glow={color}>
+    <Screen back overline="RECOVERY" title={title} glow={color}>
       <Card>
         <View style={styles.hero}>
           <ScoreRing label="RECOVERY" value={recovery.score} suffix="%" progress={recovery.score / 100} color={color} size={150} />
@@ -58,7 +61,7 @@ export default function RecoveryScreen() {
               scale={scale}
             />
           ))}
-          <BreakdownTotal label="Today" value={`${recovery.score}%`} color={color} />
+          <BreakdownTotal label={isLatest ? 'Today' : 'That day'} value={`${recovery.score}%`} color={color} />
         </Breakdown>
       </Card>
 

@@ -80,7 +80,7 @@ export function getHeartRateBaseline() {
 
 /** 0 below zone 1, else 1 to 5, against the current baseline. */
 export function liveZone(bpm: number): number {
-  return heartRateZone(bpm, baseline.restingHr, baseline.maxHr);
+  return heartRateZone(bpm, baseline.restingHr, baseline.maxHr) + 1;
 }
 
 /**

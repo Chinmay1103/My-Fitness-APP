@@ -153,9 +153,20 @@ export function generateMockDays(options: MockOptions = {}): DayData[] {
     }
     heartRate.sort((a, b) => a.time - b.time);
 
+    // Night heart rate after midnight: drifts down to resting by the early hours, a little higher in
+    // REM-heavy mornings. No randomness, so the scores above stay exactly as they were.
+    const sleepHeartRate: HeartRateSample[] = [];
+    for (let t = Math.max(sleep.start, midnight); t <= sleep.end; t += 5 * MINUTE) {
+      const hours = (t - sleep.start) / HOUR;
+      const dip = Math.max(0, 6 - 2 * hours);
+      const wave = 2 * Math.sin(hours * 4.2) + (hours > 5 ? 2 : 0);
+      sleepHeartRate.push({ time: t, bpm: Math.round(restingHr + 1 + dip + wave) });
+    }
+
     result.push({
       date: localDate(midnight),
       heartRate,
+      sleepHeartRate,
       sleep,
       restingHr,
       hrvRmssd,

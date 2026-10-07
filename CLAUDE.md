@@ -20,7 +20,7 @@ Open design to-dos from the Sep 30 screen-recording review: [docs/design-review-
 - **Math computes scores, AI only explains them.** Scores must stay deterministic and tested.
 - **Backend: Supabase.** Schema in `supabase/migrations/` (RLS on every table; deploy with
   `npm run db:push`). The app talks to it through `apps/mobile/lib/supabase.ts` (null when `.env` is
-  missing, so the app still runs), signs in with an email code (`app/account.tsx`), and uploads one
+  missing, so the app still runs), signs in with Google or an email code (`app/account.tsx`, `lib/googleSignIn.ts`; PKCE, the session stays saved until Sign out; the Google button shows once Google is enabled in Supabase), and uploads one
   summary row per day (`lib/sync.ts`); raw heart rate and demo data never leave the phone. The
   Claude API is called only from Supabase Edge Functions; API keys never ship in the app.
 - **Native modules that throw on import** (Health Connect, AsyncStorage) are loaded lazily behind a
@@ -54,10 +54,15 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
 - `packages/scoring/`: pure TypeScript scoring and mock data, Vitest tests. Consumed as source
   (`main: src/index.ts`), no build step.
 - `apps/mobile/`: Expo SDK 57 app with expo-router. Tabs live in `app/(tabs)/`: Today (`index.tsx`),
-  Sleep, Strain, Coach; `app/recovery.tsx` is the Recovery detail screen.
+  Sleep, Strain, Coach; `app/recovery.tsx` is the Recovery detail screen; `app/heart-rate.tsx` is the
+  all-day heart rate screen (opened from the Today card `components/HeartRateCard.tsx`). It re-reads
+  today's heart rate every minute while open (`lib/heartRate.ts`; Health Connect only gets the band's
+  data in batches via Google Health, so it's near-live, not live). Night heart rate lives in
+  `DayData.sleepHeartRate` and never counts toward strain. A per-day heart-rate summary
+  (`summarizeHeartRate`: low/avg/high, hourly averages) is synced in `daily_summaries.heart_rate` for the coach.
   **No logging forms or Log tab** (Chinmay's call, Oct 1). **The coach is the Claude app, not an
   in-app chat** (Chinmay has no paid Claude plan or API key): the Coach tab opens a new claude.ai chat
-  with just the question (`lib/claudeHandoff.ts`; the latest scores are synced first and Claude reads them through the connector, so no numbers show in the chat). The **coach connector** (`supabase/functions/mcp/`, an
+  with just the question (`lib/claudeHandoff.ts`; the latest scores are synced first and Claude reads them through the connector, so no numbers show in the chat). The user can save one chat's link (`lib/coachChat.ts`); then questions go to that chat instead, copied to the clipboard to paste, since claude.ai links can't prefill an existing chat (`lib/clipboard.ts`, loaded lazily). The **coach connector** (`supabase/functions/mcp/`, an
   MCP server; free plans allow one custom connector) lets that chat read the scores and record workouts
   and meals the user types or speaks. Claude signs in via Supabase Auth's OAuth server; the consent page
   is `docs/oauth/consent.html` on GitHub Pages (Edge Functions can't serve HTML). Type-check it with
@@ -80,7 +85,10 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
   hypnogram; all react-native-svg, no chart library). The background behind every screen is either
   **Scenes** (bundled public-domain photos per time of day, `components/SceneBackdrop.tsx`) or
   **Aurora** (moving lights), picked on the Account screen (`lib/backgroundStyle.ts`); the tab bar is
-  `components/TabBar.tsx`. Use tokens, not raw hex, in screens.
+  `components/TabBar.tsx`.
+  **Swiping** (`components/Swipe.tsx`, plain PanResponder): left/right anywhere on a tab screen changes tab;
+  on the score rings (`DayPager`) it changes day. The picked day (`dayBack`, `useSelectedDay()` in
+  `lib/ScoresProvider.tsx`) is shared by Today, Sleep, Strain, Recovery and Heart rate. Use tokens, not raw hex, in screens.
   Visual direction: `design-system/my-fitness-app/MASTER.md` (made with the ui-ux-pro-max skill in
   `.claude/skills/`; its "Project decisions" table overrides the generated parts). Rings and charts
   animate via Reanimated and skip motion when the phone's "reduce motion" setting is on; haptics go through
@@ -107,10 +115,10 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | # | Milestone | Status |
 |---|---|---|
 | 0 | Setup | Runs on the phone; design review done; Supabase project live (Mumbai, schema pushed Oct 2, Gmail SMTP for sign-in codes, sign-in works on the phone). To do: verify Fitbit Air data types |
-| 1 | Health Connect data in | Code ready (`lib/health/healthConnectSource.ts`, Health data screen `app/health.tsx`); first EAS dev build done (Oct 1); to do: check real Fitbit Air data |
+| 1 | Health Connect data in | Band arrived Oct 3: heart rate flows from Google Health into Health Connect and strain scores on it; heart rate screen added. To do: check sleep, HRV and resting HR after the first nights |
 | 2 | Scores + Today rings | Done on demo data; tune against real data |
 | 3 | Logging: workouts, plans, meals (AI macros) | Merged into 4: the user types or speaks what they did or ate in the Coach chat and the AI records it (no forms) |
-| 4 | AI coach (in the Claude app; also does all logging) | "Ask Claude" handoff done; coach connector live (read scores; log/list/delete workouts, meals, weight; profile; daily coach note on Today). To do: the app reads logged workouts back |
+| 4 | AI coach (in the Claude app; also does all logging) | "Ask Claude" handoff done; coach connector live (read scores; log/list/delete workouts, meals, weight; profile; daily coach note on Today; `get_coach_notes` so each new chat picks up from earlier days). To do: the app reads logged workouts back |
 | 4b | Live heart rate + home-screen widget + heart-rate alert (SMS/WhatsApp) | Code ready (Oct 6–7); needs a new EAS build and a test with the band |
 | 5 | Trends, weekly report, notifications, MCP server | Not started |
 

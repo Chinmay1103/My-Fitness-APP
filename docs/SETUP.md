@@ -122,6 +122,23 @@ account can only read its own rows.
 > The development build started before Supabase was added doesn't include the part that remembers
 > the sign-in, so there you'll sign in again after closing the app. The next build fixes that.
 
+## Google sign-in (optional)
+
+The Account screen shows "Continue with Google" as soon as Google is turned on in Supabase; no new
+build needed. Until then it shows only the email code.
+
+1. Google Cloud Console (console.cloud.google.com): create a project, then **APIs & Services ->
+   OAuth consent screen**: External, app name "My Fitness", your email; add yourself as a test user.
+2. **Credentials -> Create credentials -> OAuth client ID**, type **Web application**. Under
+   "Authorized redirect URIs" add `https://uhbgogzfelkbnrqthutg.supabase.co/auth/v1/callback`.
+   Copy the client ID and secret.
+3. Supabase dashboard -> **Authentication -> Sign In / Providers -> Google**: turn it on, paste the
+   client ID and secret, save.
+4. Supabase dashboard -> **Authentication -> URL Configuration -> Redirect URLs**: add
+   `myfitness://auth-callback`.
+
+Signing in with Google using the same Gmail address as the email code gives the same account and data.
+
 ## Coach connector (Claude reads your data and logs workouts and meals)
 
 The connector lets a chat in the Claude app read your scores and record what you tell it ("push

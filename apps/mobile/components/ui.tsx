@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import { BottomTabBarHeightContext } from 'expo-router/tabs';
 import { SymbolView } from 'expo-symbols';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Aurora } from '@/components/Aurora';
 import { SceneBackdrop } from '@/components/SceneBackdrop';
+import { useHorizontalSwipe, type SwipeDirection } from '@/components/Swipe';
 import { colors, gradients, radius, spacing, type } from '@/constants/theme';
 import { useBackgroundStyle } from '@/lib/backgroundStyle';
 import { refreshHaptic, tapHaptic } from '@/lib/haptics';
@@ -48,7 +49,9 @@ export function Screen({ children, overline, title, accessory, back, glow, glow2
   const backgroundStyle = useBackgroundStyle();
   const insets = useSafeAreaInsets();
   // The tab bar floats over the content (see app/(tabs)/_layout.tsx); undefined outside the tabs.
-  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? insets.bottom;
+  const tabBarHeightInTabs = useContext(BottomTabBarHeightContext);
+  const tabBarHeight = tabBarHeightInTabs ?? insets.bottom;
+  const swipeTabs = useTabSwipe(tabBarHeightInTabs !== undefined);
 
   if (loading && scores.length === 0) {
     return (
@@ -59,7 +62,7 @@ export function Screen({ children, overline, title, accessory, back, glow, glow2
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.screen} {...swipeTabs}>
       {backgroundStyle === 'scenes' ? (
         <SceneBackdrop color={glow ?? colors.muted} />
       ) : (
@@ -116,6 +119,20 @@ export function Screen({ children, overline, title, accessory, back, glow, glow2
       </ScrollView>
     </View>
   );
+}
+
+/** On a tab screen, swiping left or right anywhere moves to the next or previous tab. */
+function useTabSwipe(inTabs: boolean) {
+  const navigation = useNavigation();
+  const handlers = useHorizontalSwipe((direction: SwipeDirection) => {
+    const state = navigation.getState();
+    if (!state) return;
+    const next = state.routes[state.index + (direction === 'left' ? 1 : -1)];
+    if (!next) return;
+    tapHaptic();
+    navigation.navigate(next.name as never);
+  });
+  return inTabs ? handlers : undefined;
 }
 
 /**

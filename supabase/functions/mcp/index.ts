@@ -25,7 +25,9 @@ The app has no forms: everything is recorded through you, so never tell the user
 Confirm what you logged in one short line. Times are in the user's time zone (see get_daily_scores). Give wellness guidance, not medical advice.
 When you explain a day, combine the score breakdown with the workouts and meals they logged (list_workouts, list_meals): the band can't
 see a late dinner or a leg day, you can. Whenever the user asks how their day is going, or for advice, end by saving the gist with
-save_daily_note so it shows on the app's Today screen. Do this even when no scores have synced yet: then base it on what they logged.`;
+save_daily_note so it shows on the app's Today screen. Do this even when no scores have synced yet: then base it on what they logged.
+The app opens a new chat for each question, so at the start of a conversation call get_coach_notes to see what you told
+them on recent days and pick up from there (e.g. "yesterday you planned a rest day; recovery agrees").`;
 
 const WORKOUT_KINDS = ['strength', 'run', 'cycle', 'walk', 'sport', 'class', 'other'] as const;
 
@@ -57,6 +59,30 @@ function daysAgo(days: number): string {
   return new Date(Date.now() - days * 86_400_000).toISOString();
 }
 
+/** What the phone uploads in `daily_summaries.heart_rate` (see apps/mobile/lib/sync.ts). */
+interface HeartRateRow {
+  low: number;
+  avg: number;
+  high: number;
+  latest_bpm: number;
+  latest_at: string;
+  hourly: (number | null)[];
+  minutes_covered: number;
+}
+
+function heartRateBrief(json: unknown, timeZone: string) {
+  const hr = json as HeartRateRow | null;
+  if (!hr) return null;
+  return {
+    low_bpm: hr.low,
+    avg_bpm: Math.round(hr.avg),
+    high_bpm: hr.high,
+    latest_bpm: hr.latest_bpm,
+    latest_at: localTime(hr.latest_at, timeZone),
+    hours_tracked: Math.round((hr.minutes_covered / 60) * 10) / 10,
+  };
+}
+
 function buildServer(supabase: Db, userId: string) {
   const server = new McpServer({ name: 'my-fitness', version: '0.1.0' }, { instructions: INSTRUCTIONS });
 
@@ -65,7 +91,7 @@ function buildServer(supabase: Db, userId: string) {
     {
       title: 'Daily scores',
       description:
-        "Recovery, strain and sleep for the last N days (newest first), with resting HR, HRV and hours slept. Days appear once the phone has synced real band data; demo data is never uploaded.",
+        "Recovery, strain and sleep for the last N days (newest first), with resting HR, HRV, hours slept and the day's heart rate (low / average / high bpm and the latest reading). Days appear once the phone has synced real band data; demo data is never uploaded.",
       inputSchema: z.object({ days: z.number().int().min(1).max(90).default(7).describe('How many days back, 1-90') }),
       annotations: { readOnlyHint: true },
     },
@@ -74,7 +100,7 @@ function buildServer(supabase: Db, userId: string) {
       const since = localDate(new Date(Date.now() - (days - 1) * 86_400_000), timeZone);
       const { data, error } = await supabase
         .from('daily_summaries')
-        .select('date, recovery_score, recovery_zone, strain, sleep_score, asleep_minutes, resting_hr, hrv_rmssd, sleep_start, sleep_end')
+        .select('date, recovery_score, recovery_zone, strain, sleep_score, asleep_minutes, resting_hr, hrv_rmssd, sleep_start, sleep_end, heart_rate')
         .gte('date', since)
         .order('date', { ascending: false });
       if (error) return fail(error.message);
@@ -97,6 +123,7 @@ function buildServer(supabase: Db, userId: string) {
           wake: localTime(d.sleep_end, timeZone),
           resting_hr: d.resting_hr,
           hrv_ms: d.hrv_rmssd,
+          heart_rate: heartRateBrief(d.heart_rate, timeZone),
         })),
       });
     },
@@ -107,15 +134,19 @@ function buildServer(supabase: Db, userId: string) {
     {
       title: 'Why a day scored what it did',
       description:
-        "The full score breakdown for one day, as the app shows it in its 'Why' cards: recovery = typical night + points per factor (HRV, resting HR, sleep) vs. the personal baseline; sleep = hours ceiling minus quality penalties, and sleep need = base + strain + debt; strain = activities + everyday movement.",
+        "The full score breakdown for one day, as the app shows it in its 'Why' cards: recovery = typical night + points per factor (HRV, resting HR, sleep) vs. the personal baseline; sleep = hours ceiling minus quality penalties, and sleep need = base + strain + debt; strain = activities + everyday movement. Also the day's average heart rate per hour (local time, null = no readings).",
       inputSchema: z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('YYYY-MM-DD') }),
       annotations: { readOnlyHint: true },
     },
     async ({ date }) => {
-      const { data, error } = await supabase.from('daily_summaries').select('scores').eq('date', date).maybeSingle();
+      const { data, error } = await supabase.from('daily_summaries').select('scores, heart_rate').eq('date', date).maybeSingle();
       if (error) return fail(error.message);
       if (!data) return text(`No synced data for ${date}.`);
-      return text(data.scores);
+      const hourly = (data.heart_rate as HeartRateRow | null)?.hourly;
+      return text({
+        scores: data.scores,
+        heart_rate_by_hour: hourly ? Object.fromEntries(hourly.map((bpm, h) => [`${String(h).padStart(2, '0')}:00`, bpm])) : null,
+      });
     },
   );
 
@@ -286,6 +317,28 @@ function buildServer(supabase: Db, userId: string) {
         .upsert({ ...note, updated_at: new Date().toISOString() }, { onConflict: 'user_id,date' });
       if (error) return fail(error.message);
       return text(`Saved. It shows on the Today screen for ${note.date}.`);
+    },
+  );
+
+  server.registerTool(
+    'get_coach_notes',
+    {
+      title: 'Earlier coach notes',
+      description:
+        'The notes you saved with save_daily_note over the last N days, newest first: your headline, why, and tips for each day. Read them at the start of a conversation, since each question may arrive in a new chat.',
+      inputSchema: z.object({ days: z.number().int().min(1).max(30).default(7) }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ days }) => {
+      const timeZone = await timezoneOf(supabase);
+      const { data, error } = await supabase
+        .from('daily_notes')
+        .select('date, headline, why, tips, updated_at')
+        .gte('date', localDate(new Date(Date.now() - days * 86_400_000), timeZone))
+        .order('date', { ascending: false });
+      if (error) return fail(error.message);
+      if (data.length === 0) return text(`No coach notes in the last ${days} days.`);
+      return text(data.map((note) => ({ ...note, updated_at: localTime(note.updated_at, timeZone) })));
     },
   );
 
