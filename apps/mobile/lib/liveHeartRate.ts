@@ -4,6 +4,7 @@ import { NativeModules, PermissionsAndroid, Platform, TurboModuleRegistry, type 
 import type { BleManager, Subscription } from 'react-native-ble-plx';
 
 import { colors } from '@/constants/theme';
+import { checkHeartRateAlert } from './heartRateAlert';
 import { publishHeartRate } from './heartRateWidget';
 import { localStore } from './storage';
 
@@ -279,6 +280,11 @@ function onReading(sample: HeartRateSample) {
   const samples = state.samples.length >= MAX_SAMPLES ? state.samples.slice(-MAX_SAMPLES + 1) : state.samples.slice();
   samples.push(sample);
   set({ samples, status: 'live' });
+  checkHeartRateAlert(samples).then((sent) => {
+    if (sent && service().isRunning()) {
+      service().updateNotification({ taskDesc: `${sample.bpm} bpm · alert text sent` }).catch(() => {});
+    }
+  });
 
   if (sample.time - lastPublished < PUBLISH_EVERY_MS) return;
   lastPublished = sample.time;

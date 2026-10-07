@@ -2,10 +2,12 @@ import { computeStrain, MOCK_PROFILE } from '@fitness/scoring';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { HeartRateAlertCard } from '@/components/HeartRateAlertCard';
 import { LiveHeartChart } from '@/components/charts/LiveHeartChart';
 import { Button, Card, Muted, Row, Screen, Stat } from '@/components/ui';
 import { colors, fonts, type } from '@/constants/theme';
 import { formatMinutes } from '@/lib/format';
+import { isAlertSupported } from '@/lib/heartRateAlert';
 import { isWidgetSupported, pinHeartRateWidget } from '@/lib/heartRateWidget';
 import {
   getHeartRateBaseline,
@@ -108,6 +110,8 @@ export default function LiveScreen() {
               </Muted>
             </Card>
           ) : null}
+
+          {isAlertSupported() ? <HeartRateAlertCard /> : null}
 
           {isWidgetSupported() ? (
             <Card title="HOME-SCREEN WIDGET">

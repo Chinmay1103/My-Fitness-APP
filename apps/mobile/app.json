@@ -33,7 +33,9 @@
         "android.permission.health.READ_RESPIRATORY_RATE",
         "android.permission.health.READ_SKIN_TEMPERATURE",
         "android.permission.health.READ_VO2_MAX",
-        "android.permission.health.READ_HEALTH_DATA_HISTORY"
+        "android.permission.health.READ_HEALTH_DATA_HISTORY",
+        "android.permission.READ_CONTACTS",
+        "android.permission.SEND_SMS"
       ]
     },
     "web": {
