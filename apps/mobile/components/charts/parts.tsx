@@ -68,8 +68,18 @@ export function usePickedDay(count: number, canPick: (i: number) => boolean = ()
 
 export const DEFAULT_RANGES = [7, 14, 30] as const;
 
-/** The 7D / 14D / 30D switch. */
-export function RangeSwitch({ ranges = DEFAULT_RANGES, value, onChange }: { ranges?: readonly number[]; value: number; onChange: (r: number) => void }) {
+/** The 7D / 14D / 30D switch; `unit` "m" makes it minutes (5m / 15m / 30m). */
+export function RangeSwitch({
+  ranges = DEFAULT_RANGES,
+  value,
+  onChange,
+  unit = 'D',
+}: {
+  ranges?: readonly number[];
+  value: number;
+  onChange: (r: number) => void;
+  unit?: 'D' | 'm';
+}) {
   return (
     <View style={styles.ranges} accessibilityRole="tablist">
       {ranges.map((r) => (
@@ -83,9 +93,9 @@ export function RangeSwitch({ ranges = DEFAULT_RANGES, value, onChange }: { rang
           hitSlop={6}
           accessibilityRole="tab"
           accessibilityState={{ selected: r === value }}
-          accessibilityLabel={`Last ${r} days`}
+          accessibilityLabel={`Last ${r} ${unit === 'D' ? 'days' : 'minutes'}`}
           style={[styles.range, r === value && styles.rangeSelected]}>
-          <Text style={[styles.rangeText, r === value && styles.rangeTextSelected]}>{r}D</Text>
+          <Text style={[styles.rangeText, r === value && styles.rangeTextSelected]}>{r}{unit}</Text>
         </Pressable>
       ))}
     </View>

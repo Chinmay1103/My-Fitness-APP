@@ -64,7 +64,35 @@
             "enableShrinkResourcesInReleaseBuilds": true
           }
         }
-      ]
+      ],
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "neverForLocation": true,
+          "bluetoothAlwaysPermission": "Allow My Fitness to read live heart rate from your band."
+        }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "fonts": ["../../node_modules/@expo-google-fonts/barlow-condensed/700Bold/BarlowCondensed_700Bold.ttf"],
+          "widgets": [
+            {
+              "name": "HeartRate",
+              "label": "Heart rate",
+              "description": "Your heart rate right now, with the last 30 minutes",
+              "minWidth": "180dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 3,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ],
+      "./plugins/withLiveHeartRateService"
     ],
     "experiments": {
       "typedRoutes": true

@@ -180,3 +180,21 @@ never uploaded.
    the band write" check.
 5. Once the four types marked *scores* have data, the pill says **Health Connect** and the rings
    use your own numbers. Recovery shows "calibrating" for the first two weeks.
+
+## Live heart rate and the home-screen widget
+
+Live heart rate reads the band over Bluetooth about once a second; the **Heart rate** widget puts
+it on your home screen. Both need the build from Oct 6 or later (Bluetooth, widget and background
+service are native code), so rebuild once: `npx eas-cli@latest build --platform android --profile development`.
+
+1. In the Google Health app open **Fitbit Air › Share heart rate** and turn it on.
+2. In My Fitness tap the heart icon on Today (or Strain › **Open live heart rate**), then **Start
+   live heart rate**. Allow "Nearby devices" and notifications when Android asks.
+3. A notification shows your heart rate while it runs; that is what keeps it going when you leave
+   the app. Tap **Stop** when you're done, because sharing uses more of the band's battery.
+4. **Add widget to home screen** on the same screen, or long-press the home screen › Widgets ›
+   My Fitness › Heart rate. It updates every few seconds while live heart rate runs; otherwise it
+   shows the newest reading from Health Connect and its time. Tapping it opens the Live screen.
+
+If it can't find the band: check Share heart rate is still on, keep the band close, and make sure
+no other app (e.g. a gym machine) is connected to it.

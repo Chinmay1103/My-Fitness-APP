@@ -1,9 +1,11 @@
-import { computeDailyScores, MOCK_PROFILE, type DailyScores, type DayData } from '@fitness/scoring';
+import { computeDailyScores, estimateMaxHr, MOCK_PROFILE, type DailyScores, type DayData } from '@fitness/scoring';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
 import { mockSource } from './health/mockSource';
 import { pickHealthSource, type HealthSource } from './health';
+import { publishLatestFromHistory } from './heartRateWidget';
+import { liveZone, setHeartRateBaseline } from './liveHeartRate';
 import { syncDailySummaries } from './sync';
 
 const HISTORY_DAYS = 45;
@@ -53,6 +55,12 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
       // TODO(milestone 3): use the user's real age and sleep need from their profile.
       const computed = computeDailyScores(loaded, MOCK_PROFILE);
       setScores(computed);
+      // Zones for live heart rate: the latest resting HR (or the median of the last week's).
+      const rested = loaded.slice(-7).flatMap((d) => (d.restingHr ? [d.restingHr] : [])).sort((a, b) => a - b);
+      const restingHr = loaded.at(-1)?.restingHr ?? rested[Math.floor(rested.length / 2)] ?? 60;
+      setHeartRateBaseline(restingHr, estimateMaxHr(MOCK_PROFILE));
+      // The home-screen widget shows the newest real reading when live heart rate isn't running.
+      if (picked.id !== 'mock') publishLatestFromHistory(loaded.at(-1)?.heartRate ?? [], liveZone);
       // A failed upload shouldn't hide the scores, so it's reported separately.
       syncDailySummaries(picked.id, loaded, computed)
         .then((sent) => setSyncStatus(sent ? 'ok' : null))

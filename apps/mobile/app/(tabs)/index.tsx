@@ -43,6 +43,21 @@ export default function TodayScreen() {
           <Pressable
             onPress={() => {
               tapHaptic();
+              router.push('/live');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Live heart rate"
+            hitSlop={10}
+            style={({ pressed }) => pressed && styles.pressed}>
+            <SymbolView
+              name={{ ios: 'heart.text.square', android: 'monitor_heart', web: 'monitor_heart' }}
+              tintColor={colors.restingHr}
+              size={26}
+            />
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              tapHaptic();
               router.push('/account');
             }}
             accessibilityRole="button"
