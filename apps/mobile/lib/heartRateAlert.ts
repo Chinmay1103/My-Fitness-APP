@@ -7,7 +7,7 @@ import { formatTime } from './format';
 import { localStore } from './storage';
 
 /**
- * Heart-rate alert: while live heart rate runs, if it stays at or above your limit for 2 minutes,
+ * Heart-rate alert: while live heart rate runs, if it stays at or above your limit for SUSTAIN_MS (normally 2 minutes),
  * the phone messages your chosen contact, with no tap needed, two ways at once:
  * - SMS from your SIM (our own native module, modules/sms-sender), which works without internet;
  * - WhatsApp through CallMeBot (callmebot.com), a free service: the contact opts in once by
@@ -42,8 +42,11 @@ export interface AlertState {
   last: SendResult | null;
 }
 
-export const THRESHOLDS = [110, 115, 120, 130] as const;
-export const SUSTAIN_MS = 2 * 60_000;
+// TESTING: 70 bpm and 30 s so the alert is easy to trigger. Put back [110, 115, 120, 130] and 2 * 60_000 after testing.
+export const THRESHOLDS = [70, 110, 115, 120, 130] as const;
+export const SUSTAIN_MS = 30_000;
+/** "30 seconds" or "2 minutes", for the messages. */
+export const SUSTAIN_TEXT = SUSTAIN_MS < 60_000 ? `${SUSTAIN_MS / 1000} seconds` : `${SUSTAIN_MS / 60_000} minutes`;
 const COOLDOWN_MS = 30 * 60_000;
 /** After an alert that reached nobody, try again this soon. */
 const RETRY_MS = 60_000;
@@ -199,7 +202,7 @@ export function reached(result: SendResult): boolean {
 export function sendTestAlert(): Promise<SendResult> {
   return send(
     0,
-    `Test from My Fitness: if my heart rate stays above ${state.thresholdBpm} bpm for 2 minutes, you'll get a message like this. No action needed now.`,
+    `Test from My Fitness: if my heart rate stays above ${state.thresholdBpm} bpm for ${SUSTAIN_TEXT}, you'll get a message like this. No action needed now.`,
     true,
   );
 }
@@ -218,7 +221,7 @@ export async function checkHeartRateAlert(samples: HeartRateSample[]): Promise<b
   try {
     const result = await send(
       bpm,
-      `Heart-rate alert from My Fitness: my heart rate has been above ${state.thresholdBpm} bpm for over 2 minutes (${bpm} bpm at ${formatTime(Date.now())}). Please check on me.`,
+      `Heart-rate alert from My Fitness: my heart rate has been above ${state.thresholdBpm} bpm for over ${SUSTAIN_TEXT} (${bpm} bpm at ${formatTime(Date.now())}). Please check on me.`,
       false,
     );
     return reached(result);

@@ -297,6 +297,107 @@ function onReading(sample: HeartRateSample) {
   }
 }
 
+/**
+ * Band vibration check. The heart-rate signal only goes band → phone, but some bands also offer one
+ * of two standard Bluetooth alert services that any app may write to:
+ * - Immediate Alert (the "find my device" buzz): write an alert level, the band vibrates.
+ * - Alert Notification: "new alert" with a category such as incoming call, how smartwatches get calls.
+ * `inspectBand` lists everything the connected band offers so we can see whether either is there;
+ * `testBandBuzz` tries them. Both need live heart rate to be connected.
+ */
+const IMMEDIATE_ALERT = '00001802-0000-1000-8000-00805f9b34fb';
+const ALERT_LEVEL = '00002a06-0000-1000-8000-00805f9b34fb';
+const ALERT_NOTIFICATION = '00001811-0000-1000-8000-00805f9b34fb';
+const NEW_ALERT = '00002a46-0000-1000-8000-00805f9b34fb';
+
+/** Friendly names for the standard services a band is likely to have. */
+const SERVICE_NAMES: Record<string, string> = {
+  '1800': 'Device name',
+  '1801': 'Bluetooth housekeeping',
+  '180a': 'Device information',
+  '180d': 'Heart rate',
+  '180f': 'Battery',
+  '1802': 'Immediate Alert (can vibrate!)',
+  '1811': 'Alert Notification (can vibrate!)',
+  '1803': 'Link Loss alert',
+  '1805': 'Current time',
+};
+
+export interface BandService {
+  uuid: string;
+  name: string;
+  /** e.g. "2a06 write", one per characteristic. */
+  characteristics: string[];
+}
+
+export interface BandReport {
+  services: BandService[];
+  canVibrate: boolean;
+}
+
+/** The 4-hex short form of a standard Bluetooth UUID, else the full UUID. */
+function shortUuid(uuid: string): string {
+  const m = /^0000([0-9a-f]{4})-0000-1000-8000-00805f9b34fb$/i.exec(uuid);
+  return m ? m[1].toLowerCase() : uuid.toLowerCase();
+}
+
+/** Lists the services the connected band offers. Null when live heart rate isn't connected. */
+export async function inspectBand(): Promise<BandReport | null> {
+  if (!deviceId) return null;
+  const id = deviceId;
+  const services: BandService[] = [];
+  for (const s of await ble().servicesForDevice(id)) {
+    const short = shortUuid(s.uuid);
+    const chars = await ble().characteristicsForDevice(id, s.uuid);
+    services.push({
+      uuid: short,
+      name: SERVICE_NAMES[short] ?? (short.length === 4 ? 'Standard service' : 'Fitbit/Google private'),
+      characteristics: chars.map((c) => {
+        const can = [
+          c.isReadable && 'read',
+          (c.isWritableWithResponse || c.isWritableWithoutResponse) && 'write',
+          (c.isNotifiable || c.isIndicatable) && 'notify',
+        ].filter(Boolean);
+        return `${shortUuid(c.uuid)} ${can.join('/')}`;
+      }),
+    });
+  }
+  const canVibrate = services.some((s) => s.uuid === '1802' || s.uuid === '1811');
+  return { services, canVibrate };
+}
+
+/** Tries to make the band vibrate. Returns what happened, in plain words. */
+export async function testBandBuzz(): Promise<string> {
+  if (!deviceId) return 'Start live heart rate first, so the app is connected to the band.';
+  const id = deviceId;
+  const tried: string[] = [];
+  const has = new Set((await ble().servicesForDevice(id)).map((s) => s.uuid.toLowerCase()));
+
+  if (has.has(IMMEDIATE_ALERT)) {
+    try {
+      // Alert level 2 = "high alert". The spec says write-without-response, but some bands only take the other kind.
+      const high = btoa('\x02');
+      await ble()
+        .writeCharacteristicWithoutResponseForDevice(id, IMMEDIATE_ALERT, ALERT_LEVEL, high)
+        .catch(() => ble().writeCharacteristicWithResponseForDevice(id, IMMEDIATE_ALERT, ALERT_LEVEL, high));
+      tried.push('Sent "high alert" to Immediate Alert.');
+    } catch (e) {
+      tried.push(`Immediate Alert refused: ${(e as Error).message}`);
+    }
+  }
+  if (has.has(ALERT_NOTIFICATION)) {
+    try {
+      // Category 3 = incoming call, 1 new alert, then the caller text.
+      await ble().writeCharacteristicWithResponseForDevice(id, ALERT_NOTIFICATION, NEW_ALERT, btoa('\x03\x01Test call'));
+      tried.push('Sent a test "incoming call" to Alert Notification.');
+    } catch (e) {
+      tried.push(`Alert Notification refused: ${(e as Error).message}`);
+    }
+  }
+  if (!tried.length) return 'The band has neither alert service, so the app can’t make it vibrate this way.';
+  return `${tried.join('\n')}\nDid the band vibrate?`;
+}
+
 /** "Zone 3", or "Everyday" below zone 1. */
 export function zoneName(zone: number): string {
   return zone === 0 ? 'Everyday' : `Zone ${zone}`;

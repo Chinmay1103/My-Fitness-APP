@@ -2,6 +2,7 @@ import { computeStrain, MOCK_PROFILE } from '@fitness/scoring';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { BandVibrationCard } from '@/components/BandVibrationCard';
 import { HeartRateAlertCard } from '@/components/HeartRateAlertCard';
 import { LiveHeartChart } from '@/components/charts/LiveHeartChart';
 import { Button, Card, Muted, Row, Screen, Stat } from '@/components/ui';
@@ -112,6 +113,8 @@ export default function LiveScreen() {
           ) : null}
 
           {isAlertSupported() ? <HeartRateAlertCard /> : null}
+
+          <BandVibrationCard connected={live.status === 'live'} />
 
           {isWidgetSupported() ? (
             <Card title="HOME-SCREEN WIDGET">

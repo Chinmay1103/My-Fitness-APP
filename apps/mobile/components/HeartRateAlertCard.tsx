@@ -11,6 +11,7 @@ import {
   setAlertEnabled,
   setAlertThreshold,
   setWhatsappKey,
+  SUSTAIN_TEXT,
   THRESHOLDS,
   useHeartRateAlert,
 } from '@/lib/heartRateAlert';
@@ -43,7 +44,7 @@ export function HeartRateAlertCard() {
   return (
     <Card title="HEART-RATE ALERT">
       <Muted>
-        If your heart rate stays at or above your limit for 2 minutes while live heart rate is running, your phone sends
+        If your heart rate stays at or above your limit for {SUSTAIN_TEXT} while live heart rate is running, your phone sends
         this contact an SMS and a WhatsApp message. At most one alert every 30 minutes.
       </Muted>
 
@@ -118,7 +119,7 @@ export function HeartRateAlertCard() {
 
       <Text style={[styles.status, { color: alert.enabled ? colors.recovery.green : colors.muted }]}>
         {alert.enabled
-          ? `On: above ${alert.thresholdBpm} bpm for 2 min · SMS${alert.whatsappKey ? ' + WhatsApp' : ''}`
+          ? `On: above ${alert.thresholdBpm} bpm for ${SUSTAIN_TEXT} · SMS${alert.whatsappKey ? ' + WhatsApp' : ''}`
           : 'Off'}
       </Text>
       {alert.last && !alert.last.test ? (
