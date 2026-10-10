@@ -10,13 +10,13 @@ import { makeStyles, useColors } from '@/lib/theme';
 
 type SymbolNames = Extract<SymbolViewProps['name'], object>;
 const ICONS: Record<NextStepKind, { icon: SymbolNames; color: (c: Palette) => string }> = {
-  breathing: { icon: { ios: 'exclamationmark.triangle.fill', android: 'warning', web: 'warning' }, color: (c) => c.recovery.red },
-  train: { icon: { ios: 'bolt.heart.fill', android: 'bolt', web: 'bolt' }, color: (c) => c.strain },
-  sleep: { icon: { ios: 'moon.fill', android: 'bedtime', web: 'bedtime' }, color: (c) => c.sleep },
-  steps: { icon: { ios: 'figure.walk', android: 'directions_walk', web: 'directions_walk' }, color: (c) => c.steps },
+  breathing: { icon: { ios: 'cross.case.fill', android: 'health_and_safety', web: 'health_and_safety' }, color: (c) => c.recovery.red },
+  train: { icon: { ios: 'dumbbell.fill', android: 'fitness_center', web: 'fitness_center' }, color: (c) => c.strain },
+  sleep: { icon: { ios: 'moon.stars.fill', android: 'nights_stay', web: 'nights_stay' }, color: (c) => c.sleep },
+  steps: { icon: { ios: 'shoeprints.fill', android: 'footprint', web: 'footprint' }, color: (c) => c.steps },
   cardio: { icon: { ios: 'flame.fill', android: 'local_fire_department', web: 'local_fire_department' }, color: (c) => c.strain },
   protein: { icon: { ios: 'fork.knife', android: 'restaurant', web: 'restaurant' }, color: (c) => c.recovery.green },
-  log: { icon: { ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' }, color: (c) => c.muted },
+  log: { icon: { ios: 'brain.head.profile', android: 'psychology', web: 'psychology' }, color: (c) => c.muted },
 };
 
 /** Today's "what to do next": up to four suggestions from the scores, each opening where it came from. */

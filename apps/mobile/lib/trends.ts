@@ -58,7 +58,7 @@ export const TRENDS: Record<TrendKey, TrendDef> = {
     key: 'sleepNeed',
     label: 'Sleep need',
     unit: '',
-    icon: icon('moon.zzz.fill', 'bedtime'),
+    icon: icon('moon.stars.fill', 'nights_stay'),
     color: (c) => c.sleep,
     value: (s) => s.sleepNeed?.total ?? null,
     format: formatMinutes,

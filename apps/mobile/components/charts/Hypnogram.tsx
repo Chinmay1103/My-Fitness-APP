@@ -195,7 +195,7 @@ export function Hypnogram({ segments }: { segments: SleepSegment[] }) {
             </Reveal>
             <View style={[styles.axis, { marginLeft: LABEL_W }]}>
               <View style={styles.axisEnd}>
-                <SymbolView name={{ ios: 'moon.fill', android: 'bedtime', web: 'bedtime' }} tintColor={colors.muted} size={13} />
+                <SymbolView name={{ ios: 'moon.stars.fill', android: 'nights_stay', web: 'nights_stay' }} tintColor={colors.muted} size={13} />
                 <Text style={styles.axisText}>{formatTime(start)}</Text>
               </View>
               {hours.length >= 4 ? <Text style={styles.axisText}>{formatTime(hours[Math.floor(hours.length / 2)])}</Text> : null}

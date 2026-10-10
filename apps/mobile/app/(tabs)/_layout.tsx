@@ -37,10 +37,10 @@ export default function TabLayout() {
         // Build every tab at launch, so a tab opened for the first time doesn't slide in empty.
         lazy: false,
       }}>
-      <Tabs.Screen name="index" options={{ title: 'Today', tabBarIcon: tabIcon('heart.circle', 'monitor_heart') }} />
-      <Tabs.Screen name="sleep" options={{ title: 'Sleep', tabBarIcon: tabIcon('moon.zzz', 'bedtime') }} />
-      <Tabs.Screen name="strain" options={{ title: 'Strain', tabBarIcon: tabIcon('bolt.heart', 'bolt') }} />
-      <Tabs.Screen name="coach" options={{ title: 'Coach', tabBarIcon: tabIcon('sparkles', 'auto_awesome') }} />
+      <Tabs.Screen name="index" options={{ title: 'Today', tabBarIcon: tabIcon('gauge.with.needle', 'readiness_score') }} />
+      <Tabs.Screen name="sleep" options={{ title: 'Sleep', tabBarIcon: tabIcon('moon.stars', 'nights_stay') }} />
+      <Tabs.Screen name="strain" options={{ title: 'Strain', tabBarIcon: tabIcon('flame', 'local_fire_department') }} />
+      <Tabs.Screen name="coach" options={{ title: 'Coach', tabBarIcon: tabIcon('brain.head.profile', 'psychology') }} />
     </Tabs>
   );
 }

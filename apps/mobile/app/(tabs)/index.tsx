@@ -66,7 +66,7 @@ export default function TodayScreen() {
             hitSlop={10}
             style={({ pressed }) => pressed && styles.pressed}>
             <SymbolView
-              name={{ ios: 'heart.text.square', android: 'monitor_heart', web: 'monitor_heart' }}
+              name={{ ios: 'heart.text.square', android: 'heart_check', web: 'heart_check' }}
               tintColor={colors.restingHr}
               size={26}
             />
@@ -189,7 +189,7 @@ export default function TodayScreen() {
 }
 
 const EXPLORE = [
-  { href: '/weekly', title: 'Weekly report', detail: 'The week in numbers, and Claude’s take', icon: { ios: 'calendar', android: 'calendar_month', web: 'calendar_month' } },
+  { href: '/weekly', title: 'Weekly report', detail: 'The week in numbers, and Claude’s take', icon: { ios: 'chart.line.uptrend.xyaxis', android: 'insights', web: 'insights' } },
   { href: '/body-check', title: 'Body check', detail: 'Temperature, breathing and resting HR vs your usual', icon: { ios: 'cross.case', android: 'health_and_safety', web: 'health_and_safety' } },
   { href: '/habits', title: 'Habits', detail: 'What drinks, late coffee or late dinners do to you', icon: { ios: 'cup.and.saucer', android: 'local_cafe', web: 'local_cafe' } },
   { href: '/workouts', title: 'Workout history', detail: 'Every workout with what the band measured', icon: { ios: 'dumbbell', android: 'fitness_center', web: 'fitness_center' } },
