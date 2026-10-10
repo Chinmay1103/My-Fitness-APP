@@ -1,4 +1,13 @@
-import { computeDailyScores, estimateMaxHr, MOCK_PROFILE, type DailyScores, type DayData } from '@fitness/scoring';
+import {
+  computeDailyScores,
+  estimateMaxHr,
+  generateMockHabits,
+  learnSleepNeed,
+  MOCK_PROFILE,
+  type DailyScores,
+  type DayData,
+  type LearnedSleepNeed,
+} from '@fitness/scoring';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
@@ -27,6 +36,8 @@ interface ScoresState {
   logged: Logged;
   /** Steps, SpO2, zone minutes, nutrition... per day, lined up with `days`. Display only. */
   metrics: DayMetrics[];
+  /** Your own base sleep need, learned from the nights you recovered best after (null for the first 14). */
+  learnedNeed: LearnedSleepNeed | null;
   /** Result of the last upload to Supabase: 'ok', an error message, or null if nothing was sent. */
   syncStatus: string | null;
   refresh: () => Promise<void>;
@@ -43,6 +54,7 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
   const [days, setDays] = useState<DayData[]>([]);
   const [scores, setScores] = useState<DailyScores[]>([]);
   const [logged, setLogged] = useState<Logged>(NOTHING_LOGGED);
+  const [learnedNeed, setLearnedNeed] = useState<LearnedSleepNeed | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<HealthSource>(mockSource);
@@ -61,12 +73,19 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
         picked.getDays(HISTORY_DAYS),
         fetchLogged(new Date(Date.now() - HISTORY_DAYS * 86_400_000)).catch(() => NOTHING_LOGGED),
       ]);
-      setLogged(fromCoach);
-      // Logged workouts count toward real days' strain; demo days bring their own.
+      // Demo days bring their own workouts, and demo habits so the Habits screen has something to show.
+      const mockHabits = picked.id === 'mock' ? generateMockHabits(fromSource).map((h, i) => ({ ...h, id: `mock-${i}`, occurredAt: Date.parse(`${h.date}T20:00:00`) })) : [];
+      setLogged(picked.id === 'mock' ? { ...fromCoach, habits: [...fromCoach.habits, ...mockHabits] } : fromCoach);
+      // Logged workouts count toward real days' strain.
       const loaded = picked.id === 'mock' ? fromSource : attachWorkouts(fromSource, fromCoach.workouts);
       setDays(loaded);
-      // TODO(milestone 3): use the user's real age and sleep need from their profile.
-      const computed = computeDailyScores(loaded, MOCK_PROFILE);
+      // TODO(milestone 3): use the user's real age from their profile.
+      // Score once with the default 8 h need, learn your own from the nights you recovered best
+      // after, then score again with it.
+      const first = computeDailyScores(loaded, MOCK_PROFILE);
+      const learned = learnSleepNeed(first);
+      setLearnedNeed(learned);
+      const computed = learned ? computeDailyScores(loaded, { ...MOCK_PROFILE, baseSleepNeedMinutes: learned.minutes }) : first;
       setScores(computed);
       // Zones for live heart rate: the latest resting HR (or the median of the last week's).
       const rested = loaded.slice(-7).flatMap((d) => (d.restingHr ? [d.restingHr] : [])).sort((a, b) => a - b);
@@ -124,6 +143,7 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
         scores,
         logged,
         metrics,
+        learnedNeed,
         syncStatus,
         refresh,
         syncNow,

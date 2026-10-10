@@ -53,6 +53,13 @@ Open design to-dos from the Sep 30 screen-recording review: [docs/design-review-
   and resting HR) once it has 4 nights of history. Median/MAD, z clipping and the sigmoid are there
   deliberately: Fitbit-based scores in other apps swing to extremes.
 
+**Learned sleep need** (`personal.ts`): after 14 nights, the base need moves from 8 h towards the
+median sleep before your best-recovery third of mornings (blended by nights/(nights+14), 6.5–9.5 h);
+the app scores twice (default, then learned). **Insights** (shown, never scored): `bodyCheck.ts`
+(skin temp, breathing, resting HR vs 30-night robust baseline; 2+ raised = alert), `load.ts`
+(7-day vs 28-day TRIMP ratio), `habits.ts` (next-morning recovery and sleep with vs without each
+habit), `week.ts` (week summary + rule-based focus).
+
 Display-only metrics (`steps.ts`, `activity.ts`): `combineSteps` merges band and phone steps per 5
 min and drops ghost steps (band-only, flat heart rate, low cadence); Active Zone Minutes the Fitbit
 way (1/min fat burn, 2/min cardio and peak; 150 a week).
@@ -72,7 +79,9 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
 - `apps/mobile/`: Expo SDK 57 app with expo-router. **Today is the dashboard**: rings, Next steps
   (`lib/nextSteps.ts`, rule-based), the latest coach note, then a tile per metric (`lib/metrics.ts`:
   definitions, per-day values, "your usual" range). Every tile opens `app/metric/[key].tsx`. Logged
-  workouts, meals and weigh-ins are read back from Supabase in `lib/logged.ts`. Tabs live in `app/(tabs)/`: Today (`index.tsx`),
+  workouts, meals, weigh-ins and habits are read back from Supabase in `lib/logged.ts`. Explore
+screens: `app/weekly.tsx`, `app/body-check.tsx`, `app/habits.tsx`, `app/workouts.tsx`. The morning
+summary (`lib/morningSummary.ts`) is a background task defined in `index.ts`; switched on from Account. Tabs live in `app/(tabs)/`: Today (`index.tsx`),
   Sleep, Strain, Coach; `app/recovery.tsx` is the Recovery detail screen; `app/heart-rate.tsx` is the
   all-day heart rate screen (opened from the Today card `components/HeartRateCard.tsx`). It re-reads
   today's heart rate every minute while open (`lib/heartRate.ts`; Health Connect only gets the band's
@@ -142,6 +151,6 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | 4 | AI coach (in the Claude app; also does all logging) | "Ask Claude" handoff done; coach connector live (read scores; log/list/delete workouts, meals, weight; profile; daily coach note on Today; `get_coach_notes` so each new chat picks up from earlier days). App reads logged workouts (they count toward strain), meals and weight back (Oct 10). To do: deploy the mcp function (now asks for workout effort) |
 | 4c | Dashboard revamp (Oct 10) | Today dashboard with Next steps + metric tiles and drill-downs, phone+band steps, rebuilt hypnogram, light mode, battery limits. Then: flat cards, Plain background (light mode no longer shows the photos), drill-down links on every card and chart, sleep-part detail screens, tap/drag to read the live heart-rate graph. Needs a new EAS build (Weight permission, `userInterfaceStyle: automatic`); then check on the phone which device Health Connect labels steps with (Health data screen) |
 | 4b | Live heart rate + home-screen widget + heart-rate alert (WhatsApp) | Code ready (Oct 6–7); needs a new EAS build and a test with the band |
-| 5 | Trends, weekly report, notifications, MCP server | Not started |
+| 5 | Trends, weekly report, notifications, MCP server | Done Oct 10 (needs a build to test): body check, training load, learned sleep need, habits, weekly report (Claude writes it via `save_weekly_report`), workout history with lift progress, morning summary notification (background task, Health Connect background read). App icon from the logo-designer skill (`logos/`) |
 
 Keep this table up to date when a milestone moves.

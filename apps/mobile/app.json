@@ -34,6 +34,8 @@
         "android.permission.health.READ_SKIN_TEMPERATURE",
         "android.permission.health.READ_VO2_MAX",
         "android.permission.health.READ_WEIGHT",
+        "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND",
+        "android.permission.POST_NOTIFICATIONS",
         "android.permission.health.READ_HEALTH_DATA_HISTORY",
         "android.permission.READ_CONTACTS"
       ]
@@ -61,7 +63,9 @@
             "minSdkVersion": 26,
             "compileSdkVersion": 36,
             "targetSdkVersion": 36,
-            "buildArchs": ["arm64-v8a"],
+            "buildArchs": [
+              "arm64-v8a"
+            ],
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true
           }
@@ -78,7 +82,9 @@
       [
         "react-native-android-widget",
         {
-          "fonts": ["../../node_modules/@expo-google-fonts/barlow-condensed/700Bold/BarlowCondensed_700Bold.ttf"],
+          "fonts": [
+            "../../node_modules/@expo-google-fonts/barlow-condensed/700Bold/BarlowCondensed_700Bold.ttf"
+          ],
           "widgets": [
             {
               "name": "HeartRate",
@@ -94,7 +100,15 @@
           ]
         }
       ],
-      "./plugins/withLiveHeartRateService"
+      "./plugins/withLiveHeartRateService",
+      "expo-background-task",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#FF8A1F"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

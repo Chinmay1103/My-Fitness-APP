@@ -206,6 +206,24 @@ function Extra({ def, m, metrics, index }: { def: MetricDef; m: DayMetrics; metr
           <Button label="Tell the coach what you ate" onPress={() => router.navigate('/coach')} variant="secondary" />
         </Card>
       );
+    case 'trainingLoad':
+      return m.load ? (
+        <Card title="LAST 7 VS LAST 28 DAYS">
+          <Row>
+            <Stat label="Last 7 days" value={`${Math.round(m.load.acute)}`} hint="load a day" color={colors.strain} />
+            <Stat label="Last 28 days" value={`${Math.round(m.load.chronic)}`} hint="load a day" color={colors.muted} />
+          </Row>
+          <Muted>Load is TRIMP, the raw training load behind strain (strain is squashed onto 0–21, so it doesn't add up across days).</Muted>
+          <Button label="Workout history" onPress={() => router.push('/workouts')} variant="secondary" />
+        </Card>
+      ) : null;
+    case 'skinTemp':
+      return (
+        <Card title="PART OF THE BODY CHECK">
+          <Muted>A rise of 0.5 °C or more, together with faster breathing or a higher resting heart rate, is an early sign of illness.</Muted>
+          <Button label="Open the body check" onPress={() => router.push('/body-check')} variant="secondary" />
+        </Card>
+      );
     case 'weight':
       return (
         <Card title="WEIGH-INS">

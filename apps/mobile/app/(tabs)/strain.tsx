@@ -97,6 +97,8 @@ export default function StrainScreen() {
         <Muted>Watch your heart rate and zone second by second during a workout, straight from the band.</Muted>
       </Card>
 
+      <TrainingLoadCard />
+
       <Card title="TIME IN HEART RATE ZONES" href="/heart-rate" linkLabel="Full day">
         {zoneMinutes.map((minutes, i) => (
           <View key={i} style={styles.zoneRow}>
@@ -127,6 +129,39 @@ export default function StrainScreen() {
       </Card>
 
     </Screen>
+  );
+}
+
+const LOAD_TEXT = {
+  fresh: { title: 'Lighter than usual', detail: 'You’re resting or easing off: fitness holds for a while, then slowly drops.' },
+  steady: { title: 'Steady', detail: 'Training like you usually do. The sweet spot for building fitness.' },
+  building: { title: 'Building fast', detail: 'A big step up on your usual. Fine for a week or two; watch recovery.' },
+  overreaching: { title: 'Too much too soon', detail: 'Well above what you’re used to: the risk of illness and injury goes up. Plan easier days.' },
+} as const;
+
+/** The last 7 days' load against the last 28, with what that means, and the way into workout history. */
+function TrainingLoadCard() {
+  const colors = useColors();
+  const styles = useStyles();
+  const { metrics } = useScores();
+  const { index } = useSelectedDay();
+  const load = metrics[index]?.load;
+  return (
+    <Card title="TRAINING LOAD" href={{ pathname: '/metric/[key]', params: { key: 'trainingLoad' } }} linkLabel="30 days">
+      {load?.ratio != null && load.zone ? (
+        <>
+          <Text style={styles.targetTitle}>
+            {`${load.ratio.toFixed(2)}  `}
+            <Text style={styles.targetVerdict}>{LOAD_TEXT[load.zone].title}</Text>
+          </Text>
+          <Muted>{LOAD_TEXT[load.zone].detail}</Muted>
+        </>
+      ) : (
+        <Muted>Needs two weeks of data to compare the last 7 days with the last 28.</Muted>
+      )}
+      <Button label="Workout history" variant="secondary" onPress={() => router.push('/workouts')} />
+      <Button label="This week’s report" variant="secondary" onPress={() => router.push('/weekly')} />
+    </Card>
   );
 }
 

@@ -153,6 +153,19 @@ export const healthConnectSource: HealthSource = {
     return this.hasPermissions();
   },
 
+  /** Asks Health Connect to let the app read while closed (for the morning summary). True if allowed. */
+  async requestBackgroundAccess() {
+    if (!(await ready())) return false;
+    const background = { accessType: 'read', recordType: 'BackgroundAccessPermission' } as const;
+    try {
+      await hcOrThrow().requestPermission([background]);
+      const granted = await hcOrThrow().getGrantedPermissions();
+      return granted.some((p) => p.recordType === 'BackgroundAccessPermission');
+    } catch {
+      return false;
+    }
+  },
+
   async getDays(days) {
     const now = new Date();
     const firstMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));
@@ -161,7 +174,7 @@ export const healthConnectSource: HealthSource = {
 
     // Extras are optional: a missing permission leaves that metric empty instead of failing the scores.
     const optional = <T,>(read: Promise<T[]>) => read.catch(() => [] as T[]);
-    const [heartRate, resting, hrv, sleep, steps, spo2, breathing, calories] = await Promise.all([
+    const [heartRate, resting, hrv, sleep, steps, spo2, breathing, calories, skinTemp] = await Promise.all([
       readAll('HeartRate', from, now),
       readAll('RestingHeartRate', from, now),
       readAll('HeartRateVariabilityRmssd', from, now),
@@ -170,6 +183,7 @@ export const healthConnectSource: HealthSource = {
       optional(readAll('OxygenSaturation', from, now)),
       optional(readAll('RespiratoryRate', from, now)),
       optional(readAll('TotalCaloriesBurned', from, now)),
+      optional(readAll('SkinTemperature', from, now)),
     ]);
 
     const result: DayData[] = [];
@@ -227,6 +241,9 @@ export const healthConnectSource: HealthSource = {
     };
     nightAverage(spo2, (r) => r.percentage, (d, v) => (d.spo2 = Math.round(v)));
     nightAverage(breathing, (r) => r.rate, (d, v) => (d.respiratoryRate = Math.round(v * 10) / 10));
+    // Skin temperature comes as deltas from the band's own baseline, a few per night.
+    const tempDeltas = skinTemp.flatMap((r) => r.deltas.map((x) => ({ time: x.time, delta: x.delta.inCelsius })));
+    nightAverage(tempDeltas, (r) => r.delta, (d, v) => (d.skinTempDelta = Math.round(v * 100) / 100));
 
     for (const r of calories) {
       const day = byDate.get(localDate(Date.parse(r.startTime)));

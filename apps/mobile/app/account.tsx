@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { MorningSummaryCard } from '@/components/MorningSummaryCard';
 import { Button, Card, Chip, Input, Muted, Screen } from '@/components/ui';
 import { setBackgroundStyle, useBackgroundStyle } from '@/lib/backgroundStyle';
 import { type } from '@/constants/theme';
@@ -143,6 +144,7 @@ export default function AccountScreen() {
         </>
       )}
       {message ? <Text style={styles.error}>{message}</Text> : null}
+      <MorningSummaryCard />
       <Card title="APPEARANCE">
         <View style={styles.chips}>
           <Chip label="System" selected={preference === 'system'} onPress={() => setPreference('system')} />

@@ -1,6 +1,8 @@
 import {
   activeZoneMinutes,
   combineSteps,
+  trainingLoad,
+  type LoadDay,
   daySamples,
   summarizeHeartRate,
   weeklyZoneProgress,
@@ -37,12 +39,17 @@ export interface DayMetrics {
   nutrition: { calories: number | null; proteinG: number | null; carbsG: number | null; fatG: number | null; meals: LoggedMeal[] };
   /** Latest weigh-in on or before this day. */
   weightKg: number | null;
+  /** Last night's skin temperature vs the band's baseline, °C. */
+  skinTemp: number | null;
+  /** Last 7 days' load against the last 28. */
+  load: LoadDay | null;
 }
 
 const FALLBACK_RESTING_HR = 60;
 
 export function computeDayMetrics(days: DayData[], scores: DailyScores[], logged: Logged, profile: UserProfile): DayMetrics[] {
   const zoneTotals: number[] = [];
+  const loads = trainingLoad(scores);
   return days.map((day, i) => {
     const recent = days.slice(Math.max(0, i - 7), i + 1).flatMap((d) => (d.restingHr ? [d.restingHr] : []));
     const restingHr = day.restingHr ?? (recent.length ? normalRange(recent).mid : FALLBACK_RESTING_HR);
@@ -64,6 +71,8 @@ export function computeDayMetrics(days: DayData[], scores: DailyScores[], logged
       energy: day.caloriesBurned ?? null,
       nutrition,
       weightKg: weighIn ? weighIn.kg : null,
+      skinTemp: day.skinTempDelta ?? null,
+      load: loads[i] ?? null,
     };
   });
 }
@@ -82,7 +91,9 @@ export type MetricKey =
   | 'energy'
   | 'caloriesIn'
   | 'macros'
-  | 'weight';
+  | 'weight'
+  | 'skinTemp'
+  | 'trainingLoad';
 
 export interface MetricDef {
   key: MetricKey;
@@ -269,6 +280,35 @@ export const METRICS: Record<MetricKey, MetricDef> = {
     about: 'Your latest weigh-in, told to the coach. Day-to-day changes are mostly water; look at the trend over weeks.',
     affects: 'Food, salt, carbs, hydration and training.',
   },
+  skinTemp: {
+    key: 'skinTemp',
+    label: 'Skin temperature',
+    unit: '°C vs usual',
+    icon: icon('thermometer.medium', 'device_thermostat'),
+    color: (c) => c.calories,
+    value: (m) => m.skinTemp,
+    format: (v) => `${v > 0 ? '+' : ''}${v.toFixed(1)}`,
+    higherIsBetter: false,
+    chart: 'line',
+    about:
+      'How much warmer or cooler your skin was overnight than the band’s own baseline. Small night-to-night changes are normal; a rise of half a degree or more, together with faster breathing or a higher resting heart rate, is what the Body check watches for.',
+    affects: 'Illness coming on, alcohol, a hot room or heavy bedding, late hard training, and the menstrual cycle.',
+  },
+
+  trainingLoad: {
+    key: 'trainingLoad',
+    label: 'Training load',
+    unit: 'last 7 vs 28 days',
+    icon: icon('chart.bar.xaxis', 'stacked_bar_chart'),
+    color: (c) => c.strain,
+    value: (m) => m.load?.ratio ?? null,
+    format: (v) => v.toFixed(2),
+    higherIsBetter: null,
+    chart: 'line',
+    about:
+      'Your average daily load over the last 7 days divided by the last 28. Around 1 means you’re training like you usually do; 0.8–1.3 builds fitness steadily; above 1.5 is a jump big enough to raise the risk of illness and injury; below 0.8 you’re resting or losing fitness.',
+    affects: 'Every workout and active day. Build up by no more than about 10–30% a week.',
+  },
 };
 
 export const DASHBOARD_ORDER: MetricKey[] = [
@@ -284,6 +324,8 @@ export const DASHBOARD_ORDER: MetricKey[] = [
   'caloriesIn',
   'macros',
   'weight',
+  'trainingLoad',
+  'skinTemp',
 ];
 
 export type MetricStatus = { label: string; tone: 'good' | 'bad' | 'neutral' };

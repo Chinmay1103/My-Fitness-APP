@@ -14,6 +14,8 @@ export interface HealthSource {
   requestPermissions(): Promise<boolean>;
   /** The last `days` days, oldest first. */
   getDays(days: number): Promise<DayData[]>;
+  /** Asks to read while the app is closed (the morning summary). Sources without background reads leave it out. */
+  requestBackgroundAccess?(): Promise<boolean>;
   /** Every heart-rate sample in a time range, oldest first. Cheap enough to call every minute for today. */
   getHeartRate(from: Date, to: Date): Promise<HeartRateSample[]>;
 }

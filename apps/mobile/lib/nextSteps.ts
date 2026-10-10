@@ -1,4 +1,4 @@
-import { sleepNeed, type DailyScores, type DayData, type UserProfile } from '@fitness/scoring';
+import { bodyCheck, sleepNeed, type DailyScores, type DayData, type UserProfile } from '@fitness/scoring';
 import type { Href } from 'expo-router';
 
 import { formatCount, formatMinutes, formatTime } from './format';
@@ -43,19 +43,22 @@ export function nextSteps({ scores, days, metrics, profile, now = Date.now() }: 
   const steps: NextStep[] = [];
   const hour = new Date(now).getHours();
 
-  // Breathing well above your usual: the earliest warning sign there is, so it goes first.
-  const breathingHistory = metrics.slice(-31, -1).flatMap((d) => (d.breathing != null ? [d.breathing] : []));
-  if (m.breathing != null && breathingHistory.length >= 5) {
-    const usual = normalRange(breathingHistory).mid;
-    if (m.breathing - usual >= 1) {
-      steps.push({
-        kind: 'breathing',
-        title: 'Take it easy today',
-        detail: `Breathing was ${(m.breathing - usual).toFixed(1)} breaths/min above your usual last night, an early sign of illness or overreaching. Keep training light and get to bed early.`,
-        href: '/metric/breathing',
-        priority: 0,
-      });
-    }
+  // Body check: skin temperature, breathing and resting HR up together is the earliest warning
+  // sign there is, so it goes first. One signal alone is only worth a mention.
+  const body = bodyCheck(days);
+  if (body && body.level !== 'normal') {
+    const names = { skinTemp: 'skin temperature', breathing: 'breathing', restingHr: 'resting heart rate' } as const;
+    const raised = body.signals.filter((s) => s.raised).map((s) => names[s.key]);
+    steps.push({
+      kind: 'breathing',
+      title: body.level === 'alert' ? 'Take it easy today' : `Watch your ${raised[0]}`,
+      detail:
+        body.level === 'alert'
+          ? `${capitalize(raised.join(' and '))} rose together last night, often the first sign of a cold or overtraining. Keep training light, drink more and get to bed early.`
+          : `Your ${raised[0]} was above your usual last night. Probably nothing on its own; worth keeping today a little easier.`,
+      href: '/body-check',
+      priority: 0,
+    });
   }
 
   // How hard to go today, from recovery.
@@ -85,15 +88,10 @@ export function nextSteps({ scores, days, metrics, profile, now = Date.now() }: 
     });
   }
 
-  // Bedtime tonight: tonight's need from today's strain and recent nights, back from your usual wake-up.
-  const base = profile.baseSleepNeedMinutes ?? 480;
-  const recentShortfalls = scores.slice(-3).flatMap((s) => (s.sleep ? [base - s.sleep.asleepMinutes] : []));
-  const need = sleepNeed({ baseNeedMinutes: base, priorDayStrain: today.strain.strain, recentShortfalls });
-  const wakeTimes = days.slice(-7).flatMap((d) => (d.sleep ? [minutesOfDay(d.sleep.end)] : []));
-  if (wakeTimes.length >= 3 && hour >= 12) {
-    const wake = normalRange(wakeTimes).mid;
-    const wakeAt = startOfDay(now) + DAY + wake * 60_000;
-    const bedAt = wakeAt - (need.total + SLEEP_LATENCY_MIN) * 60_000;
+  // Bedtime tonight.
+  const plan = tonightPlan(scores, days, profile, now);
+  if (plan && hour >= 12) {
+    const { need, wakeAt, bedAt } = plan;
     const extras = [need.strain > 0 ? `today's strain adds ${formatMinutes(need.strain)}` : '', need.debt > 0 ? `catching up ${formatMinutes(need.debt)} of recent short nights` : '']
       .filter(Boolean)
       .join(', ');
@@ -157,6 +155,26 @@ export function nextSteps({ scores, days, metrics, profile, now = Date.now() }: 
   }
 
   return steps.sort((a, b) => a.priority - b.priority).slice(0, 4);
+}
+
+/**
+ * Tonight's sleep: how much you need (from today's strain so far and recent nights) and when to be
+ * in bed to get it before your usual wake-up time. Null until there are 3 nights to find the usual.
+ */
+export function tonightPlan(scores: DailyScores[], days: DayData[], profile: UserProfile, now = Date.now()) {
+  const today = scores.at(-1);
+  if (!today) return null;
+  const base = profile.baseSleepNeedMinutes ?? 480;
+  const recentShortfalls = scores.slice(-3).flatMap((s) => (s.sleep ? [base - s.sleep.asleepMinutes] : []));
+  const need = sleepNeed({ baseNeedMinutes: base, priorDayStrain: today.strain.strain, recentShortfalls });
+  const wakeTimes = days.slice(-7).flatMap((d) => (d.sleep ? [minutesOfDay(d.sleep.end)] : []));
+  if (wakeTimes.length < 3) return null;
+  const wakeAt = startOfDay(now) + DAY + normalRange(wakeTimes).mid * 60_000;
+  return { need, wakeAt, bedAt: wakeAt - (need.total + SLEEP_LATENCY_MIN) * 60_000 };
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function minutesOfDay(t: number): number {

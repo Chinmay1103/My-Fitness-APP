@@ -26,7 +26,7 @@ const STAGES = [
 export default function SleepScreen() {
   const colors = useColors();
   const styles = useStyles();
-  const { scores } = useScores();
+  const { scores, learnedNeed } = useScores();
   const { score, day, previous, isLatest } = useSelectedDay();
   const sleep = score?.sleep;
   const need = score?.sleepNeed;
@@ -108,7 +108,15 @@ export default function SleepScreen() {
       {need ? (
         <Card title={`${isLatest ? 'LAST NIGHT ' : ''}YOU NEEDED ${formatMinutes(need.total).toUpperCase()}`} onPress={open('sleepNeed')} linkLabel="30 days">
           <Breakdown>
-            <BreakdownTotal label="Base need" detail="What an average adult needs; adjustable later" value={formatMinutes(need.base)} />
+            <BreakdownTotal
+              label="Base need"
+              detail={
+                learnedNeed
+                  ? `Learned from your ${learnedNeed.nights} nights: you recover best after about ${formatMinutes(learnedNeed.bestNights)}`
+                  : 'What an average adult needs, until 14 nights let the app learn yours'
+              }
+              value={formatMinutes(need.base)}
+            />
             <BreakdownFactor
               label={isLatest ? "Yesterday's strain" : "The day before's strain"}
               detail={

@@ -1,4 +1,4 @@
-import { CALIBRATED_DAYS, MOCK_PROFILE } from '@fitness/scoring';
+import { bodyCheck, CALIBRATED_DAYS, MOCK_PROFILE } from '@fitness/scoring';
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useMemo, useState } from 'react';
@@ -10,7 +10,7 @@ import { NextStepsCard } from '@/components/NextStepsCard';
 import { ScoreRing } from '@/components/ScoreRing';
 import { DayPager } from '@/components/Swipe';
 import { Card, Muted, Pill, Screen } from '@/components/ui';
-import { fonts, spacing, type } from '@/constants/theme';
+import { fonts, spacing, type, withAlpha } from '@/constants/theme';
 import { makeStyles, useColors } from '@/lib/theme';
 import { formatDate } from '@/lib/format';
 import { tapHaptic } from '@/lib/haptics';
@@ -23,16 +23,20 @@ import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 export default function TodayScreen() {
   const colors = useColors();
   const styles = useStyles();
-  const { scores, days, metrics, sourceLabel, dayBack } = useScores();
+  const { scores, days, metrics, sourceLabel, dayBack, learnedNeed } = useScores();
   // "today" is whichever day is picked with the day pager; the latest day unless swiped back.
   const { score: today, isLatest, index } = useSelectedDay();
   // Suggestions are about what's still ahead, so only for the latest day.
-  const steps = useMemo(() => nextSteps({ scores, days, metrics, profile: MOCK_PROFILE }), [scores, days, metrics]);
+  const steps = useMemo(
+    () => nextSteps({ scores, days, metrics, profile: { ...MOCK_PROFILE, baseSleepNeedMinutes: learnedNeed?.minutes ?? MOCK_PROFILE.baseSleepNeedMinutes } }),
+    [scores, days, metrics, learnedNeed],
+  );
   const series = useMemo(
     () => Object.fromEntries(DASHBOARD_ORDER.map((key) => [key, metrics.map(METRICS[key].value)])),
     [metrics],
   );
   const note = useCoachNote(today?.date);
+  const body = useMemo(() => bodyCheck(days, index), [days, index]);
   // Three rings side by side must fit narrow phones (or a large display-size setting): size them
   // from the width the card actually has, up to 104. Until it's measured, estimate from the screen.
   const { width: screenWidth } = useWindowDimensions();
@@ -130,6 +134,22 @@ export default function TodayScreen() {
         ) : null}
       </Card>
 
+      {body && body.level !== 'normal' ? (
+        <Card title="BODY CHECK" href="/body-check" wholeCard>
+          <View style={[styles.bodyBadge, { backgroundColor: withAlpha(body.level === 'alert' ? colors.recovery.red : colors.recovery.yellow, 0.16) }]}>
+            <Text style={[styles.bodyBadgeText, { color: body.level === 'alert' ? colors.recovery.red : colors.recovery.yellow }]}>
+              {body.level === 'alert' ? 'Several signals up together' : 'One signal up'}
+            </Text>
+          </View>
+          <Muted>
+            {body.signals
+              .filter((s) => s.raised)
+              .map((s) => `${{ skinTemp: 'Skin temperature', breathing: 'Breathing', restingHr: 'Resting heart rate' }[s.key]} ${s.diff > 0 ? '+' : ''}${s.diff}`)
+              .join(' · ')}
+          </Muted>
+        </Card>
+      ) : null}
+
       {isLatest ? <NextStepsCard steps={steps} /> : null}
 
       {note ? <CoachNoteCard note={note} accent={recoveryColor} /> : null}
@@ -142,9 +162,37 @@ export default function TodayScreen() {
           ))}
         </View>
       ))}
+
+      <Text style={styles.section}>EXPLORE</Text>
+      <Card>
+        {EXPLORE.map((e, i) => (
+          <Pressable
+            key={e.href}
+            onPress={() => {
+              tapHaptic();
+              router.push(e.href);
+            }}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.exploreRow, i > 0 && styles.exploreDivider, pressed && styles.pressed]}>
+            <SymbolView name={e.icon} tintColor={colors.text} size={20} />
+            <View style={styles.exploreText}>
+              <Text style={styles.exploreTitle}>{e.title}</Text>
+              <Text style={styles.exploreDetail}>{e.detail}</Text>
+            </View>
+            <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }} tintColor={colors.muted} size={16} />
+          </Pressable>
+        ))}
+      </Card>
     </Screen>
   );
 }
+
+const EXPLORE = [
+  { href: '/weekly', title: 'Weekly report', detail: 'The week in numbers, and Claude’s take', icon: { ios: 'calendar', android: 'calendar_month', web: 'calendar_month' } },
+  { href: '/body-check', title: 'Body check', detail: 'Temperature, breathing and resting HR vs your usual', icon: { ios: 'cross.case', android: 'health_and_safety', web: 'health_and_safety' } },
+  { href: '/habits', title: 'Habits', detail: 'What drinks, late coffee or late dinners do to you', icon: { ios: 'cup.and.saucer', android: 'local_cafe', web: 'local_cafe' } },
+  { href: '/workouts', title: 'Workout history', detail: 'Every workout with what the band measured', icon: { ios: 'dumbbell', android: 'fitness_center', web: 'fitness_center' } },
+] as const;
 
 function pairs<T>(items: T[]): T[][] {
   const out: T[][] = [];
@@ -159,4 +207,11 @@ const useStyles = makeStyles((colors) => StyleSheet.create({
   headline: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 22 },
   section: { ...type.overline, color: colors.muted, marginTop: spacing.sm, marginLeft: 4 },
   tileRow: { flexDirection: 'row', gap: spacing.md },
+  bodyBadge: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 },
+  bodyBadgeText: { fontFamily: fonts.bodySemi, fontSize: 14 },
+  exploreRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  exploreDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingTop: spacing.md },
+  exploreText: { flex: 1, gap: 2 },
+  exploreTitle: { color: colors.text, fontFamily: fonts.bodySemi, fontSize: 15 },
+  exploreDetail: { ...type.caption, color: colors.muted },
 }));
