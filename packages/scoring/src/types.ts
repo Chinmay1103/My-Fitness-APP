@@ -69,6 +69,8 @@ export interface DayData {
   hrvRmssd?: number;
   /** Breaths per minute during last night's sleep. Optional recovery factor. */
   respiratoryRate?: number;
+  /** Last night's skin temperature, °C above (+) or below (−) the band's own baseline. Body check only. */
+  skinTempDelta?: number;
   /** Workouts logged through the coach that started this day. Can add strain heart rate missed. */
   workouts?: LoggedWorkout[];
   /** Step counts from the band and the phone, combined with `combineSteps`. Shown, not scored. */
@@ -77,4 +79,14 @@ export interface DayData {
   spo2?: number;
   /** Energy burned over the whole day, kcal, as the band's app estimates it. Shown, not scored. */
   caloriesBurned?: number;
+}
+
+/** Something the user told the coach they did that day: drinks, late coffee, a late meal... */
+export interface HabitEntry {
+  /** Short lowercase name the coach uses consistently, e.g. "alcohol", "late caffeine". */
+  kind: string;
+  /** Local date it happened, YYYY-MM-DD. */
+  date: string;
+  /** How much, when it matters (e.g. 2 drinks). */
+  amount?: number;
 }

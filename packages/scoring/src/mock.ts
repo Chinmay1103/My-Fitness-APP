@@ -1,5 +1,5 @@
 import type { StepRecord } from "./steps";
-import type { DayData, HeartRateSample, LoggedWorkout, SleepSegment, SleepStageMinutes, UserProfile } from "./types";
+import type { DayData, HabitEntry, HeartRateSample, LoggedWorkout, SleepSegment, SleepStageMinutes, UserProfile } from "./types";
 
 /**
  * Realistic fake data so we can build and test before the Fitbit Air arrives.
@@ -194,6 +194,7 @@ export function generateMockDays(options: MockOptions = {}): DayData[] {
       restingHr,
       hrvRmssd,
       respiratoryRate: Math.round((14.5 + 0.4 * loadEffect + noise2(0.6)) * 10) / 10,
+      skinTempDelta: Math.round((0.1 * loadEffect + noise2(0.3)) * 10) / 10,
       spo2: Math.round(96.5 + noise2(1.5)),
       caloriesBurned: Math.round(1650 + workout.minutes * workout.effort * 11 + noise2(120)),
       steps: mockSteps(midnight, walkStart, walkMinutes, load === "moderate" ? workoutStart : null, noise2),
@@ -235,4 +236,20 @@ function mockSteps(
   // Band on the charger, phone in the pocket.
   records.push({ start: midnight + 20 * HOUR, end: midnight + 20.5 * HOUR, count: Math.round(1200 + noise(300)), device: "phone" });
   return records;
+}
+
+/**
+ * Demo habits for the days `generateMockDays` made: a few evenings with drinks, late coffee and a
+ * late dinner, as if told to the coach. Seeded; independent of the scores, so any effect the
+ * Habits screen shows on demo data is chance.
+ */
+export function generateMockHabits(days: DayData[], seed = 7): HabitEntry[] {
+  const rand = mulberry32(seed);
+  return days.flatMap((d): HabitEntry[] => {
+    const out: HabitEntry[] = [];
+    if (rand() < 0.15) out.push({ kind: "alcohol", date: d.date, amount: 1 + Math.floor(rand() * 3) });
+    if (rand() < 0.25) out.push({ kind: "late caffeine", date: d.date });
+    if (rand() < 0.2) out.push({ kind: "late dinner", date: d.date });
+    return out;
+  });
 }

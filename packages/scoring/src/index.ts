@@ -8,3 +8,8 @@ export * from "./mock";
 export * from "./alerts";
 export * from "./steps";
 export * from "./activity";
+export * from "./bodyCheck";
+export * from "./load";
+export * from "./personal";
+export * from "./habits";
+export * from "./week";

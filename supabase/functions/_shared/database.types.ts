@@ -146,6 +146,36 @@ export type Database = {
         }
         Relationships: []
       }
+      habits: {
+        Row: {
+          amount: number | null
+          created_at: string
+          id: string
+          kind: string
+          note: string | null
+          occurred_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          id?: string
+          kind: string
+          note?: string | null
+          occurred_at?: string
+          user_id?: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          occurred_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       meals: {
         Row: {
           ai_estimated: boolean
@@ -218,6 +248,33 @@ export type Database = {
           id?: string
           max_hr?: number | null
           timezone?: string
+        }
+        Relationships: []
+      }
+      weekly_reports: {
+        Row: {
+          focus: string
+          headline: string
+          summary: string
+          updated_at: string
+          user_id: string
+          week_end: string
+        }
+        Insert: {
+          focus: string
+          headline: string
+          summary: string
+          updated_at?: string
+          user_id?: string
+          week_end: string
+        }
+        Update: {
+          focus?: string
+          headline?: string
+          summary?: string
+          updated_at?: string
+          user_id?: string
+          week_end?: string
         }
         Relationships: []
       }

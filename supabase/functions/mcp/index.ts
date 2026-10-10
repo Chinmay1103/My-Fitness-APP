@@ -31,7 +31,11 @@ them on recent days and pick up from there (e.g. "yesterday you planned a rest d
 For workouts, record the exact start and end time ("from 6:10 to 7:05 pm"); ask if they only give a rough time. The app matches
 those times to the band's heart rate, and list_workouts then shows what the band measured during each one (avg/peak heart rate,
 minutes of effort, strain). Use that to tell them how hard it really was, e.g. a run that stayed in zone 2 or a lifting session
-the heart barely noticed.`;
+the heart barely noticed.
+Log habits that can affect sleep and recovery with log_habit whenever they come up (drinks, late coffee, a late dinner, screens
+in bed, stress, meditation), using the same short kinds each time; the app shows what each one does to their mornings.
+When they ask for a weekly report (or it's Sunday or Monday and they ask how the week went), read get_week_summary and save it
+with save_weekly_report so it shows in the app.`;
 
 const WORKOUT_KINDS = ['strength', 'run', 'cycle', 'walk', 'sport', 'class', 'other'] as const;
 
@@ -375,6 +379,136 @@ function buildServer(supabase: Db, userId: string) {
   );
 
   server.registerTool(
+    'log_habit',
+    {
+      title: 'Log a habit',
+      description:
+        "Record something the user did that can affect sleep and recovery, e.g. 'had 2 beers', 'coffee at 5 pm', 'dinner at 11', 'screens in bed', 'meditated'. Use short lowercase kinds and keep them consistent over time (alcohol, late caffeine, late dinner, screens in bed, meditation, stress, sauna...), so the app can compare days with and without each one.",
+      inputSchema: z.object({
+        kind: z.string().min(1).max(40).describe("Short lowercase name, e.g. 'alcohol' or 'late caffeine'"),
+        occurred_at: z.string().optional().describe("ISO 8601 with the user's UTC offset; omit for now"),
+        amount: z.number().min(0).max(1000).optional().describe('How much, if it matters: drinks, cups'),
+        note: z.string().max(300).optional(),
+      }),
+    },
+    async (h) => {
+      const occurredAt = h.occurred_at ? new Date(h.occurred_at) : new Date();
+      if (Number.isNaN(occurredAt.getTime())) return fail(`Couldn't read occurred_at "${h.occurred_at}".`);
+      const { data, error } = await supabase
+        .from('habits')
+        .insert({ kind: h.kind.trim().toLowerCase(), occurred_at: occurredAt.toISOString(), amount: h.amount ?? null, note: h.note ?? null })
+        .select('id')
+        .single();
+      if (error) return fail(error.message);
+      return text({ logged: 'habit', id: data.id, kind: h.kind.trim().toLowerCase() });
+    },
+  );
+
+  server.registerTool(
+    'list_habits',
+    {
+      title: 'Recent habits',
+      description: 'Habits logged in the last N days, newest first. Use the same kinds when logging new ones.',
+      inputSchema: z.object({ days: z.number().int().min(1).max(90).default(14) }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ days }) => {
+      const timeZone = await timezoneOf(supabase);
+      const { data, error } = await supabase
+        .from('habits')
+        .select('id, kind, occurred_at, amount, note')
+        .gte('occurred_at', daysAgo(days))
+        .order('occurred_at', { ascending: false });
+      if (error) return fail(error.message);
+      return text(data.map((h) => ({ ...h, occurred_at: localTime(h.occurred_at, timeZone) })));
+    },
+  );
+
+  server.registerTool(
+    'get_week_summary',
+    {
+      title: 'Week summary',
+      description:
+        'The numbers for the 7 days ending on week_end (default: yesterday): average recovery, sleep and strain, best and worst mornings, sleep debt, green/red days, training load (last 7 days vs last 28), the workouts and habits logged. Read this before writing the weekly report with save_weekly_report.',
+      inputSchema: z.object({ week_end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ week_end }) => {
+      const timeZone = await timezoneOf(supabase);
+      const end = week_end ?? localDate(new Date(Date.now() - 86_400_000), timeZone);
+      const endMs = Date.parse(`${end}T00:00:00Z`);
+      const dateBack = (n: number) => new Date(endMs - n * 86_400_000).toISOString().slice(0, 10);
+      const { data: rows, error } = await supabase
+        .from('daily_summaries')
+        .select('date, recovery_score, recovery_zone, sleep_score, strain, asleep_minutes, scores')
+        .gte('date', dateBack(27))
+        .lte('date', end)
+        .order('date');
+      if (error) return fail(error.message);
+      const week = rows.filter((r) => r.date >= dateBack(6));
+      if (!week.length) return text(`No synced days in the week ending ${end}. The phone app uploads days when it's opened.`);
+      const avg = (v: (number | null)[]) => {
+        const k = v.filter((x): x is number => x != null);
+        return k.length ? Math.round((k.reduce((a, b) => a + b, 0) / k.length) * 10) / 10 : null;
+      };
+      type Scores = { strain?: { trimp?: number }; sleep?: { needMinutes?: number; asleepMinutes?: number } | null };
+      const trimp = (r: (typeof rows)[number]) => (r.scores as Scores | null)?.strain?.trimp ?? 0;
+      const acute = week.reduce((a, r) => a + trimp(r), 0) / week.length;
+      const chronic = rows.reduce((a, r) => a + trimp(r), 0) / rows.length;
+      const ranked = week.filter((r) => r.recovery_score != null).sort((a, b) => b.recovery_score! - a.recovery_score!);
+      const sleepDebt = week.reduce((a, r) => {
+        const s = (r.scores as Scores | null)?.sleep;
+        return a + (s?.needMinutes && s.asleepMinutes ? Math.max(0, s.needMinutes - s.asleepMinutes) : 0);
+      }, 0);
+      const from = `${dateBack(6)}T00:00:00`;
+      const [workouts, habits] = await Promise.all([
+        supabase.from('workouts').select('kind, title, started_at, ended_at, details').gte('started_at', new Date(Date.parse(from) - 86_400_000).toISOString()),
+        supabase.from('habits').select('kind, occurred_at, amount').gte('occurred_at', new Date(Date.parse(from) - 86_400_000).toISOString()),
+      ]);
+      const inWeek = (iso: string) => {
+        const d = localDate(new Date(iso), timeZone);
+        return d >= dateBack(6) && d <= end;
+      };
+      return text({
+        week: { from: dateBack(6), to: end, days_synced: week.length },
+        averages: { recovery: avg(week.map((r) => r.recovery_score)), sleep: avg(week.map((r) => r.sleep_score)), strain: avg(week.map((r) => Number(r.strain))), hours_asleep: avg(week.map((r) => (r.asleep_minutes != null ? r.asleep_minutes / 60 : null))) },
+        best_morning: ranked[0] ? { date: ranked[0].date, recovery: ranked[0].recovery_score } : null,
+        worst_morning: ranked.at(-1) ? { date: ranked.at(-1)!.date, recovery: ranked.at(-1)!.recovery_score } : null,
+        green_days: week.filter((r) => r.recovery_zone === 'green').length,
+        red_days: week.filter((r) => r.recovery_zone === 'red').length,
+        sleep_debt_hours: Math.round((sleepDebt / 60) * 10) / 10,
+        training_load: { last_7_days: Math.round(acute), last_28_days: Math.round(chronic), ratio: chronic > 0 ? Math.round((acute / chronic) * 100) / 100 : null, guide: 'ratio < 0.8 fresh, 0.8-1.3 steady, 1.3-1.5 building fast, > 1.5 overreaching' },
+        workouts: (workouts.data ?? []).filter((w) => inWeek(w.started_at)).map((w) => ({ ...w, started_at: localTime(w.started_at, timeZone), ended_at: localTime(w.ended_at, timeZone) })),
+        habits: (habits.data ?? []).filter((h) => inWeek(h.occurred_at)).map((h) => ({ ...h, occurred_at: localTime(h.occurred_at, timeZone) })),
+        per_day: week.map((r) => ({ date: r.date, recovery: r.recovery_score, sleep: r.sleep_score, strain: Number(r.strain) })),
+      });
+    },
+  );
+
+  server.registerTool(
+    'save_weekly_report',
+    {
+      title: 'Save the weekly report',
+      description:
+        "Save the weekly report to the app's Weekly report screen, after reading get_week_summary. Write it like a coach: what went well, what held them back (tie it to logged workouts, meals and habits), and one focus for next week. Saving again for the same week replaces it.",
+      inputSchema: z.object({
+        week_end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('Last day of the week, YYYY-MM-DD (same as in get_week_summary)'),
+        headline: z.string().min(1).max(140).describe("One line, e.g. 'Strong week, but sleep debt crept up'"),
+        summary: z.string().min(1).max(1500).describe('4-8 plain sentences citing the numbers'),
+        focus: z.string().min(1).max(300).describe('The one thing to focus on next week, concrete'),
+      }),
+      annotations: { idempotentHint: true },
+    },
+    async (report) => {
+      const { error } = await supabase
+        .from('weekly_reports')
+        .upsert({ ...report, updated_at: new Date().toISOString() }, { onConflict: 'user_id,week_end' });
+      if (error) return fail(error.message);
+      return text(`Saved. It shows on the app's Weekly report screen for the week ending ${report.week_end}.`);
+    },
+  );
+
+  server.registerTool(
     'log_weight',
     {
       title: 'Log body weight',
@@ -466,14 +600,14 @@ function buildServer(supabase: Db, userId: string) {
   server.registerTool(
     'delete_entry',
     {
-      title: 'Delete a logged workout, meal or weigh-in',
+      title: 'Delete a logged workout, meal, weigh-in or habit',
       description:
-        'Remove a workout, meal or weigh-in, e.g. one logged by mistake. Get the id from list_workouts, list_meals or list_weights.',
-      inputSchema: z.object({ type: z.enum(['workout', 'meal', 'weight']), id: z.string().uuid() }),
+        'Remove a workout, meal, weigh-in or habit, e.g. one logged by mistake. Get the id from list_workouts, list_meals, list_weights or list_habits.',
+      inputSchema: z.object({ type: z.enum(['workout', 'meal', 'weight', 'habit']), id: z.string().uuid() }),
       annotations: { destructiveHint: true },
     },
     async ({ type, id }) => {
-      const table = ({ workout: 'workouts', meal: 'meals', weight: 'body_weights' } as const)[type];
+      const table = ({ workout: 'workouts', meal: 'meals', weight: 'body_weights', habit: 'habits' } as const)[type];
       const { data, error } = await supabase
         .from(table)
         .delete()
