@@ -45,6 +45,8 @@ npm run typecheck    # type errors across the whole repo
 | `apps/mobile/app/(tabs)/` | One file per tab: `index.tsx` (Today), `sleep.tsx`, `strain.tsx`, `log.tsx`, `coach.tsx` |
 | `apps/mobile/components/` | Reusable UI: score rings, cards, bar charts |
 | `apps/mobile/lib/health/` | Where health data comes from: demo data, or Health Connect in the app's own build |
+| `apps/web/` | The website / desktop app: long-range trends and reports from the cloud copy of your days |
+| `docs/web/` | The built website that GitHub Pages serves (made by `npm run web:build`; don't edit by hand) |
 
 ## Your own build (needed for Health Connect)
 
@@ -138,6 +140,36 @@ build needed. Until then it shows only the email code.
    `myfitness://auth-callback`.
 
 Signing in with Google using the same Gmail address as the email code gives the same account and data.
+
+For Google on the **website** too, also add `https://chinmay1103.github.io/My-Fitness-APP/web/` to
+the same Redirect URLs list (and `http://localhost:5173/` if you run the website on your laptop).
+
+## Website (months of history and reports)
+
+The phone only reads the last 30 days from Health Connect, but every day it syncs stays in Supabase.
+The website (`apps/web/`) reads that cloud copy, so it can show any range: 30 days to all time,
+with trends, a year calendar, sleep timing, training load, habits, weekly/monthly reports, CSV
+download and print-to-PDF. Click any day for its full breakdown. It only reads; scores are still
+computed on the phone.
+
+It's also an app: in Chrome or Edge on the laptop, the **Install app** button in the header (or the
+install icon in the address bar) gives it its own window and icon; on the phone, Chrome menu ->
+**Add to Home screen**.
+
+**Once:**
+
+1. Push the new database column (steps, SpO2, breathing, skin temperature, energy and sleep stages
+   for the website): from the repo root, `npm run db:push`.
+2. Update the phone app (the change is in `lib/sync.ts`, JavaScript only, so reloading from the dev
+   server or the next EAS build both work), then open it signed in and pull to refresh. Each refresh
+   also uploads any older days (up to the phone's 30) that the cloud doesn't have yet.
+3. GitHub Pages already serves the `docs` folder for the consent page, so the website is at
+   **https://chinmay1103.github.io/My-Fitness-APP/web/** once this branch is the one Pages deploys
+   from. Sign in with the same email as on the phone. **Look around with demo data first** on the
+   sign-in screen shows a made-up year without signing in.
+
+**On your laptop** (to try changes): `npm run web`, then open http://localhost:5173.
+**After changing the website:** `npm run web:build` and commit `docs/web/` along with the code.
 
 ## Coach connector (Claude reads your data and logs workouts and meals)
 

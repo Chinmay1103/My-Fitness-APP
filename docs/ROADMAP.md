@@ -107,6 +107,7 @@ which is all the coach needs and far less sensitive.
 | 3 | Logging | Log workouts, import a workout plan, log meals by text or photo (AI macros) | **Changed (Oct 1):** no forms or Log tab. Everything is logged by typing or voice-typing into the coach chat, which records it; built as part of milestone 4 |
 | 4 | AI coach | Chat screen: Claude reads your scores, sleep, training and food through tools and gives advice | |
 | 5 | Polish | Trends, weekly report, notifications, optional MCP server to use your data from the Claude app | |
+| 6 | Website | Months of history and reports on a big screen, installable as an app | **Added (Oct 10):** `apps/web/` reads the cloud copy of every synced day (the phone only sees 30); trends, calendar, sleep timing, training load, habits, weekly/monthly reports with CSV and print. See SETUP.md, "Website" |
 
 ## 8. Ground rules
 

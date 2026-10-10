@@ -126,15 +126,33 @@ summary (`lib/morningSummary.ts`) is a background task defined in `index.ts`; sw
   on Android pick weights by `fontFamily` only (no `fontWeight`).
   Also read `apps/mobile/AGENTS.md`: Expo APIs change every SDK, so check the installed version's
   docs or types, not memory.
+- `apps/web/`: the **website** (Oct 10), Vite + React (react-dom, not React Native: the phone screens
+  are built around Health Connect and touch, the website around wide screens and long ranges).
+  Read-only view of the cloud copy (`daily_summaries`, workouts, meals, weights, habits, notes,
+  weekly reports) over any range (30 days to all time), since the phone only sees 30 days. Pages:
+  Overview, Trends (any metric + "compare two things" scatter), Sleep, Training, Body & food, Habits,
+  Reports (weekly/monthly table, CSV, print), and a day panel (`?day=` in the hash). Same sign-in,
+  same Supabase project and tokens (`src/styles.css` mirrors `constants/theme.ts`; keep them in step),
+  installable as an app (manifest + `public/sw.js`). Charts are hand-drawn SVG in
+  `src/components/charts/` (one `TimeChart` for lines/bars/stacks/ranges, `Calendar`, `Scatter`),
+  following the dataviz skill: one y axis, legend for 2+ series, hover readout, click opens the day.
+  Report math in `src/lib/stats.ts` (tested in `apps/web/tests/`); it reuses `@fitness/scoring`
+  (`habitImpact`, `trainingLoad`) and the phone's wording in `apps/mobile/lib/insights.ts`. Demo mode
+  (`src/lib/demo.ts`) shows a made-up year. The phone's sync sends display-only `extras` (steps, zone
+  minutes, SpO2, breathing, skin temp, energy, sleep stages) for it, and backfills older days the
+  cloud is missing. Built into `docs/web/` (committed; GitHub Pages serves it at `/web/`) with
+  `npm run web:build`.
 
 ## Commands (run from the repo root)
 
 ```bash
 npm install          # npm workspaces
-npm test             # scoring tests
+npm test             # scoring and website tests
 npm run typecheck    # all workspaces
 npm run mobile       # dev server for the app's own build (development build)
 npm run mobile:go    # same, for Expo Go (no Health Connect)
+npm run web          # the website on http://localhost:5173
+npm run web:build    # build it into docs/web (commit that folder too)
 ```
 
 In `apps/mobile`, add packages with `npx expo install <pkg>`, not `npm install`.
@@ -152,5 +170,6 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | 4c | Dashboard revamp (Oct 10) | Today dashboard with Next steps + metric tiles and drill-downs, phone+band steps, rebuilt hypnogram, light mode, battery limits. Then: flat cards, Plain background (light mode no longer shows the photos), drill-down links on every card and chart, sleep-part detail screens, tap/drag to read the live heart-rate graph. Needs a new EAS build (Weight permission, `userInterfaceStyle: automatic`); then check on the phone which device Health Connect labels steps with (Health data screen) |
 | 4b | Live heart rate + home-screen widget + heart-rate alert (WhatsApp) | Code ready (Oct 6–7); needs a new EAS build and a test with the band |
 | 5 | Trends, weekly report, notifications, MCP server | Done Oct 10 (needs a build to test): body check, training load, learned sleep need, habits, weekly report (Claude writes it via `save_weekly_report`), workout history with lift progress, morning summary notification (background task, Health Connect background read). App icon from the logo-designer skill (`logos/`) |
+| 6 | Website (long-range trends and reports) | Built Oct 10 (`apps/web/`, tried on demo data). To do: `npm run db:push` (extras column), update the phone app, check the site at chinmay1103.github.io/My-Fitness-APP/web/ with real data |
 
 Keep this table up to date when a milestone moves.

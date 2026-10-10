@@ -4,7 +4,7 @@ import type { HabitEntry } from "./types";
 
 /**
  * What a habit does to you: the next morning's recovery and that night's sleep after days with the
- * habit, compared with days without it, over the last 60 days. Only an association; shown once
+ * habit, compared with days without it, over the last 60 days (or `window`). Only an association; shown once
  * there are at least 3 days on each side, and called "early" until 6.
  */
 
@@ -24,8 +24,8 @@ const MIN_DAYS = 3;
 const SOLID_DAYS = 6;
 const WINDOW = 60;
 
-export function habitImpact(entries: HabitEntry[], scores: DailyScores[]): HabitImpact[] {
-  const recent = scores.slice(-WINDOW - 1);
+export function habitImpact(entries: HabitEntry[], scores: DailyScores[], window = WINDOW): HabitImpact[] {
+  const recent = scores.slice(-window - 1);
   const kinds = [...new Set(entries.map((e) => e.kind))];
   return kinds
     .map((kind) => {
