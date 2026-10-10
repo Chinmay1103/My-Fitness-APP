@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Aurora } from '@/components/Aurora';
+import { Logo } from '@/components/Logo';
 import { PlainBackdrop } from '@/components/PlainBackdrop';
 import { SceneBackdrop } from '@/components/SceneBackdrop';
 import { useHorizontalSwipe, type SwipeDirection } from '@/components/Swipe';
@@ -29,6 +30,8 @@ type ScreenProps = {
   children: ReactNode;
   /** Small uppercase label above the title, e.g. "SLEEP". */
   overline?: string;
+  /** Show the app's logo before the overline (the Today screen). */
+  logo?: boolean;
   title?: string;
   /** Shown to the right of the title, e.g. the "Demo data" label. */
   accessory?: ReactNode;
@@ -45,7 +48,7 @@ type ScreenProps = {
  * Navigator headers are hidden app-wide; every screen draws its own title here, so the glow runs
  * all the way up behind the status bar instead of stopping under a flat header bar.
  */
-export function Screen({ children, overline, title, accessory, back, glow, glow2 }: ScreenProps) {
+export function Screen({ children, logo, overline, title, accessory, back, glow, glow2 }: ScreenProps) {
   const colors = useColors();
   const styles = useStyles();
   const { loading, error, scores, refresh } = useScores();
@@ -59,7 +62,8 @@ export function Screen({ children, overline, title, accessory, back, glow, glow2
   if (loading && scores.length === 0) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={colors.text} />
+        <Logo size={88} tile />
+        <ActivityIndicator color={colors.muted} style={styles.loadingSpinner} />
       </View>
     );
   }
@@ -109,7 +113,14 @@ export function Screen({ children, overline, title, accessory, back, glow, glow2
                 <SymbolView name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }} tintColor={colors.text} size={24} />
               </Pressable>
             ) : null}
-            {overline ? <Text style={styles.overline}>{overline}</Text> : null}
+            {logo && overline ? (
+              <View style={styles.logoRow}>
+                <Logo size={22} />
+                <Text style={styles.overline}>{overline}</Text>
+              </View>
+            ) : overline ? (
+              <Text style={styles.overline}>{overline}</Text>
+            ) : null}
             <View style={styles.titleRow}>
               {title ? (
                 <Text style={styles.title} accessibilityRole="header">
@@ -342,6 +353,8 @@ const useStyles = makeStyles((colors) => StyleSheet.create({
   header: { gap: 2, marginBottom: spacing.xs },
   back: { alignSelf: 'flex-start', marginLeft: -2, marginBottom: spacing.sm },
   overline: { ...type.overline, color: colors.muted },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  loadingSpinner: { marginTop: spacing.lg },
   titleRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', columnGap: 8 },
   title: { ...type.hero, color: colors.text },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },

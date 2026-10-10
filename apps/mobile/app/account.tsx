@@ -1,6 +1,8 @@
+import Constants from 'expo-constants';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { Logo } from '@/components/Logo';
 import { MorningSummaryCard } from '@/components/MorningSummaryCard';
 import { Button, Card, Chip, Input, Muted, Screen } from '@/components/ui';
 import { setBackgroundStyle, useBackgroundStyle } from '@/lib/backgroundStyle';
@@ -71,6 +73,13 @@ export default function AccountScreen() {
 
   return (
     <Screen back overline="ACCOUNT" title={session ? 'Signed in' : 'Sign in'}>
+      <View style={styles.about}>
+        <Logo size={64} tile />
+        <View>
+          <Text style={styles.appName}>My Fitness</Text>
+          <Text style={styles.version}>{`Version ${Constants.expoConfig?.version ?? ''} · for the Fitbit Air`}</Text>
+        </View>
+      </View>
       {!enabled ? (
         <Card title="NOT SET UP YET">
           <Muted>
@@ -175,6 +184,9 @@ export default function AccountScreen() {
 
 const useStyles = makeStyles((colors) => StyleSheet.create({
   chips: { flexDirection: 'row', gap: 8 },
+  about: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  appName: { ...type.title, color: colors.text },
+  version: { ...type.caption, color: colors.muted },
   email: { ...type.title, color: colors.text },
   status: { ...type.caption, color: colors.text },
   error: { ...type.body, color: colors.recovery.red },

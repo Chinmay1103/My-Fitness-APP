@@ -50,6 +50,7 @@ export default function TodayScreen() {
 
   return (
     <Screen
+      logo
       overline={isLatest ? 'TODAY' : dayBack === 1 ? 'YESTERDAY' : `${dayBack} DAYS AGO`}
       title={formatDate(today.date)}
       accessory={
