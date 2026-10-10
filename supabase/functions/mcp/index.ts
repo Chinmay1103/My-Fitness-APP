@@ -27,7 +27,11 @@ When you explain a day, combine the score breakdown with the workouts and meals 
 see a late dinner or a leg day, you can. Whenever the user asks how their day is going, or for advice, end by saving the gist with
 save_daily_note so it shows on the app's Today screen. Do this even when no scores have synced yet: then base it on what they logged.
 The app opens a new chat for each question, so at the start of a conversation call get_coach_notes to see what you told
-them on recent days and pick up from there (e.g. "yesterday you planned a rest day; recovery agrees").`;
+them on recent days and pick up from there (e.g. "yesterday you planned a rest day; recovery agrees").
+For workouts, record the exact start and end time ("from 6:10 to 7:05 pm"); ask if they only give a rough time. The app matches
+those times to the band's heart rate, and list_workouts then shows what the band measured during each one (avg/peak heart rate,
+minutes of effort, strain). Use that to tell them how hard it really was, e.g. a run that stayed in zone 2 or a lifting session
+the heart barely noticed.`;
 
 const WORKOUT_KINDS = ['strength', 'run', 'cycle', 'walk', 'sport', 'class', 'other'] as const;
 
@@ -155,11 +159,12 @@ function buildServer(supabase: Db, userId: string) {
     {
       title: 'Log a workout',
       description:
-        "Record a workout the user describes, e.g. 'push day, 45 min this morning: bench 3x8 at 60kg'. Ask only if the type or rough time is unclear, or for how hard it felt (1-10) if they didn't say: the app uses that rating to count strain heart rate misses, e.g. in lifting.",
+        "Record a workout the user describes, e.g. 'push day 6:10-7:05 pm: bench 3x8 at 60kg'. Ask if the type, the start and end time, or how hard it felt (1-10) is missing: the app matches the times to the band's heart rate and uses the rating to count strain heart rate misses, e.g. in lifting.",
       inputSchema: z.object({
         kind: z.enum(WORKOUT_KINDS).describe('strength = gym/weights; cycle = ride; class = yoga, HIIT, etc.'),
         started_at: z.string().describe("ISO 8601 with the user's UTC offset, e.g. 2026-10-02T07:30:00+05:30"),
-        minutes: z.number().int().min(1).max(600),
+        ended_at: z.string().optional().describe('When it ended, ISO 8601 with the UTC offset. Prefer this over minutes'),
+        minutes: z.number().int().min(1).max(600).optional().describe('Length, if the user gave a duration instead of an end time'),
         title: z.string().max(80).optional().describe("Short name, e.g. 'Push day' or 'Easy 5k'"),
         effort: z.number().int().min(1).max(10).optional().describe('How hard it felt, 1 (very easy) to 10 (all out). Ask if the user did not say'),
         distance_km: z.number().min(0).max(500).optional(),
@@ -177,6 +182,9 @@ function buildServer(supabase: Db, userId: string) {
     async (w) => {
       const start = new Date(w.started_at);
       if (Number.isNaN(start.getTime())) return fail(`Couldn't read started_at "${w.started_at}".`);
+      const end = w.ended_at ? new Date(w.ended_at) : w.minutes ? new Date(start.getTime() + w.minutes * 60_000) : null;
+      if (!end || Number.isNaN(end.getTime())) return fail('Need ended_at or minutes: ask the user when they finished.');
+      if (end <= start || end.getTime() - start.getTime() > 10 * 3_600_000) return fail('ended_at must be after started_at and within 10 hours.');
       const details = {
         effort: w.effort ?? null,
         distanceKm: w.distance_km ?? null,
@@ -187,7 +195,7 @@ function buildServer(supabase: Db, userId: string) {
         .insert({
           kind: w.kind,
           started_at: start.toISOString(),
-          ended_at: new Date(start.getTime() + w.minutes * 60_000).toISOString(),
+          ended_at: end.toISOString(),
           title: w.title ?? null,
           notes: w.notes ?? null,
           details: details as Json,
@@ -243,7 +251,8 @@ function buildServer(supabase: Db, userId: string) {
     'list_workouts',
     {
       title: 'Recent workouts',
-      description: 'Workouts the user logged in the last N days, newest first.',
+      description:
+        "Workouts the user logged in the last N days, newest first. `band` is what the band measured during it (after the phone app has synced that day): heart rate, minutes of effort, strain, and how much of the strain came from the effort rating.",
       inputSchema: z.object({ days: z.number().int().min(1).max(90).default(7) }),
       annotations: { readOnlyHint: true },
     },
@@ -255,12 +264,35 @@ function buildServer(supabase: Db, userId: string) {
         .gte('started_at', daysAgo(days))
         .order('started_at', { ascending: false });
       if (error) return fail(error.message);
+      // The phone matches workouts to the band's stretches of effort and uploads them in the day's scores.
+      const dates = [...new Set(data.map((w) => localDate(new Date(w.started_at), timeZone)))];
+      const { data: summaries } = dates.length
+        ? await supabase.from('daily_summaries').select('date, scores').in('date', dates)
+        : { data: [] };
+      type Activity = { start: number; end: number; minutes: number; avgBpm: number; maxBpm: number; strain: number; effortStrain?: number; workout?: { id: string } };
+      const activities = (summaries ?? []).flatMap(
+        (row) => ((row.scores as { strain?: { activities?: Activity[] } } | null)?.strain?.activities ?? []),
+      );
       return text(
-        data.map((w) => ({
-          ...w,
-          started_at: localTime(w.started_at, timeZone),
-          ended_at: localTime(w.ended_at, timeZone),
-        })),
+        data.map((w) => {
+          const a = activities.find((x) => x.workout?.id === w.id);
+          return {
+            ...w,
+            started_at: localTime(w.started_at, timeZone),
+            ended_at: localTime(w.ended_at, timeZone),
+            band: a
+              ? {
+                  effort_from: localTime(new Date(a.start).toISOString(), timeZone),
+                  effort_to: localTime(new Date(a.end).toISOString(), timeZone),
+                  minutes_of_effort: a.minutes,
+                  avg_bpm: a.avgBpm || null,
+                  peak_bpm: a.maxBpm || null,
+                  strain: a.strain,
+                  strain_from_effort_rating: a.effortStrain ?? 0,
+                }
+              : 'not matched yet: the phone app syncs it the next time it is opened, or the band saw no effort then',
+          };
+        }),
       );
     },
   );
