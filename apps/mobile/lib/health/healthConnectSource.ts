@@ -1,4 +1,4 @@
-import type { DayData, HeartRateSample, SleepSegment, SleepSession, SleepStage, SleepStageMinutes } from '@fitness/scoring';
+import type { DayData, HeartRateSample, SleepSegment, SleepSession, SleepStage, SleepStageMinutes, StepRecord } from '@fitness/scoring';
 import { Platform, TurboModuleRegistry } from 'react-native';
 import type { Permission, ReadRecordsResult, RecordType } from 'react-native-health-connect';
 
@@ -8,7 +8,8 @@ import type { HealthSource } from './types';
 export const CORE_TYPES = ['HeartRate', 'RestingHeartRate', 'HeartRateVariabilityRmssd', 'SleepSession'] as const;
 
 /**
- * Also read, but only shown on the Health data screen for now, to find out what the band writes.
+ * Also read when allowed: steps, SpO2, breathing rate and energy burned feed the Today dashboard;
+ * the rest only shows on the Health data screen, to find out what the band writes.
  * Each one needs a matching android.permission.health.READ_* line in app.json.
  */
 export const EXTRA_TYPES = [
@@ -20,7 +21,11 @@ export const EXTRA_TYPES = [
   'RespiratoryRate',
   'SkinTemperature',
   'Vo2Max',
+  'Weight',
 ] as const;
+
+/** Health Connect's device type for phones (metadata.device.type). */
+const DEVICE_PHONE = 2;
 
 const PERMISSIONS: Permission[] = [...CORE_TYPES, ...EXTRA_TYPES].map((recordType) => ({ accessType: 'read', recordType }));
 
@@ -154,11 +159,17 @@ export const healthConnectSource: HealthSource = {
     // Start a day earlier so the first day's sleep (which begins the evening before) is included.
     const from = new Date(firstMidnight.getTime() - DAY);
 
-    const [heartRate, resting, hrv, sleep] = await Promise.all([
+    // Extras are optional: a missing permission leaves that metric empty instead of failing the scores.
+    const optional = <T,>(read: Promise<T[]>) => read.catch(() => [] as T[]);
+    const [heartRate, resting, hrv, sleep, steps, spo2, breathing, calories] = await Promise.all([
       readAll('HeartRate', from, now),
       readAll('RestingHeartRate', from, now),
       readAll('HeartRateVariabilityRmssd', from, now),
       readAll('SleepSession', from, now),
+      optional(readAll('Steps', from, now)),
+      optional(readAll('OxygenSaturation', from, now)),
+      optional(readAll('RespiratoryRate', from, now)),
+      optional(readAll('TotalCaloriesBurned', from, now)),
     ]);
 
     const result: DayData[] = [];
@@ -194,6 +205,34 @@ export const healthConnectSource: HealthSource = {
       else day.heartRate.push(s);
     }
 
+    // Steps, labelled by device so the band's can be checked against the phone's (combineSteps).
+    for (const r of steps) {
+      const start = Date.parse(r.startTime);
+      const day = byDate.get(localDate(start));
+      if (!day) continue;
+      const device: StepRecord['device'] = r.metadata?.device?.type === DEVICE_PHONE ? 'phone' : 'band';
+      (day.steps ??= []).push({ start, end: Date.parse(r.endTime), count: r.count, device });
+    }
+
+    // SpO2 and breathing rate: averages over the main sleep (the band measures both overnight).
+    const nightAverage = (records: { time: string }[], value: (r: any) => number, set: (d: DayData, v: number) => void) => {
+      for (const day of result) {
+        if (!day.sleep) continue;
+        const inside = records.filter((r) => {
+          const t = Date.parse(r.time);
+          return t >= day.sleep!.start - 30 * 60_000 && t <= day.sleep!.end + 30 * 60_000;
+        });
+        if (inside.length) set(day, inside.reduce((sum, r) => sum + value(r), 0) / inside.length);
+      }
+    };
+    nightAverage(spo2, (r) => r.percentage, (d, v) => (d.spo2 = Math.round(v)));
+    nightAverage(breathing, (r) => r.rate, (d, v) => (d.respiratoryRate = Math.round(v * 10) / 10));
+
+    for (const r of calories) {
+      const day = byDate.get(localDate(Date.parse(r.startTime)));
+      if (day) day.caloriesBurned = Math.round((day.caloriesBurned ?? 0) + r.energy.inKilocalories);
+    }
+
     return result;
   },
 
@@ -217,6 +256,8 @@ export interface DataTypeCheck {
   count: number;
   /** Package names of the apps that wrote them, e.g. com.google.android.apps.fitness. */
   origins: string[];
+  /** Devices that recorded them, e.g. "phone", "band (Google Fitbit Air)". */
+  devices: string[];
   /** Newest record's time, ISO. */
   latest?: string;
   /** Set when this type couldn't be read, usually a missing permission. */
@@ -235,16 +276,21 @@ export async function checkDataTypes(days = 7): Promise<DataTypeCheck[]> {
       try {
         const records = await readAll(type, from, to);
         const origins = new Set<string>();
+        const devices = new Set<string>();
         let latest: string | undefined;
         for (const r of records) {
           if (r.metadata?.dataOrigin) origins.add(r.metadata.dataOrigin);
+          const device = r.metadata?.device;
+          if (device) devices.add(`${DEVICE_NAMES[device.type ?? 0] ?? 'other'}${device.model ? ` (${[device.manufacturer, device.model].filter(Boolean).join(' ')})` : ''}`);
           const time = 'time' in r ? r.time : 'endTime' in r ? r.endTime : undefined;
           if (typeof time === 'string' && (!latest || time > latest)) latest = time;
         }
-        return { type, count: records.length, origins: [...origins], latest };
+        return { type, count: records.length, origins: [...origins], devices: [...devices], latest };
       } catch (e) {
-        return { type, count: 0, origins: [], error: e instanceof Error ? e.message : String(e) };
+        return { type, count: 0, origins: [], devices: [], error: e instanceof Error ? e.message : String(e) };
       }
     }),
   );
 }
+
+const DEVICE_NAMES: Record<number, string> = { 0: 'unknown device', 2: 'phone', 3: 'scale', 4: 'ring', 6: 'band', 7: 'chest strap' };

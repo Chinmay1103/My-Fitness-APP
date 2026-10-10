@@ -4,7 +4,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { HeartRateChart, zoneColor, zoneName } from '@/components/charts/HeartRateChart';
 import { Card, Muted, Row, Stat } from '@/components/ui';
-import { colors, fonts } from '@/constants/theme';
+import { fonts } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { formatTime } from '@/lib/format';
 import { tapHaptic } from '@/lib/haptics';
 import { ago, heartRateLimits, useDayHeartRate } from '@/lib/heartRate';
@@ -12,6 +13,8 @@ import { useScores } from '@/lib/ScoresProvider';
 
 /** Today's heart rate at a glance: the latest reading, a mini chart of the day and low / avg / high. Opens the full screen. */
 export function HeartRateCard({ date }: { date: string }) {
+  const colors = useColors();
+  const styles = useStyles();
   const { days } = useScores();
   const { samples, day } = useDayHeartRate(date);
   const summary = summarizeHeartRate(samples);
@@ -31,7 +34,7 @@ export function HeartRateCard({ date }: { date: string }) {
           <>
             <View style={styles.top}>
               <View style={styles.latest}>
-                <Text style={[styles.bpm, { color: zoneColor(heartRateZone(summary.latest.bpm, restingHr, maxHr)) }]}>
+                <Text style={[styles.bpm, { color: zoneColor(heartRateZone(summary.latest.bpm, restingHr, maxHr), colors) }]}>
                   {Math.round(summary.latest.bpm)}
                 </Text>
                 <View>
@@ -58,11 +61,11 @@ export function HeartRateCard({ date }: { date: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   pressed: { opacity: 0.75 },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   latest: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   bpm: { fontFamily: fonts.number, fontSize: 44, fontVariant: ['tabular-nums'] },
   unit: { color: colors.text, fontFamily: fonts.bodySemi, fontSize: 13 },
   when: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 12 },
-});
+}));

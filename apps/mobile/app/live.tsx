@@ -6,7 +6,8 @@ import { BandVibrationCard } from '@/components/BandVibrationCard';
 import { HeartRateAlertCard } from '@/components/HeartRateAlertCard';
 import { LiveHeartChart } from '@/components/charts/LiveHeartChart';
 import { Button, Card, Muted, Row, Screen, Stat } from '@/components/ui';
-import { colors, fonts, type } from '@/constants/theme';
+import { fonts, type } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { formatMinutes } from '@/lib/format';
 import { isAlertSupported } from '@/lib/heartRateAlert';
 import { isWidgetSupported, pinHeartRateWidget } from '@/lib/heartRateWidget';
@@ -35,6 +36,8 @@ const STATUS_TEXT: Record<LiveStatus, string> = {
  * Opened from Today, from the notification while it runs, and from the home-screen widget.
  */
 export default function LiveScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const live = useLiveHeartRate();
   const [widgetMessage, setWidgetMessage] = useState<string | null>(null);
   const supported = isLiveHeartRateSupported();
@@ -141,7 +144,7 @@ export default function LiveScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   hero: { alignItems: 'center', gap: 2 },
   bpmRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   bpm: { fontFamily: fonts.number, fontSize: 84, lineHeight: 92, fontVariant: ['tabular-nums'] },
@@ -149,4 +152,4 @@ const styles = StyleSheet.create({
   zone: { fontFamily: fonts.bodySemi, fontSize: 16 },
   status: { ...type.caption, color: colors.muted },
   error: { ...type.body, color: colors.recovery.red },
-});
+}));

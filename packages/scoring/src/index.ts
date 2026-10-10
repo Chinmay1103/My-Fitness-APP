@@ -6,3 +6,5 @@ export * from "./recovery";
 export * from "./daily";
 export * from "./mock";
 export * from "./alerts";
+export * from "./steps";
+export * from "./activity";

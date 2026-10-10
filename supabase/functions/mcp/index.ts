@@ -155,13 +155,13 @@ function buildServer(supabase: Db, userId: string) {
     {
       title: 'Log a workout',
       description:
-        "Record a workout the user describes, e.g. 'push day, 45 min this morning: bench 3x8 at 60kg'. Ask only if the type or rough time is unclear.",
+        "Record a workout the user describes, e.g. 'push day, 45 min this morning: bench 3x8 at 60kg'. Ask only if the type or rough time is unclear, or for how hard it felt (1-10) if they didn't say: the app uses that rating to count strain heart rate misses, e.g. in lifting.",
       inputSchema: z.object({
         kind: z.enum(WORKOUT_KINDS).describe('strength = gym/weights; cycle = ride; class = yoga, HIIT, etc.'),
         started_at: z.string().describe("ISO 8601 with the user's UTC offset, e.g. 2026-10-02T07:30:00+05:30"),
         minutes: z.number().int().min(1).max(600),
         title: z.string().max(80).optional().describe("Short name, e.g. 'Push day' or 'Easy 5k'"),
-        effort: z.number().int().min(1).max(10).optional().describe('How hard it felt, 1-10, if the user said'),
+        effort: z.number().int().min(1).max(10).optional().describe('How hard it felt, 1 (very easy) to 10 (all out). Ask if the user did not say'),
         distance_km: z.number().min(0).max(500).optional(),
         exercises: z
           .array(

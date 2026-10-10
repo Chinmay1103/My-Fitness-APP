@@ -1,24 +1,27 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { SymbolView } from 'expo-symbols';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 
-import { colors, fonts, gradientFor, motion, spacing, type } from '@/constants/theme';
+import { fonts, gradientFor, motion, spacing, type } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { useAnimatedTarget } from '@/lib/animation';
+import { tapHaptic } from '@/lib/haptics';
 
-const POSITIVE = colors.recovery.green;
-const NEGATIVE = colors.recovery.red;
 
 /**
  * "Start value, then what each factor added or took off, then the result" list.
  * Used to show how every score was reached.
  */
 export function Breakdown({ children }: { children: ReactNode }) {
+  const styles = useStyles();
   return <View style={styles.list}>{children}</View>;
 }
 
 /** The starting point (e.g. "Typical night for you: 57%") or the final result. */
 export function BreakdownTotal({ label, value, color, detail }: { label: string; value: string; color?: string; detail?: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.total}>
       <View style={styles.text}>
@@ -42,17 +45,21 @@ interface FactorProps {
   unit?: string;
   /** Fixed color, for lists where more isn't good or bad (strain, minutes of sleep need). */
   color?: string;
+  /** Makes the row tappable (with a chevron), e.g. to open the activity or metric behind it. */
+  onPress?: () => void;
 }
 
-export function BreakdownFactor({ label, detail, delta, scale, decimals = 0, unit = '', color: fixedColor }: FactorProps) {
+export function BreakdownFactor({ label, detail, delta, scale, decimals = 0, unit = '', color: fixedColor, onPress }: FactorProps) {
+  const colors = useColors();
+  const styles = useStyles();
   const rounded = Number(delta.toFixed(decimals));
-  const color = rounded === 0 ? colors.muted : fixedColor ? fixedColor : rounded > 0 ? POSITIVE : NEGATIVE;
-  const [light, dark] = gradientFor(color);
+  const color = rounded === 0 ? colors.muted : fixedColor ? fixedColor : rounded > 0 ? colors.recovery.green : colors.recovery.red;
+  const [light, dark] = gradientFor(color, colors);
   const fraction = Math.min(Math.abs(delta) / Math.max(scale, 1e-6), 1);
   const grow = useAnimatedTarget(1, motion.bars, 150);
   const barStyle = useAnimatedStyle(() => ({ transform: [{ scaleX: grow.value }] }));
   const sign = rounded > 0 ? '+' : rounded < 0 ? '−' : '±';
-  return (
+  const row = (
     <View style={styles.factor}>
       <View style={styles.factorTop}>
         <View style={styles.text}>
@@ -64,6 +71,7 @@ export function BreakdownFactor({ label, detail, delta, scale, decimals = 0, uni
           {Math.abs(rounded).toFixed(decimals)}
           {unit}
         </Text>
+        {onPress ? <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }} tintColor={colors.muted} size={16} /> : null}
       </View>
       <View style={styles.track}>
         <Animated.View style={[styles.bar, { width: `${fraction * 100}%` }, barStyle]}>
@@ -72,10 +80,24 @@ export function BreakdownFactor({ label, detail, delta, scale, decimals = 0, uni
       </View>
     </View>
   );
+  if (!onPress) return row;
+  return (
+    <Pressable
+      onPress={() => {
+        tapHaptic();
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${detail}. Open details.`}
+      style={({ pressed }) => pressed && styles.pressed}>
+      {row}
+    </Pressable>
+  );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   list: { gap: spacing.md },
+  pressed: { opacity: 0.6 },
   text: { flex: 1, gap: 2 },
   total: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   totalLabel: { ...type.bodyStrong, color: colors.text },
@@ -87,4 +109,4 @@ const styles = StyleSheet.create({
   delta: { fontFamily: fonts.number, fontSize: 20, minWidth: 52, textAlign: 'right' },
   track: { height: 6, flexDirection: 'row', backgroundColor: colors.track, borderRadius: 3, overflow: 'hidden' },
   bar: { borderRadius: 3, overflow: 'hidden', transformOrigin: 'left' },
-});
+}));

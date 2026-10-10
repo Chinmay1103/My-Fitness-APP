@@ -7,13 +7,16 @@ import { LineChart } from '@/components/charts/LineChart';
 import { dayName } from '@/components/charts/parts';
 import { StepButton } from '@/components/Swipe';
 import { Card, Muted, Row, Screen, Stat } from '@/components/ui';
-import { colors, fonts } from '@/constants/theme';
+import { fonts } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { formatTime } from '@/lib/format';
 import { tapHaptic } from '@/lib/haptics';
 import { ago, heartRateLimits, useDayHeartRate } from '@/lib/heartRate';
 import { useScores } from '@/lib/ScoresProvider';
 
 export default function HeartRateScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   // Days back from today (0 = today), shared with the day pager on Today, Sleep and Strain.
   const { days, sourceId, dayBack: back, setDayBack: setBack } = useScores();
   const index = Math.max(days.length - 1 - back, 0);
@@ -84,7 +87,7 @@ export default function HeartRateScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   stepperText: { flex: 1, textAlign: 'center', color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 12 },
-});
+}));

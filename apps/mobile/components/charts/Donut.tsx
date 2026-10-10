@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-na
 import Animated, { useAnimatedProps } from 'react-native-reanimated';
 import Svg, { Circle, G } from 'react-native-svg';
 
-import { colors, fonts, motion, spacing } from '@/constants/theme';
+import { fonts, motion, spacing } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { useAnimatedTarget } from '@/lib/animation';
 import { tapHaptic } from '@/lib/haptics';
 
@@ -36,6 +37,7 @@ const GAP_DEG = 3;
 const LEGEND_MIN = 175;
 
 export function Donut({ slices, center, centerLabel, size: maxSize = 132 }: Props) {
+  const styles = useStyles();
   const [picked, setPicked] = useState<string | null>(null);
   // On narrow phones the donut shrinks so the legend keeps its room (card inside ≈ screen − 70).
   const { width } = useWindowDimensions();
@@ -149,7 +151,7 @@ function Arc({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   center: { alignItems: 'center', justifyContent: 'center' },
   centerValue: { color: colors.text, fontFamily: fonts.number, fontSize: 24, fontVariant: ['tabular-nums'] },
@@ -161,4 +163,4 @@ const styles = StyleSheet.create({
   rowLabel: { flex: 1, color: colors.text, fontFamily: fonts.bodyMedium, fontSize: 13 },
   rowValue: { color: colors.text, fontFamily: fonts.numberSemi, fontSize: 16, fontVariant: ['tabular-nums'] },
   rowPct: { width: 38, textAlign: 'right', color: colors.muted, fontFamily: fonts.numberSemi, fontSize: 15 },
-});
+}));

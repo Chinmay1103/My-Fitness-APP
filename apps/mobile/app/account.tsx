@@ -3,7 +3,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Button, Card, Chip, Input, Muted, Screen } from '@/components/ui';
 import { setBackgroundStyle, useBackgroundStyle } from '@/lib/backgroundStyle';
-import { colors, type } from '@/constants/theme';
+import { type } from '@/constants/theme';
+import { makeStyles, useColors, useTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/AuthProvider';
 import { signInWithGoogle, useGoogleEnabled } from '@/lib/googleSignIn';
 import { useScores } from '@/lib/ScoresProvider';
@@ -14,7 +15,9 @@ import { supabase } from '@/lib/supabase';
  * saved on the phone until Sign out. Signing in is optional: scores work without it. It's needed for backup, and later for meal logging and the coach.
  */
 export default function AccountScreen() {
+  const styles = useStyles();
   const background = useBackgroundStyle();
+  const { preference, setPreference } = useTheme();
   const { enabled, session } = useAuth();
   const { sourceId, syncStatus, refresh } = useScores();
   const [email, setEmail] = useState('');
@@ -139,6 +142,16 @@ export default function AccountScreen() {
         </>
       )}
       {message ? <Text style={styles.error}>{message}</Text> : null}
+      <Card title="APPEARANCE">
+        <View style={styles.chips}>
+          <Chip label="System" selected={preference === 'system'} onPress={() => setPreference('system')} />
+          <Chip label="Light" selected={preference === 'light'} onPress={() => setPreference('light')} />
+          <Chip label="Dark" selected={preference === 'dark'} onPress={() => setPreference('dark')} />
+        </View>
+        <Muted>
+          {preference === 'system' ? 'Follows your phone’s light or dark setting.' : `Always ${preference}, whatever the phone is set to.`}
+        </Muted>
+      </Card>
       <Card title="BACKGROUND">
         <View style={styles.chips}>
           <Chip label="Scenes" selected={background === 'scenes'} onPress={() => setBackgroundStyle('scenes')} />
@@ -154,9 +167,9 @@ export default function AccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   chips: { flexDirection: 'row', gap: 8 },
   email: { ...type.title, color: colors.text },
   status: { ...type.caption, color: colors.text },
   error: { ...type.body, color: colors.recovery.red },
-});
+}));

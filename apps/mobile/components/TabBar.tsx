@@ -4,7 +4,8 @@ import { useContext, useEffect, useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, withTiming } from 'react-native-reanimated';
 
-import { colors, motion } from '@/constants/theme';
+import { motion } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { easeOut } from '@/lib/animation';
 
 const SLOT = 64;
@@ -19,6 +20,8 @@ const LIFT = 12;
  * Reports its full height so screens pad their content (see Screen in components/ui.tsx).
  */
 export function TabBar({ state, descriptors, navigation, insets }: BottomTabBarProps) {
+  const colors = useColors();
+  const styles = useStyles();
   const setHeight = useContext(BottomTabBarHeightCallbackContext);
   const reduced = useReducedMotion();
   const keyboardOpen = useKeyboardOpen();
@@ -81,7 +84,7 @@ function useKeyboardOpen(): boolean {
   return open;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   bar: {
     flexDirection: 'row',
@@ -103,4 +106,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.tabActive,
   },
   slot: { width: SLOT, alignItems: 'center', justifyContent: 'center' },
-});
+}));

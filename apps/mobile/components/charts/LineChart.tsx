@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
-import { colors, fonts } from '@/constants/theme';
+import { fonts, withAlpha } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { ChartHeader, DEFAULT_RANGES, Legend, RangeSwitch, Reveal, dayName, smoothPath, usePickedDay, useScrub } from './parts';
 
 interface Point {
@@ -30,6 +31,8 @@ const PAD_Y = 10;
  * Drag to scrub; 7D / 14D / 30D switch.
  */
 export function LineChart({ label, points: all, color, format, higherIsBetter, height = 120 }: Props) {
+  const colors = useColors();
+  const styles = useStyles();
   const [range, setRange] = useState<number>(DEFAULT_RANGES[2]);
   const points = all.slice(-range);
   const n = points.length;
@@ -117,15 +120,15 @@ export function LineChart({ label, points: all, color, format, higherIsBetter, h
       <Legend
         items={[
           { label, color },
-          { label: 'your normal range', color: 'rgba(255,255,255,0.25)' },
+          { label: 'your normal range', color: withAlpha(colors.muted, 0.45) },
         ]}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   wrap: { gap: 10 },
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -4 },
   axisText: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 11 },
-});
+}));

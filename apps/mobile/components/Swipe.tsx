@@ -3,7 +3,8 @@ import { useMemo, useRef, type ReactNode } from 'react';
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View, type GestureResponderHandlers } from 'react-native';
 
 import { dayName } from '@/components/charts/parts';
-import { colors, fonts } from '@/constants/theme';
+import { fonts } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { tapHaptic } from '@/lib/haptics';
 import { useSelectedDay } from '@/lib/ScoresProvider';
 
@@ -49,6 +50,7 @@ export function useHorizontalSwipe(
  * turning pages back. The arrows below do the same for anyone who doesn't swipe.
  */
 export function DayPager({ children }: { children?: ReactNode }) {
+  const styles = useStyles();
   const { score, isLatest, dayBack, setDayBack, count } = useSelectedDay();
   const shift = useRef(new Animated.Value(0)).current;
   const canOlder = dayBack < count - 1;
@@ -99,6 +101,8 @@ export function StepButton({
   disabled: boolean;
   onPress: () => void;
 }) {
+  const colors = useColors();
+  const styles = useStyles();
   const name =
     icon === 'left'
       ? ({ ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' } as const)
@@ -117,10 +121,10 @@ export function StepButton({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12 },
   label: { flex: 1, textAlign: 'center', color: colors.text, fontFamily: fonts.bodySemi, fontSize: 14 },
   hint: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 12 },
   stepButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.track, alignItems: 'center', justifyContent: 'center' },
   dim: { opacity: 0.35 },
-});
+}));

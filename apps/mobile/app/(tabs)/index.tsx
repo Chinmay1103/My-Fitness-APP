@@ -1,26 +1,37 @@
-import { CALIBRATED_DAYS } from '@fitness/scoring';
+import { CALIBRATED_DAYS, MOCK_PROFILE } from '@fitness/scoring';
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { CoachNoteCard } from '@/components/CoachNoteCard';
-import { HeartRateCard } from '@/components/HeartRateCard';
+import { MetricTile } from '@/components/MetricTile';
+import { NextStepsCard } from '@/components/NextStepsCard';
 import { ScoreRing } from '@/components/ScoreRing';
 import { DayPager } from '@/components/Swipe';
-import { TrendBars } from '@/components/TrendBars';
-import { Card, Muted, Pill, Row, Screen, Stat } from '@/components/ui';
-import { colors, fonts, spacing } from '@/constants/theme';
-import { formatDate, formatMinutes } from '@/lib/format';
+import { Card, Muted, Pill, Screen } from '@/components/ui';
+import { fonts, spacing, type } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
+import { formatDate } from '@/lib/format';
 import { tapHaptic } from '@/lib/haptics';
 import { useCoachNote } from '@/lib/coachNote';
 import { todayHeadline } from '@/lib/insights';
+import { DASHBOARD_ORDER, METRICS } from '@/lib/metrics';
+import { nextSteps } from '@/lib/nextSteps';
 import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 
 export default function TodayScreen() {
-  const { scores, sourceLabel, dayBack } = useScores();
+  const colors = useColors();
+  const styles = useStyles();
+  const { scores, days, metrics, sourceLabel, dayBack } = useScores();
   // "today" is whichever day is picked with the day pager; the latest day unless swiped back.
-  const { score: today, day: todayData, isLatest } = useSelectedDay();
+  const { score: today, isLatest, index } = useSelectedDay();
+  // Suggestions are about what's still ahead, so only for the latest day.
+  const steps = useMemo(() => nextSteps({ scores, days, metrics, profile: MOCK_PROFILE }), [scores, days, metrics]);
+  const series = useMemo(
+    () => Object.fromEntries(DASHBOARD_ORDER.map((key) => [key, metrics.map(METRICS[key].value)])),
+    [metrics],
+  );
   const note = useCoachNote(today?.date);
   // Three rings side by side must fit narrow phones (or a large display-size setting): size them
   // from the width the card actually has, up to 104. Until it's measured, estimate from the screen.
@@ -119,42 +130,33 @@ export default function TodayScreen() {
         ) : null}
       </Card>
 
+      {isLatest ? <NextStepsCard steps={steps} /> : null}
+
       {note ? <CoachNoteCard note={note} accent={recoveryColor} /> : null}
 
-      <HeartRateCard date={today.date} />
-
-      <Card title={isLatest ? 'LAST NIGHT' : 'THAT NIGHT'}>
-        <Row>
-          <Stat label="HRV" value={todayData?.hrvRmssd ? `${todayData.hrvRmssd} ms` : '--'} />
-          <Stat label="Resting HR" value={todayData?.restingHr ? `${todayData.restingHr} bpm` : '--'} />
-          <Stat
-            label="Slept"
-            value={today.sleep ? formatMinutes(today.sleep.asleepMinutes) : '--'}
-            hint={today.sleep ? `need ${formatMinutes(today.sleep.needMinutes)}` : undefined}
-          />
-        </Row>
-      </Card>
-
-      <Card title="RECOVERY TREND">
-        <TrendBars
-          label="Recovery"
-          max={100}
-          color={colors.muted}
-          format={(v) => `${Math.round(v)}%`}
-          points={scores.slice(-30).map((s) => ({
-            date: s.date,
-            value: s.recovery?.score ?? null,
-            color: s.recovery?.zone ? colors.recovery[s.recovery.zone] : undefined,
-          }))}
-        />
-      </Card>
+      <Text style={styles.section}>{isLatest ? 'YOUR METRICS' : 'THAT DAY'}</Text>
+      {pairs(DASHBOARD_ORDER).map((pair) => (
+        <View key={pair[0]} style={styles.tileRow}>
+          {pair.map((key) => (
+            <MetricTile key={key} def={METRICS[key]} series={series[key]} index={index} />
+          ))}
+        </View>
+      ))}
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
+function pairs<T>(items: T[]): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += 2) out.push(items.slice(i, i + 2));
+  return out;
+}
+
+const useStyles = makeStyles((colors) => StyleSheet.create({
   rings: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   accessory: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   pressed: { opacity: 0.6 },
   headline: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 22 },
-});
+  section: { ...type.overline, color: colors.muted, marginTop: spacing.sm, marginLeft: 4 },
+  tileRow: { flexDirection: 'row', gap: spacing.md },
+}));

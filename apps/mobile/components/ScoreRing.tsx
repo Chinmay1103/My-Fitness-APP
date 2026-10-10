@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedProps } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
-import { colors, fonts, gradientFor, motion, type } from '@/constants/theme';
+import { fonts, gradientFor, motion, type } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { useAnimatedTarget, useCountUp } from '@/lib/animation';
 import { tapHaptic } from '@/lib/haptics';
 
@@ -28,13 +29,15 @@ interface Props {
 }
 
 export function ScoreRing({ label, value, decimals = 0, suffix = '', progress, color, size = 104, labelWidth, onPress }: Props) {
+  const colors = useColors();
+  const styles = useStyles();
   const stroke = size * 0.09;
   const glowWidth = stroke * 1.6;
   // Leave room for the glow so it isn't clipped at the edge.
   const radius = (size - glowWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const target = Math.min(Math.max(progress, 0), 1);
-  const [light, dark] = gradientFor(color);
+  const [light, dark] = gradientFor(color, colors);
   const gradientId = `ring${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
 
   // The ring fills from 12 o'clock and the number counts up with it.
@@ -118,10 +121,10 @@ export function ScoreRing({ label, value, decimals = 0, suffix = '', progress, c
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   wrap: { alignItems: 'center', gap: 8, minWidth: 48 },
   pressed: { opacity: 0.7, transform: [{ scale: 0.97 }] },
   center: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
   value: { color: colors.text, fontFamily: fonts.number, fontVariant: ['tabular-nums'] },
   label: { ...type.overline, color: colors.muted },
-});
+}));

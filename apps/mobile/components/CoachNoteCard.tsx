@@ -1,12 +1,14 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '@/components/ui';
-import { colors, fonts, spacing, type } from '@/constants/theme';
+import { fonts, spacing, type } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { formatTime } from '@/lib/format';
 import type { CoachNote } from '@/lib/coachNote';
 
 /** Claude's note for today, under the score rings: headline, why, and up to three things to do. */
 export function CoachNoteCard({ note, accent }: { note: CoachNote; accent: string }) {
+  const styles = useStyles();
   return (
     <Card title="COACH NOTE">
       <Text style={[styles.headline, { color: accent }]}>{note.headline}</Text>
@@ -26,7 +28,7 @@ export function CoachNoteCard({ note, accent }: { note: CoachNote; accent: strin
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   headline: { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 22 },
   body: { ...type.body, color: colors.text },
   tips: { gap: spacing.sm },
@@ -34,4 +36,4 @@ const styles = StyleSheet.create({
   bullet: { ...type.body, fontFamily: fonts.bodySemi },
   tipText: { ...type.body, color: colors.text, flex: 1 },
   footer: { ...type.body, fontSize: 12, color: colors.muted },
-});
+}));

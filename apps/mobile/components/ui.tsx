@@ -19,7 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Aurora } from '@/components/Aurora';
 import { SceneBackdrop } from '@/components/SceneBackdrop';
 import { useHorizontalSwipe, type SwipeDirection } from '@/components/Swipe';
-import { colors, gradients, radius, spacing, type } from '@/constants/theme';
+import { radius, spacing, type } from '@/constants/theme';
+import { makeStyles, useColors, useTheme } from '@/lib/theme';
 import { useBackgroundStyle } from '@/lib/backgroundStyle';
 import { refreshHaptic, tapHaptic } from '@/lib/haptics';
 import { useScores } from '@/lib/ScoresProvider';
@@ -45,6 +46,8 @@ type ScreenProps = {
  * all the way up behind the status bar instead of stopping under a flat header bar.
  */
 export function Screen({ children, overline, title, accessory, back, glow, glow2 }: ScreenProps) {
+  const colors = useColors();
+  const styles = useStyles();
   const { loading, error, scores, refresh } = useScores();
   const backgroundStyle = useBackgroundStyle();
   const insets = useSafeAreaInsets();
@@ -141,6 +144,8 @@ function useTabSwipe(inTabs: boolean) {
  * Over the photo backgrounds it's tinted dark ("frosted dark glass").
  */
 export function Card({ title, children }: { title?: string; children: ReactNode }) {
+  const { gradients } = useTheme();
+  const styles = useStyles();
   // Over photos, the glass gets a dark tint so white text stays readable on bright skies and snow.
   const overPhoto = useBackgroundStyle() === 'scenes';
   return (
@@ -157,6 +162,7 @@ export function Card({ title, children }: { title?: string; children: ReactNode 
 }
 
 export function Stat({ label, value, hint, color }: { label: string; value: string; hint?: string; color?: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.stat}>
       <View style={styles.statLabelRow}>
@@ -171,6 +177,7 @@ export function Stat({ label, value, hint, color }: { label: string; value: stri
 
 /** Small outlined label, e.g. "Demo data" or an example question. Tappable when given `onPress`. */
 export function Pill({ children, onPress }: { children: ReactNode; onPress?: () => void }) {
+  const styles = useStyles();
   const text = <Text style={styles.pillText}>{children}</Text>;
   if (!onPress) return <View style={styles.pill}>{text}</View>;
   return (
@@ -189,6 +196,7 @@ export function Pill({ children, onPress }: { children: ReactNode; onPress?: () 
 
 /** Selectable option, e.g. a workout type. The selected one is filled. */
 export function Chip({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
+  const styles = useStyles();
   return (
     <Pressable
       onPress={() => {
@@ -206,6 +214,8 @@ export function Chip({ label, selected, onPress }: { label: string; selected?: b
 
 /** Text field in the app's style. */
 export function Input({ style, ...props }: TextInputProps) {
+  const colors = useColors();
+  const styles = useStyles();
   return <TextInput placeholderTextColor={colors.muted} {...props} style={[styles.input, style]} />;
 }
 
@@ -221,6 +231,7 @@ export function Button({
   /** 'secondary' is outlined, for less important actions next to a primary one. */
   variant?: 'primary' | 'secondary';
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       onPress={() => {
@@ -241,14 +252,16 @@ export function Button({
 }
 
 export function Row({ children }: { children: ReactNode }) {
+  const styles = useStyles();
   return <View style={styles.row}>{children}</View>;
 }
 
 export function Muted({ children }: { children: ReactNode }) {
+  const styles = useStyles();
   return <Text style={styles.muted}>{children}</Text>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.md, gap: spacing.md },
   header: { gap: 2, marginBottom: spacing.xs },
@@ -321,4 +334,4 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     minHeight: 46,
   },
-});
+}));

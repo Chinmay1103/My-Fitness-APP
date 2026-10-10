@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
-import { colors, fonts, gradientFor } from '@/constants/theme';
+import { fonts, gradientFor } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { shortDay } from '@/lib/format';
 import { ChartHeader, DEFAULT_RANGES, Legend, RangeSwitch, Reveal, dayName, smoothPath, usePickedDay, useScrub } from './parts';
 
@@ -32,6 +33,8 @@ const TOP = 8;
  * recovery (line), or hours slept (bars) against hours needed (dashed line). Drag to scrub.
  */
 export function ComboChart({ points: all, bar, line, describe, height = 130 }: Props) {
+  const colors = useColors();
+  const styles = useStyles();
   const [range, setRange] = useState<number>(DEFAULT_RANGES[1]);
   const points = all.slice(-range);
   const n = points.length;
@@ -43,7 +46,7 @@ export function ComboChart({ points: all, bar, line, describe, height = 130 }: P
   const barY = (v: number) => TOP + (1 - Math.min(v / bar.max, 1)) * plotH;
   const lineY = (v: number) => TOP + (1 - Math.min(v / line.max, 1)) * plotH;
   const drawn = points.flatMap((p, i) => (p.line != null ? [{ x: i * slot + slot / 2, y: lineY(p.line), i }] : []));
-  const [light, dark] = gradientFor(bar.color);
+  const [light, dark] = gradientFor(bar.color, colors);
   const gradId = `combo${bar.label.replace(/\W/g, '')}`;
   const labelEvery = n > 14 ? 7 : 1;
 
@@ -142,10 +145,10 @@ export function ComboChart({ points: all, bar, line, describe, height = 130 }: P
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   wrap: { gap: 10 },
   days: { flexDirection: 'row', marginTop: 6 },
   dayCell: { flex: 1, alignItems: 'center' },
   day: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 11, marginHorizontal: -12, textAlign: 'center' },
   daySelected: { color: colors.text, fontFamily: fonts.bodySemi },
-});
+}));

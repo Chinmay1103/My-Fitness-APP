@@ -8,7 +8,7 @@ import { ScoreRing } from '@/components/ScoreRing';
 import { DayPager } from '@/components/Swipe';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Row, Screen, Stat } from '@/components/ui';
-import { colors } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { formatDate, formatMinutes } from '@/lib/format';
 import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 
@@ -20,6 +20,8 @@ const STAGES = [
 ] as const;
 
 export default function SleepScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { scores } = useScores();
   const { score, day, previous, isLatest } = useSelectedDay();
   const sleep = score?.sleep;
@@ -177,6 +179,6 @@ export default function SleepScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   hero: { alignItems: 'center', gap: 12 },
-});
+}));

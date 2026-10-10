@@ -1,11 +1,13 @@
 import { computeDailyScores, estimateMaxHr, MOCK_PROFILE, type DailyScores, type DayData } from '@fitness/scoring';
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 
 import { mockSource } from './health/mockSource';
 import { pickHealthSource, type HealthSource } from './health';
 import { publishLatestFromHistory } from './heartRateWidget';
 import { liveZone, setHeartRateBaseline } from './liveHeartRate';
+import { attachWorkouts, fetchLogged, NOTHING_LOGGED, type Logged } from './logged';
+import { computeDayMetrics, type DayMetrics } from './metrics';
 import { syncDailySummaries } from './sync';
 
 const HISTORY_DAYS = 45;
@@ -21,6 +23,10 @@ interface ScoresState {
   getHeartRate: HealthSource['getHeartRate'];
   days: DayData[];
   scores: DailyScores[];
+  /** Workouts, meals and weigh-ins the user told the coach about. Empty when signed out. */
+  logged: Logged;
+  /** Steps, SpO2, zone minutes, nutrition... per day, lined up with `days`. Display only. */
+  metrics: DayMetrics[];
   /** Result of the last upload to Supabase: 'ok', an error message, or null if nothing was sent. */
   syncStatus: string | null;
   refresh: () => Promise<void>;
@@ -36,6 +42,7 @@ const ScoresContext = createContext<ScoresState | null>(null);
 export function ScoresProvider({ children }: { children: ReactNode }) {
   const [days, setDays] = useState<DayData[]>([]);
   const [scores, setScores] = useState<DailyScores[]>([]);
+  const [logged, setLogged] = useState<Logged>(NOTHING_LOGGED);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<HealthSource>(mockSource);
@@ -50,7 +57,13 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
     try {
       const picked = await pickHealthSource();
       setSource(picked);
-      const loaded = await picked.getDays(HISTORY_DAYS);
+      const [fromSource, fromCoach] = await Promise.all([
+        picked.getDays(HISTORY_DAYS),
+        fetchLogged(new Date(Date.now() - HISTORY_DAYS * 86_400_000)).catch(() => NOTHING_LOGGED),
+      ]);
+      setLogged(fromCoach);
+      // Logged workouts count toward real days' strain; demo days bring their own.
+      const loaded = picked.id === 'mock' ? fromSource : attachWorkouts(fromSource, fromCoach.workouts);
       setDays(loaded);
       // TODO(milestone 3): use the user's real age and sleep need from their profile.
       const computed = computeDailyScores(loaded, MOCK_PROFILE);
@@ -92,6 +105,8 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
     }
   }, [source, days, scores]);
 
+  const metrics = useMemo(() => computeDayMetrics(days, scores, logged, MOCK_PROFILE), [days, scores, logged]);
+
   const setDayBack = useCallback(
     (back: number) => setDayBackRaw(Math.min(Math.max(back, 0), Math.max(scores.length - 1, 0))),
     [scores.length],
@@ -107,6 +122,8 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
         getHeartRate: source.getHeartRate,
         days,
         scores,
+        logged,
+        metrics,
         syncStatus,
         refresh,
         syncNow,
@@ -135,6 +152,7 @@ export function useSelectedDay() {
     score: scores[index] as DailyScores | undefined,
     day: days[index] as DayData | undefined,
     previous: index > 0 ? scores[index - 1] : undefined,
+    index,
     isLatest: dayBack === 0,
     dayBack,
     setDayBack,

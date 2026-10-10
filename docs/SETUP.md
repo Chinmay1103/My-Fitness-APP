@@ -199,17 +199,18 @@ service are native code), so rebuild once: `npx eas-cli@latest build --platform 
 If it can't find the band: check Share heart rate is still on, keep the band close, and make sure
 no other app (e.g. a gym machine) is connected to it.
 
-## Heart-rate alert (SMS + WhatsApp to a contact)
+## Heart-rate alert (WhatsApp to a contact)
 
-Needs the build from Oct 7 or later (it adds the SMS sender and contact picker), and live heart
-rate running: the alert watches the live readings.
+Needs the build from Oct 7 or later (it adds the contact picker), internet, and live heart rate
+running: the alert watches the live readings. (SMS was removed on Oct 10: Android blocks it for
+apps installed outside the Play Store.)
 
 1. Live screen › **Heart-rate alert** › **Pick a contact**, choose the limit (110–130 bpm).
 2. WhatsApp, once, on the contact's phone: add CallMeBot's number (on
    [callmebot.com](https://www.callmebot.com/blog/free-api-whatsapp-messages/); +34 623 75 84 18
    as of Oct 2026) and send it "I allow callmebot to send me messages". It replies with a key;
-   type that key into the card. Without a key, only the SMS goes out.
-3. **Turn alert on** (allow SMS when asked), then **Send a test message**.
+   type that key into the card. The alert can't be turned on without it.
+3. **Turn alert on**, then **Send a test message**.
 
 Rule: heart rate at or above the limit for 2 minutes in a row; then at most one alert per 30
 minutes. Turn it off before workouts, or it will fire during them.

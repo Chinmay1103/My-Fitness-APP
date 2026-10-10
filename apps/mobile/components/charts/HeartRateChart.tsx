@@ -3,12 +3,13 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
-import { colors, fonts, withAlpha } from '@/constants/theme';
+import { fonts, withAlpha, type Palette } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { formatTime } from '@/lib/format';
 import { ChartHeader, Legend, Reveal, useScrub } from './parts';
 
 const MINUTE = 60_000;
-const DAY = 24 * 60 * MINUTE;
+const FULL_DAY = 24 * 60 * MINUTE;
 /** Longer gaps between readings break the line instead of drawing a straight bridge across them. */
 const GAP_MS = 15 * MINUTE;
 const PAD_Y = 8;
@@ -24,6 +25,8 @@ interface Props {
   sleep?: { start: number; end: number };
   /** Small version for the Today card: no readout, legend or scrubbing. */
   compact?: boolean;
+  /** Zoom in on part of the day (e.g. one activity) instead of midnight to midnight. Epoch ms. */
+  window?: { start: number; end: number };
   height?: number;
 }
 
@@ -32,7 +35,7 @@ export function zoneName(zone: number): string {
   return zone < 0 ? 'Resting / light' : `Zone ${zone + 1}`;
 }
 
-export function zoneColor(zone: number): string {
+export function zoneColor(zone: number, colors: Palette): string {
   return zone < 0 ? colors.muted : colors.hrZones[zone];
 }
 
@@ -62,11 +65,15 @@ function bucket(samples: HeartRateSample[], size: number): HeartRateSample[] {
  * same zones the strain score uses), so walks and workouts stand out from resting time. Drag to
  * read any moment.
  */
-export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact = false, height = compact ? 64 : 160 }: Props) {
+export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact = false, window, height = compact ? 64 : 160 }: Props) {
+  const colors = useColors();
+  const styles = useStyles();
   const [picked, setPicked] = useState<number | null>(null);
-  const dayStart = new Date(`${date}T00:00:00`).getTime();
-  const points = bucket(samples, compact ? 10 * MINUTE : 2 * MINUTE);
-  const { width, scrubProps } = useScrub((f) => setPicked(dayStart + f * DAY));
+  const dayStart = window?.start ?? new Date(`${date}T00:00:00`).getTime();
+  const span = window ? Math.max(window.end - window.start, MINUTE) : FULL_DAY;
+  const inView = window ? samples.filter((s) => s.time >= window.start && s.time <= window.end) : samples;
+  const points = bucket(inView, compact ? 10 * MINUTE : window ? Math.max(Math.round(span / 120), 15_000) : 2 * MINUTE);
+  const { width, scrubProps } = useScrub((f) => setPicked(dayStart + f * span));
 
   if (points.length === 0) {
     return compact ? <View style={{ height }} /> : <Text style={styles.empty}>No heart rate recorded for this day yet.</Text>;
@@ -75,7 +82,7 @@ export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact
   const bpms = points.map((p) => p.bpm);
   const min = Math.min(...bpms, restingHr) - 6;
   const max = Math.max(Math.max(...bpms) + 6, restingHr + 40);
-  const xAt = (t: number) => ((t - dayStart) / DAY) * width;
+  const xAt = (t: number) => ((t - dayStart) / span) * width;
   const yAt = (v: number) => PAD_Y + (1 - (v - min) / (max - min)) * (height - PAD_Y * 2);
 
   let line = '';
@@ -98,7 +105,7 @@ export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact
   const latest = samples.at(-1)!;
   const shown = sel ?? latest;
   const shownZone = heartRateZone(shown.bpm, restingHr, maxHr);
-  const sleepBox = sleep && sleep.end > dayStart && sleep.start < dayStart + DAY ? { x1: xAt(Math.max(sleep.start, dayStart)), x2: xAt(Math.min(sleep.end, dayStart + DAY)) } : null;
+  const sleepBox = sleep && sleep.end > dayStart && sleep.start < dayStart + span ? { x1: xAt(Math.max(sleep.start, dayStart)), x2: xAt(Math.min(sleep.end, dayStart + span)) } : null;
 
   const plot = (
     <Svg width={width} height={height}>
@@ -118,10 +125,10 @@ export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact
       {sel ? (
         <>
           <Line x1={xAt(sel.time)} x2={xAt(sel.time)} y1={0} y2={height} stroke={colors.text} strokeOpacity={0.25} />
-          <Circle cx={xAt(sel.time)} cy={yAt(sel.bpm)} r={4} fill={colors.text} stroke={zoneColor(shownZone)} strokeWidth={2} />
+          <Circle cx={xAt(sel.time)} cy={yAt(sel.bpm)} r={4} fill={colors.text} stroke={zoneColor(shownZone, colors)} strokeWidth={2} />
         </>
       ) : (
-        <Circle cx={xAt(points.at(-1)!.time)} cy={yAt(points.at(-1)!.bpm)} r={3.5} fill={zoneColor(heartRateZone(points.at(-1)!.bpm, restingHr, maxHr))} />
+        <Circle cx={xAt(points.at(-1)!.time)} cy={yAt(points.at(-1)!.bpm)} r={3.5} fill={zoneColor(heartRateZone(points.at(-1)!.bpm, restingHr, maxHr), colors)} />
       )}
     </Svg>
   );
@@ -138,7 +145,7 @@ export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact
     <View style={styles.wrap}>
       <ChartHeader
         value={`${Math.round(shown.bpm)}`}
-        color={zoneColor(shownZone)}
+        color={zoneColor(shownZone, colors)}
         title={sel ? `${formatTime(sel.time)} · bpm` : `Latest · ${formatTime(latest.time)} · bpm`}
         detail={zoneName(shownZone)}
       />
@@ -158,7 +165,7 @@ export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact
         )}
       </View>
       <View style={styles.axis}>
-        {['12 AM', '6 AM', '12 PM', '6 PM', '12 AM'].map((label, i) => (
+        {(window ? [0, 0.5, 1].map((f) => formatTime(dayStart + f * span)) : ['12 AM', '6 AM', '12 PM', '6 PM', '12 AM']).map((label, i) => (
           <Text key={i} style={styles.axisText}>
             {label}
           </Text>
@@ -166,7 +173,7 @@ export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact
       </View>
       <Legend
         items={[
-          { label: `resting ${restingHr}`, color: 'rgba(255,255,255,0.3)', dashed: true },
+          { label: `resting ${restingHr}`, color: withAlpha(colors.muted, 0.6), dashed: true },
           ...(sleepBox ? [{ label: 'asleep', color: withAlpha(colors.sleep, 0.5) }] : []),
           { label: 'zones 1–5', color: colors.hrZones[3] },
         ]}
@@ -181,9 +188,9 @@ function nearest(points: HeartRateSample[], time: number): HeartRateSample | nul
   return best && Math.abs(best.time - time) <= GAP_MS ? best : null;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   wrap: { gap: 10 },
   empty: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 14, paddingVertical: 24, textAlign: 'center' },
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -4 },
   axisText: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 11 },
-});
+}));

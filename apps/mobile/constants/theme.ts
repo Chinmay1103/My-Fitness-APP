@@ -3,7 +3,8 @@ import type { TextStyle } from 'react-native';
 
 /**
  * Design tokens. The reasoning behind them is in design-system/my-fitness-app/MASTER.md.
- * Screens should use these names, not raw hex values.
+ * Screens should use these names, not raw hex values, and get the palette from `useColors()` /
+ * `makeStyles()` in lib/theme.tsx, so they follow light and dark mode.
  */
 
 type Gradient = readonly [string, string];
@@ -13,7 +14,8 @@ type Gradient = readonly [string, string];
  * let each screen's color tint show through. Hex values that get an alpha suffix appended
  * (score colors, `muted`, `hrZones`) must stay 6-digit hex.
  */
-export const colors = {
+const dark = {
+  scheme: 'dark' as 'dark' | 'light',
   background: '#050505',
   /** Glass card fill, bottom and top of its gradient: white at low opacity over the tinted page. */
   card: 'rgba(255,255,255,0.035)',
@@ -61,27 +63,77 @@ export const colors = {
   restingHr: '#FF6B81',
   /** Heart-rate zones 1–5, easy to hard. */
   hrZones: ['#78716C', '#2ED573', '#F5C518', '#FF8A1F', '#FF4757'],
+  /** Metric tiles on Today that aren't one of the three scores. */
+  steps: '#3DD6C6',
+  spo2: '#FF7A9C',
+  calories: '#FFB020',
+  weight: '#C7B8A8',
+  /** Lighter top of each sleep stage's gradient in the hypnogram. */
+  sleepStageLight: { awake: '#FFFFFF', rem: '#E4D8FF', light: '#B39DFF', deep: '#8466F0' },
 };
 
-/** Two-stop gradients, light end first. The dark end matches the flat color above. */
-export const gradients = {
-  strain: ['#FFC078', colors.strain],
-  sleep: ['#D2C2FF', colors.sleep],
-  recovery: {
-    green: ['#8BF7B4', colors.recovery.green],
-    yellow: ['#FFE483', colors.recovery.yellow],
-    red: ['#FF97A0', colors.recovery.red],
-  } satisfies Record<RecoveryZone, Gradient>,
-  card: [colors.cardHighlight, colors.card],
-  neutral: ['#E7E5E4', colors.muted],
-} as const;
+export type Palette = typeof dark;
+
+/**
+ * Light mode: warm paper instead of near-black, frosted white glass cards, and slightly deeper
+ * score colors so they keep their contrast on a light page. Same names as the dark palette.
+ */
+const light: Palette = {
+  scheme: 'light',
+  background: '#F4F1EC',
+  card: 'rgba(255,255,255,0.62)',
+  cardHighlight: 'rgba(255,255,255,0.86)',
+  cardOverPhoto: 'rgba(255,255,255,0.55)',
+  cardEdge: 'rgba(255,255,255,0.95)',
+  surface: '#FFFFFF',
+  tabBar: 'rgba(255,255,255,0.9)',
+  tabActive: 'rgba(28,25,23,0.08)',
+  border: 'rgba(28,25,23,0.10)',
+  text: '#1C1917',
+  muted: '#5F5853',
+  track: 'rgba(28,25,23,0.09)',
+  strain: '#EE7300',
+  sleep: '#7B5AF0',
+  recovery: { green: '#14A85A', yellow: '#D49B00', red: '#E5384B' },
+  sleepStages: { awake: '#A8A29E', light: '#8A6CF0', deep: '#4F2FC0', rem: '#B49AFF' },
+  timeOfDay: { dawn: '#FFB36B', day: '#FF9E7A', dusk: '#FF6FA3', night: '#7B5CFF' },
+  hrv: '#14A85A',
+  restingHr: '#E5466A',
+  hrZones: ['#A8A29E', '#14A85A', '#D49B00', '#EE7300', '#E5384B'],
+  steps: '#0FA596',
+  spo2: '#E5466A',
+  calories: '#D98700',
+  weight: '#8C7B6B',
+  sleepStageLight: { awake: '#D6D3D1', rem: '#D9CCFF', light: '#B39DFF', deep: '#7457E8' },
+};
+
+export const palettes = { dark, light } as const;
+
+
+/** Two-stop gradients, light end first. The dark end matches the palette's flat color. */
+export function gradientsFor(c: Palette) {
+  const lightMode = c.scheme === 'light';
+  return {
+    strain: [lightMode ? '#FFB061' : '#FFC078', c.strain] as Gradient,
+    sleep: [lightMode ? '#B9A3FF' : '#D2C2FF', c.sleep] as Gradient,
+    recovery: {
+      green: [lightMode ? '#5BD98F' : '#8BF7B4', c.recovery.green],
+      yellow: [lightMode ? '#FFD34D' : '#FFE483', c.recovery.yellow],
+      red: [lightMode ? '#FF7F8C' : '#FF97A0', c.recovery.red],
+    } satisfies Record<RecoveryZone, Gradient>,
+    card: [c.cardHighlight, c.card] as Gradient,
+    neutral: [lightMode ? '#D6D3D1' : '#E7E5E4', c.muted] as Gradient,
+  };
+}
+
+export type Gradients = ReturnType<typeof gradientsFor>;
 
 /** `hex` (6-digit) at `opacity` 0–1, as 8-digit hex. */
 export function withAlpha(hex: string, opacity: number): string {
   return `${hex}${Math.round(Math.min(Math.max(opacity, 0), 1) * 255).toString(16).padStart(2, '0')}`;
 }
 
-export type TimeOfDay = keyof typeof colors.timeOfDay;
+export type TimeOfDay = keyof Palette['timeOfDay'];
 
 /** Which part of the day `hour` (0–23, the phone's local time) falls in. */
 export function timeOfDay(hour: number): TimeOfDay {
@@ -92,14 +144,15 @@ export function timeOfDay(hour: number): TimeOfDay {
 }
 
 /** The background's time-of-day color for `hour`. */
-export function timeOfDayTint(hour: number): string {
-  return colors.timeOfDay[timeOfDay(hour)];
+export function timeOfDayTint(hour: number, c: Palette = dark): string {
+  return c.timeOfDay[timeOfDay(hour)];
 }
 
 /** Picks a gradient whose dark end is `color`, falling back to a flat one. */
-export function gradientFor(color: string): Gradient {
-  const all: Gradient[] = [gradients.strain, gradients.sleep, ...Object.values(gradients.recovery)];
-  return all.find((g) => g[1] === color) ?? [color, color];
+export function gradientFor(color: string, c: Palette = dark): Gradient {
+  const g = gradientsFor(c);
+  const all: Gradient[] = [g.strain, g.sleep, ...Object.values(g.recovery)];
+  return all.find((x) => x[1] === color) ?? [color, color];
 }
 
 /**
@@ -142,4 +195,9 @@ export const motion = {
   aurora: 16000,
   /** Tab bar's selected pill sliding between tabs. */
   tabSlide: 260,
+  /**
+   * How long backgrounds keep moving after a screen opens, then they settle. Moving a full-screen
+   * layer at 60 fps the whole time the app is open costs battery for little gain.
+   */
+  backgroundMotion: 120_000,
 };

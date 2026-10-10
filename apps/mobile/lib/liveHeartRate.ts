@@ -3,10 +3,13 @@ import { useSyncExternalStore } from 'react';
 import { NativeModules, PermissionsAndroid, Platform, TurboModuleRegistry, type Permission } from 'react-native';
 import type { BleManager, Subscription } from 'react-native-ble-plx';
 
-import { colors } from '@/constants/theme';
-import { checkHeartRateAlert } from './heartRateAlert';
+import { palettes } from '@/constants/theme';
+import { checkHeartRateAlert, isAlertWatching } from './heartRateAlert';
 import { publishHeartRate } from './heartRateWidget';
 import { localStore } from './storage';
+
+// Outside the React tree, so it can't follow the theme: always the dark palette.
+const colors = palettes.dark;
 
 /**
  * Live heart rate straight from the band over Bluetooth, about once a second.
@@ -35,6 +38,16 @@ const RECONNECT_DELAY_MS = 5_000;
 const PUBLISH_EVERY_MS = 5_000;
 /** One session keeps up to this many readings (6 hours at one a second). */
 const MAX_SAMPLES = 6 * 60 * 60;
+/**
+ * Battery: a Bluetooth link plus a foreground service drain the phone, and the band's "Share heart
+ * rate" broadcast drains the band. So live heart rate stops by itself after this long, unless the
+ * heart-rate alert is on (then watching is the point).
+ */
+export const AUTO_STOP_MS = 30 * 60_000;
+/** Lost the band for this long (out of range, off the wrist): stop searching, unless the alert is on. */
+const GIVE_UP_RECONNECT_MS = 10 * 60_000;
+/** With the alert on, search less often once the band has been gone a while. */
+const SLOW_RECONNECT_DELAY_MS = 30_000;
 
 export type LiveStatus = 'off' | 'searching' | 'connecting' | 'live' | 'reconnecting' | 'error';
 
@@ -118,6 +131,7 @@ let monitor: Subscription | null = null;
 let disconnectWatch: Subscription | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let lastPublished = 0;
+let lostSince: number | null = null;
 
 /** Asks for Bluetooth (and, on Android 13+, notification) access. True if Bluetooth was allowed. */
 async function askPermissions(): Promise<boolean> {
@@ -158,6 +172,7 @@ export async function startLiveHeartRate(): Promise<void> {
 
   running = true;
   session += 1;
+  lostSince = null;
   try {
     await service().start(() => new Promise<void>(() => {}), {
       taskName: 'LiveHeartRate',
@@ -261,9 +276,15 @@ async function attach(id: string, name: string) {
   }
 }
 
-/** Lost the band (walked away, band asleep): keep trying until stopped. */
+/** Lost the band (walked away, band asleep): keep trying for a while, or until stopped with the alert on. */
 function retry() {
   if (!running) return;
+  lostSince ??= Date.now();
+  const lostFor = Date.now() - lostSince;
+  if (!isAlertWatching() && lostFor > GIVE_UP_RECONNECT_MS) {
+    stopLiveHeartRate().then(() => set({ message: 'Stopped: the band was out of reach for 10 minutes. Start again when it’s close.' }));
+    return;
+  }
   set({ status: 'reconnecting' });
   if (service().isRunning()) {
     service().updateNotification({ taskDesc: 'Reconnecting to your band…' }).catch(() => {});
@@ -273,10 +294,17 @@ function retry() {
     reconnectTimer = null;
     await disconnect();
     connect(null);
-  }, RECONNECT_DELAY_MS);
+  }, lostFor > GIVE_UP_RECONNECT_MS ? SLOW_RECONNECT_DELAY_MS : RECONNECT_DELAY_MS);
 }
 
 function onReading(sample: HeartRateSample) {
+  lostSince = null;
+  if (!isAlertWatching() && state.startedAt && sample.time - state.startedAt > AUTO_STOP_MS) {
+    stopLiveHeartRate().then(() =>
+      set({ message: 'Stopped after 30 minutes to save battery (yours and the band’s). Tap Start again to keep watching.' }),
+    );
+    return;
+  }
   const samples = state.samples.length >= MAX_SAMPLES ? state.samples.slice(-MAX_SAMPLES + 1) : state.samples.slice();
   samples.push(sample);
   set({ samples, status: 'live' });

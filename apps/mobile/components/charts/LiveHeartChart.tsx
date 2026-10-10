@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
-import { colors, fonts } from '@/constants/theme';
+import { fonts } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { RangeSwitch, smoothPath } from './parts';
 
 const WINDOWS = [5, 15, 30] as const;
@@ -25,6 +26,8 @@ interface Props {
  * reading, so no reveal animation.
  */
 export function LiveHeartChart({ samples, restingHr, maxHr, height = 170 }: Props) {
+  const colors = useColors();
+  const styles = useStyles();
   const [minutes, setMinutes] = useState<number>(WINDOWS[1]);
   const [width, setWidth] = useState(0);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
@@ -133,10 +136,10 @@ export function LiveHeartChart({ samples, restingHr, maxHr, height = 170 }: Prop
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   wrap: { gap: 10 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   summary: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 12, flexShrink: 1 },
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -4 },
   axisText: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 11 },
-});
+}));

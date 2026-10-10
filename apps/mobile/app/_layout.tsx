@@ -5,15 +5,15 @@ import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
 import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { useFonts } from 'expo-font';
-import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider as NavigationTheme } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import { colors } from '@/constants/theme';
 import { AuthProvider } from '@/lib/AuthProvider';
 import { ScoresProvider } from '@/lib/ScoresProvider';
+import { ThemeProvider, useColors } from '@/lib/theme';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -26,11 +26,6 @@ export const unstable_settings = {
 
 // Keep the splash screen up until the fonts are ready, so text doesn't flash in the system font.
 SplashScreen.preventAutoHideAsync();
-
-const theme = {
-  ...DarkTheme,
-  colors: { ...DarkTheme.colors, background: colors.background, card: colors.background, border: colors.border },
-};
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -50,21 +45,37 @@ export default function RootLayout() {
   if (!ready) return null;
 
   return (
-    <ThemeProvider value={theme}>
-      <AuthProvider>
-        <ScoresProvider>
-          <StatusBar style="light" />
-          {/* Screens draw their own titles (see Screen in components/ui.tsx), so no navigator headers. */}
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="recovery" options={{ title: 'Recovery' }} />
-            <Stack.Screen name="heart-rate" options={{ title: 'Heart rate' }} />
-            <Stack.Screen name="health" options={{ title: 'Health data' }} />
-            <Stack.Screen name="account" options={{ title: 'Account' }} />
-            <Stack.Screen name="live" options={{ title: 'Live heart rate' }} />
-          </Stack>
-        </ScoresProvider>
-      </AuthProvider>
+    <ThemeProvider>
+      <Themed>
+        <AuthProvider>
+          <ScoresProvider>
+            {/* Screens draw their own titles (see Screen in components/ui.tsx), so no navigator headers. */}
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="recovery" options={{ title: 'Recovery' }} />
+              <Stack.Screen name="heart-rate" options={{ title: 'Heart rate' }} />
+              <Stack.Screen name="health" options={{ title: 'Health data' }} />
+              <Stack.Screen name="account" options={{ title: 'Account' }} />
+              <Stack.Screen name="live" options={{ title: 'Live heart rate' }} />
+              <Stack.Screen name="metric/[key]" options={{ title: 'Metric' }} />
+              <Stack.Screen name="activity" options={{ title: 'Activity' }} />
+            </Stack>
+          </ScoresProvider>
+        </AuthProvider>
+      </Themed>
     </ThemeProvider>
+  );
+}
+
+/** Gives the navigator (screen transitions, system bars) the app's light or dark page color. */
+function Themed({ children }: { children: React.ReactNode }) {
+  const colors = useColors();
+  const base = colors.scheme === 'light' ? DefaultTheme : DarkTheme;
+  return (
+    <NavigationTheme
+      value={{ ...base, colors: { ...base.colors, background: colors.background, card: colors.background, border: colors.border, text: colors.text } }}>
+      <StatusBar style={colors.scheme === 'light' ? 'dark' : 'light'} />
+      {children}
+    </NavigationTheme>
   );
 }

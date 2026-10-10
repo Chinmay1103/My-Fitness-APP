@@ -13,7 +13,8 @@ export interface KeyValueStore {
  * last until the app closes.
  */
 function load(): KeyValueStore {
-  if (TurboModuleRegistry.get('RNCAsyncStorage')) {
+  // `?.`: the web build has no TurboModuleRegistry.
+  if (TurboModuleRegistry?.get('RNCAsyncStorage')) {
     return require('@react-native-async-storage/async-storage').default as KeyValueStore;
   }
   const memory = new Map<string, string>();

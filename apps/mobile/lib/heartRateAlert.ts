@@ -1,18 +1,17 @@
 import { sustainedAbove, type HeartRateSample } from '@fitness/scoring';
 import { useSyncExternalStore } from 'react';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { Platform } from 'react-native';
 
-import { SmsSender } from '@/modules/sms-sender';
 import { formatTime } from './format';
 import { localStore } from './storage';
 
 /**
  * Heart-rate alert: while live heart rate runs, if it stays at or above your limit for SUSTAIN_MS (normally 2 minutes),
- * the phone messages your chosen contact, with no tap needed, two ways at once:
- * - SMS from your SIM (our own native module, modules/sms-sender), which works without internet;
- * - WhatsApp through CallMeBot (callmebot.com), a free service: the contact opts in once by
- *   messaging CallMeBot and gets a key. WhatsApp doesn't let apps send from your own account
- *   without a tap, so the WhatsApp message comes from CallMeBot's number.
+ * the phone messages your chosen contact on WhatsApp, with no tap needed, through CallMeBot
+ * (callmebot.com), a free service: the contact opts in once by messaging CallMeBot and gets a key.
+ * WhatsApp doesn't let apps send from your own account without a tap, so the message comes from
+ * CallMeBot's number. (SMS was tried and removed on Oct 10: Android blocks sending SMS for apps
+ * installed outside the Play Store, and the permission made Play Protect flag the app as harmful.)
  * At most one alert per 30 minutes, so a long high stretch doesn't flood them. Live heart rate must
  * be running, since Health Connect data arrives too late for an alert. Wellness alert, not a
  * medical device.
@@ -28,8 +27,7 @@ interface SendResult {
   time: number;
   bpm: number;
   test: boolean;
-  /** Per channel: null = sent, a message = failed, undefined = not set up. */
-  sms?: string | null;
+  /** null = sent, a message = failed, undefined = not set up. */
   whatsapp?: string | null;
 }
 
@@ -42,9 +40,8 @@ export interface AlertState {
   last: SendResult | null;
 }
 
-// TESTING: 70 bpm and 30 s so the alert is easy to trigger. Put back [110, 115, 120, 130] and 2 * 60_000 after testing.
-export const THRESHOLDS = [70, 110, 115, 120, 130] as const;
-export const SUSTAIN_MS = 30_000;
+export const THRESHOLDS = [110, 115, 120, 130] as const;
+export const SUSTAIN_MS = 2 * 60_000;
 /** "30 seconds" or "2 minutes", for the messages. */
 export const SUSTAIN_TEXT = SUSTAIN_MS < 60_000 ? `${SUSTAIN_MS / 1000} seconds` : `${SUSTAIN_MS / 60_000} minutes`;
 const COOLDOWN_MS = 30 * 60_000;
@@ -65,7 +62,11 @@ function set(patch: Partial<AlertState>) {
 localStore
   .getItem(KEY)
   .then((raw) => {
-    if (raw) set(JSON.parse(raw) as AlertState);
+    if (!raw) return;
+    const saved = JSON.parse(raw) as AlertState;
+    // Limits from older builds (e.g. the 70 bpm test value) fall back to the default.
+    if (!(THRESHOLDS as readonly number[]).includes(saved.thresholdBpm)) saved.thresholdBpm = 115;
+    set(saved);
   })
   .catch(() => {});
 
@@ -83,9 +84,13 @@ export function useHeartRateAlert(): AlertState {
   );
 }
 
-/** Whether this build has the SMS module (the build from Oct 7 or later). */
+/** True while the alert is on and has someone to message: live heart rate then keeps running. */
+export function isAlertWatching(): boolean {
+  return state.enabled && !!state.contact;
+}
+
 export function isAlertSupported(): boolean {
-  return !!SmsSender;
+  return Platform.OS === 'android';
 }
 
 /**
@@ -101,19 +106,11 @@ export function internationalNumber(raw: string): string {
   return `+${digits}`;
 }
 
-async function canSendSms(): Promise<boolean> {
-  if (Platform.OS !== 'android' || !SmsSender) return false;
-  const p = PermissionsAndroid.PERMISSIONS.SEND_SMS;
-  if (await PermissionsAndroid.check(p)) return true;
-  return (await PermissionsAndroid.request(p)) === PermissionsAndroid.RESULTS.GRANTED;
-}
-
-/** Turns the alert on (asking for SMS access first) or off. Returns an error message, if any. */
+/** Turns the alert on or off. Returns an error message, if any. */
 export async function setAlertEnabled(enabled: boolean): Promise<string | null> {
   if (enabled) {
     if (!state.contact) return 'Pick a contact first.';
-    const sms = await canSendSms();
-    if (!sms && !state.whatsappKey) return 'SMS access was not allowed and WhatsApp isn’t set up, so the alert couldn’t reach anyone.';
+    if (!state.whatsappKey) return 'Add the contact’s CallMeBot key first, so the alert can reach them on WhatsApp.';
   }
   set({ enabled });
   persist();
@@ -154,16 +151,6 @@ export async function pickAlertContact(): Promise<string | null> {
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-async function sendSms(phone: string, message: string): Promise<string | null> {
-  try {
-    if (!(await canSendSms())) return 'SMS access not allowed';
-    await SmsSender!.sendText(phone, message);
-    return null;
-  } catch (e) {
-    return errorText(e);
-  }
-}
-
 async function sendWhatsapp(phone: string, key: string, message: string): Promise<string | null> {
   try {
     const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(message)}&apikey=${encodeURIComponent(key)}`;
@@ -179,23 +166,20 @@ async function sendWhatsapp(phone: string, key: string, message: string): Promis
   }
 }
 
-/** Sends on every channel that's set up, at the same time. */
+/** Sends the WhatsApp message, if it's set up. */
 async function send(bpm: number, message: string, test: boolean): Promise<SendResult> {
   const { contact, whatsappKey } = state;
   if (!contact) throw new Error('No contact');
-  const [sms, whatsapp] = await Promise.all([
-    SmsSender ? sendSms(contact.phone, message) : Promise.resolve(undefined),
-    whatsappKey ? sendWhatsapp(contact.phone, whatsappKey, message) : Promise.resolve(undefined),
-  ]);
-  const result: SendResult = { time: Date.now(), bpm, test, sms, whatsapp };
+  const whatsapp = whatsappKey ? await sendWhatsapp(contact.phone, whatsappKey, message) : undefined;
+  const result: SendResult = { time: Date.now(), bpm, test, whatsapp };
   set({ last: result });
   persist();
   return result;
 }
 
-/** Whether at least one channel got the message out. */
+/** Whether the message got out. */
 export function reached(result: SendResult): boolean {
-  return result.sms === null || result.whatsapp === null;
+  return result.whatsapp === null;
 }
 
 /** Sends a test message, so you and your contact know what an alert looks like. */

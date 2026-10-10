@@ -26,7 +26,7 @@ export function computeDailyScores(days: DayData[], profile: UserProfile): Daily
     const restingHr =
       day.restingHr ??
       (nights.length > 0 ? median(nights.map((n) => n.restingHr)) : FALLBACK_RESTING_HR);
-    const strain = computeStrain(day.heartRate, restingHr, profile);
+    const strain = computeStrain(day.heartRate, restingHr, profile, day.workouts);
 
     let sleep: SleepScoreResult | null = null;
     let need: SleepNeed | null = null;
@@ -45,7 +45,8 @@ export function computeDailyScores(days: DayData[], profile: UserProfile): Daily
 
     let recovery: RecoveryResult | null = null;
     if (day.hrvRmssd !== undefined && day.restingHr !== undefined) {
-      const today = { hrvRmssd: day.hrvRmssd, restingHr: day.restingHr };
+      const today: NightMetrics = { hrvRmssd: day.hrvRmssd, restingHr: day.restingHr };
+      if (day.respiratoryRate !== undefined) today.respiratoryRate = day.respiratoryRate;
       recovery = computeRecovery({ today, history: nights, sleepScore: sleep?.score });
       nights.push(today);
     }

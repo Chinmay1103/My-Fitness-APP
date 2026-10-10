@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Button, Card, Muted, Screen } from '@/components/ui';
-import { colors, fonts, spacing, type } from '@/constants/theme';
+import { fonts, spacing, type } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { checkDataTypes, CORE_TYPES, healthConnectSource, openHealthConnectSettings, type DataTypeCheck } from '@/lib/health';
 import { useScores } from '@/lib/ScoresProvider';
 
@@ -28,6 +29,8 @@ type Status = 'checking' | 'unavailable' | 'needs-permission' | 'connected';
  * arrives this is the first screen to open: it lists which data types the band writes.
  */
 export default function HealthScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { sourceLabel, sourceId, refresh } = useScores();
   const [status, setStatus] = useState<Status>('checking');
   const [checks, setChecks] = useState<DataTypeCheck[] | null>(null);
@@ -124,11 +127,13 @@ export default function HealthScreen() {
 function describe(c: DataTypeCheck): string {
   if (c.error) return 'Not allowed yet';
   if (c.count === 0) return 'No records';
-  const from = c.origins.join(', ') || 'unknown app';
+  const app = c.origins.join(', ') || 'unknown app';
+  // Which device recorded them tells us whether phone and band steps can be told apart.
+  const from = c.devices.length ? `${app} · ${c.devices.join(', ')}` : app;
   return c.latest ? `${from} · latest ${new Date(c.latest).toLocaleString()}` : from;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   source: { ...type.title, color: colors.text },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   rowText: { flex: 1, gap: 2 },
@@ -136,4 +141,4 @@ const styles = StyleSheet.create({
   core: { ...type.caption, color: colors.muted },
   rowDetail: { ...type.caption, color: colors.muted },
   count: { fontFamily: fonts.number, fontSize: 20, minWidth: 44, textAlign: 'right', fontVariant: ['tabular-nums'] },
-});
+}));

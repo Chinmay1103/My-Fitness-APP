@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 
 import { Button, Card, Chip, Input, Muted } from '@/components/ui';
-import { colors, type } from '@/constants/theme';
+import { type } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { formatTime } from '@/lib/format';
 import {
   pickAlertContact,
@@ -16,15 +17,16 @@ import {
   useHeartRateAlert,
 } from '@/lib/heartRateAlert';
 
-/** "SMS sent · WhatsApp failed: …" for one send. */
-function describeResult(r: { sms?: string | null; whatsapp?: string | null }): string {
-  const part = (name: string, v: string | null | undefined) =>
-    v === undefined ? null : v === null ? `${name} sent` : `${name} failed (${v})`;
-  return [part('SMS', r.sms), part('WhatsApp', r.whatsapp)].filter(Boolean).join(' · ');
+/** "WhatsApp sent" or why it failed, for one send. */
+function describeResult(r: { whatsapp?: string | null }): string {
+  if (r.whatsapp === undefined) return 'WhatsApp isn’t set up';
+  return r.whatsapp === null ? 'WhatsApp sent' : `WhatsApp failed (${r.whatsapp})`;
 }
 
 /** Live screen card: who gets messaged, at what heart rate, on/off, WhatsApp setup and a test. */
 export function HeartRateAlertCard() {
+  const colors = useColors();
+  const styles = useStyles();
   const alert = useHeartRateAlert();
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -45,7 +47,7 @@ export function HeartRateAlertCard() {
     <Card title="HEART-RATE ALERT">
       <Muted>
         If your heart rate stays at or above your limit for {SUSTAIN_TEXT} while live heart rate is running, your phone sends
-        this contact an SMS and a WhatsApp message. At most one alert every 30 minutes.
+        this contact a WhatsApp message (needs internet). At most one alert every 30 minutes.
       </Muted>
 
       <View style={styles.row}>
@@ -119,7 +121,7 @@ export function HeartRateAlertCard() {
 
       <Text style={[styles.status, { color: alert.enabled ? colors.recovery.green : colors.muted }]}>
         {alert.enabled
-          ? `On: above ${alert.thresholdBpm} bpm for ${SUSTAIN_TEXT} · SMS${alert.whatsappKey ? ' + WhatsApp' : ''}`
+          ? `On: above ${alert.thresholdBpm} bpm for ${SUSTAIN_TEXT} · WhatsApp`
           : 'Off'}
       </Text>
       {alert.last && !alert.last.test ? (
@@ -134,11 +136,11 @@ export function HeartRateAlertCard() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   label: { ...type.caption, color: colors.muted },
   value: { ...type.bodyStrong, color: colors.text, flexShrink: 1 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   status: { ...type.bodyStrong },
   message: { ...type.body, color: colors.text },
-});
+}));

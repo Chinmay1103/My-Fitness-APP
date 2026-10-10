@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
 import { Button, Card, Muted } from '@/components/ui';
-import { colors, type } from '@/constants/theme';
+import { type } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { inspectBand, testBandBuzz, type BandReport } from '@/lib/liveHeartRate';
 
 /**
@@ -10,6 +11,8 @@ import { inspectBand, testBandBuzz, type BandReport } from '@/lib/liveHeartRate'
  * Lists the band's Bluetooth services and tries the two standard alert ones.
  */
 export function BandVibrationCard({ connected }: { connected: boolean }) {
+  const colors = useColors();
+  const styles = useStyles();
   const [report, setReport] = useState<BandReport | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,7 +64,7 @@ export function BandVibrationCard({ connected }: { connected: boolean }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   verdict: { ...type.bodyStrong },
   line: { ...type.caption, color: colors.muted },
-});
+}));

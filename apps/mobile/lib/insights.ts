@@ -8,6 +8,7 @@ import type { DailyScores, RecoveryFactor, RecoveryZone } from '@fitness/scoring
 export const FACTOR_LABELS: Record<RecoveryFactor['key'], string> = {
   hrv: 'Heart rate variability',
   restingHr: 'Resting heart rate',
+  respiratoryRate: 'Breathing rate',
   sleep: 'Sleep performance',
 };
 
@@ -22,6 +23,11 @@ export function recoveryFactorDetail(f: RecoveryFactor): string {
     case 'restingHr': {
       const vs = diff === 0 ? 'the same as' : `${Math.abs(diff)} bpm ${diff < 0 ? 'lower than' : 'higher than'}`;
       return `${f.today} bpm, ${vs} your usual ${f.baseline} bpm. Lower means your heart is working less to recover.`;
+    }
+    case 'respiratoryRate': {
+      const d = Math.round(diff * 10) / 10;
+      const vs = d === 0 ? 'the same as' : `${Math.abs(d)} ${d < 0 ? 'slower than' : 'faster than'}`;
+      return `${f.today} breaths a minute asleep, ${vs} your usual ${f.baseline}. Faster breathing can be an early sign of illness or overtraining.`;
     }
     case 'sleep':
       return `${f.today}% last night vs an ${f.baseline}% benchmark.`;
@@ -54,6 +60,7 @@ export function todayHeadline(day: DailyScores): string | null {
   const what: Record<RecoveryFactor['key'], string> = {
     hrv: top.today > top.baseline ? 'Higher-than-usual HRV' : 'Lower-than-usual HRV',
     restingHr: top.today < top.baseline ? 'A lower resting heart rate' : 'A higher resting heart rate',
+    respiratoryRate: top.today <= top.baseline ? 'Calm breathing' : 'Faster-than-usual breathing',
     sleep: top.today >= top.baseline ? 'Good sleep' : 'Short or restless sleep',
   };
   return `${lead}. ${what[top.key]} ${direction} your recovery the most.`;

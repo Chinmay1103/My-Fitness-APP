@@ -1,4 +1,5 @@
-import type { DayData, HeartRateSample, SleepSegment, SleepStageMinutes, UserProfile } from "./types";
+import type { StepRecord } from "./steps";
+import type { DayData, HeartRateSample, LoggedWorkout, SleepSegment, SleepStageMinutes, UserProfile } from "./types";
 
 /**
  * Realistic fake data so we can build and test before the Fitbit Air arrives.
@@ -90,6 +91,9 @@ export function generateMockDays(options: MockOptions = {}): DayData[] {
   const { days = 45, seed = 42 } = options;
   const rand = mulberry32(seed);
   const noise = (scale: number) => (rand() + rand() + rand() - 1.5) * scale;
+  // Extras (steps, SpO2, ...) draw from their own sequence, so adding them left the scores unchanged.
+  const rand2 = mulberry32(seed + 1);
+  const noise2 = (scale: number) => (rand2() + rand2() + rand2() - 1.5) * scale;
 
   const [year, month, dayOfMonth] = (options.endDate ?? localDate(Date.now())).split("-").map(Number) as [
     number,
@@ -152,6 +156,10 @@ export function generateMockDays(options: MockOptions = {}): DayData[] {
       });
     }
     heartRate.sort((a, b) => a.time - b.time);
+    // Riding a scooter to work at 8:30: heart rate stays near resting (the band's steps then are ghosts).
+    for (const s of heartRate) {
+      if (s.time >= midnight + 8.5 * HOUR && s.time < midnight + 9 * HOUR) s.bpm = restingHr + 4;
+    }
 
     // Night heart rate after midnight: drifts down to resting by the early hours, a little higher in
     // REM-heavy mornings. No randomness, so the scores above stay exactly as they were.
@@ -163,6 +171,21 @@ export function generateMockDays(options: MockOptions = {}): DayData[] {
       sleepHeartRate.push({ time: t, bpm: Math.round(restingHr + 1 + dip + wave) });
     }
 
+    // Logged through the coach on most workout days, with how hard it felt.
+    const workouts: LoggedWorkout[] =
+      workout.minutes > 0 && rand2() < 0.8
+        ? [
+            {
+              id: `mock-${localDate(midnight)}`,
+              start: workoutStart,
+              end: workoutStart + workout.minutes * MINUTE,
+              kind: load === "hard" ? "strength" : "run",
+              title: load === "hard" ? "Leg day" : "Easy run",
+              effort: load === "hard" ? 8 : 5,
+            },
+          ]
+        : [];
+
     result.push({
       date: localDate(midnight),
       heartRate,
@@ -170,9 +193,46 @@ export function generateMockDays(options: MockOptions = {}): DayData[] {
       sleep,
       restingHr,
       hrvRmssd,
+      respiratoryRate: Math.round((14.5 + 0.4 * loadEffect + noise2(0.6)) * 10) / 10,
+      spo2: Math.round(96.5 + noise2(1.5)),
+      caloriesBurned: Math.round(1650 + workout.minutes * workout.effort * 11 + noise2(120)),
+      steps: mockSteps(midnight, walkStart, walkMinutes, load === "moderate" ? workoutStart : null, noise2),
+      workouts,
     });
     prevLoad = load;
   }
 
   return result;
+}
+
+/**
+ * A day's steps as the band and the phone would each record them: both see the walk and the run,
+ * the band also counts arm movement on the morning scooter ride (ghost steps, with flat heart rate),
+ * and the phone alone counts a stroll while the band was charging.
+ */
+function mockSteps(
+  midnight: number,
+  walkStart: number,
+  walkMinutes: number,
+  runStart: number | null,
+  noise: (scale: number) => number,
+): StepRecord[] {
+  const records: StepRecord[] = [];
+  const both = (start: number, minutes: number, perMinute: number) => {
+    const count = Math.round(minutes * perMinute * (1 + noise(0.1)));
+    records.push({ start, end: start + minutes * MINUTE, count, device: "band" });
+    records.push({ start, end: start + minutes * MINUTE, count: Math.round(count * (0.9 + noise(0.1))), device: "phone" });
+  };
+  // Pottering about the house and office: band only, hour by hour.
+  for (let h = 7; h < 22; h++) {
+    if (h === 9 || h === 20) continue;
+    records.push({ start: midnight + h * HOUR, end: midnight + (h + 1) * HOUR, count: Math.round(180 + noise(150)), device: "band" });
+  }
+  both(walkStart, walkMinutes, 105);
+  if (runStart !== null) both(runStart, 45, 160);
+  // Scooter ride: the band counts the bumps.
+  records.push({ start: midnight + 8.5 * HOUR, end: midnight + 9 * HOUR, count: Math.round(420 + noise(120)), device: "band" });
+  // Band on the charger, phone in the pocket.
+  records.push({ start: midnight + 20 * HOUR, end: midnight + 20.5 * HOUR, count: Math.round(1200 + noise(300)), device: "phone" });
+  return records;
 }

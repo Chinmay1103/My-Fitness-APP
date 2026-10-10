@@ -13,7 +13,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
-import { colors, motion, timeOfDayTint, withAlpha } from '@/constants/theme';
+import { motion, timeOfDayTint, withAlpha } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { useHour } from '@/lib/useHour';
 
 interface Props {
@@ -38,7 +39,8 @@ export function Aurora({ color, second, strength = 1 }: Props) {
   const hour = useHour(focused);
   const animate = focused && !reduced;
 
-  const clock = timeOfDayTint(hour);
+  const colors = useColors();
+  const clock = timeOfDayTint(hour, colors);
   const size = width * 1.35;
 
   return (
@@ -77,6 +79,7 @@ function Light({
   period: number;
   animate: boolean;
 }) {
+  const styles = useStyles();
   const id = `light${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const t = useSharedValue(0);
 
@@ -86,7 +89,9 @@ function Light({
       return;
     }
     // A slow loop 0 → 1 → 0; the path below turns it into a lazy figure-eight with a gentle pulse.
-    t.value = withRepeat(withTiming(1, { duration: period, easing: Easing.inOut(Easing.sin) }), -1, true);
+    // An even number of passes, so each light ends where it started.
+    const passes = 2 * Math.max(1, Math.round(motion.backgroundMotion / period / 2));
+    t.value = withRepeat(withTiming(1, { duration: period, easing: Easing.inOut(Easing.sin) }), passes, true);
     return () => cancelAnimation(t);
   }, [animate, period, t]);
 
@@ -117,6 +122,6 @@ function Light({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   light: { position: 'absolute', top: 0, left: 0 },
-});
+}));

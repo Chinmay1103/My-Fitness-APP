@@ -7,8 +7,11 @@ import {
   type HexColor,
 } from 'react-native-android-widget';
 
-import { colors } from '@/constants/theme';
+import { palettes } from '@/constants/theme';
 import { LIVE_STALE_MS, loadSnapshot, type HeartRateSnapshot } from '../heartRateWidget';
+
+// Outside the React tree, so it can't follow the theme: always the dark palette.
+const colors = palettes.dark;
 
 /**
  * The widget's drawing. Only loaded when the build has the widget library (see heartRateWidget.ts).

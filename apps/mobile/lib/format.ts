@@ -19,3 +19,14 @@ export function shortDay(date: string): string {
 export function formatTime(ms: number): string {
   return new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
+
+/** Local calendar day of a time, YYYY-MM-DD (the same keys as DayData.date). */
+export function localDate(ms: number): string {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** 12345 -> "12,345". */
+export function formatCount(n: number): string {
+  return Math.round(n).toLocaleString('en-IN');
+}

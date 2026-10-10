@@ -19,7 +19,8 @@ export interface CoachNote {
 }
 
 /**
- * The signed-in user's note for `date`, or null. Reloads when the screen comes into focus and when
+ * The signed-in user's latest note on or before `date` (so this morning, before Claude has written
+ * today's, you still see yesterday's), or null. Reloads when the screen comes into focus and when
  * the app returns to the foreground, which is when the user comes back from the Claude app.
  */
 export function useCoachNote(date: string | undefined): CoachNote | null {
@@ -35,7 +36,9 @@ export function useCoachNote(date: string | undefined): CoachNote | null {
     const { data, error } = await supabase
       .from('daily_notes')
       .select('date, headline, why, tips, updated_at')
-      .eq('date', date)
+      .lte('date', date)
+      .order('date', { ascending: false })
+      .limit(1)
       .maybeSingle();
     // A failed fetch keeps whatever note is already showing; the note is a bonus, not core data.
     if (error) return;

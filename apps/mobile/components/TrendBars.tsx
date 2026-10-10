@@ -5,7 +5,8 @@ import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import Svg, { Line } from 'react-native-svg';
 
 import { ChartHeader, DEFAULT_RANGES, RangeSwitch, dayName, usePickedDay, useScrub } from '@/components/charts/parts';
-import { colors, fonts, gradientFor, motion } from '@/constants/theme';
+import { fonts, gradientFor, motion } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { useAnimatedTarget } from '@/lib/animation';
 import { shortDay } from '@/lib/format';
 
@@ -35,6 +36,8 @@ const GAP = 3;
  * the picked day against the average. 7D / 14D / 30D switch, 14 first.
  */
 export function TrendBars({ label, points: allPoints, max, color, height = 110, format = (v) => String(Math.round(v)) }: Props) {
+  const colors = useColors();
+  const styles = useStyles();
   const [range, setRange] = useState<number>(DEFAULT_RANGES[1]);
   const points = allPoints.slice(-range);
   const n = points.length;
@@ -53,7 +56,7 @@ export function TrendBars({ label, points: allPoints, max, color, height = 110, 
     <View style={styles.wrap}>
       <ChartHeader
         value={selected?.value != null ? format(selected.value) : '--'}
-        color={selected?.value != null ? gradientFor(selected.color ?? color)[0] : colors.muted}
+        color={selected?.value != null ? gradientFor(selected.color ?? color, colors)[0] : colors.muted}
         title={selected ? dayName(selected.date, index === n - 1) : ''}
         detail={
           diff === null
@@ -110,6 +113,8 @@ export function TrendBars({ label, points: allPoints, max, color, height = 110, 
 }
 
 function Bar({ point, index, isSelected, max, color, height }: { point: Point; index: number; isSelected: boolean; max: number; color: string; height: number }) {
+  const colors = useColors();
+  const styles = useStyles();
   const grow = useAnimatedTarget(point.value !== null ? 1 : 0, motion.bars, index * motion.barStagger);
   const lit = useAnimatedTarget(isSelected ? 1 : 0.45, 180);
   const barStyle = useAnimatedStyle(() => ({ transform: [{ scaleY: grow.value }], opacity: lit.value }));
@@ -119,14 +124,14 @@ function Bar({ point, index, isSelected, max, color, height }: { point: Point; i
     <View style={[styles.col, isSelected && styles.colSelected]}>
       {point.value !== null ? (
         <Animated.View style={[{ height: barHeight }, styles.bar, barStyle]}>
-          <LinearGradient colors={gradientFor(color)} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={gradientFor(color, colors)} style={StyleSheet.absoluteFill} />
         </Animated.View>
       ) : null}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   wrap: { gap: 12 },
   row: { flexDirection: 'row', gap: GAP },
   col: { flex: 1, justifyContent: 'flex-end', borderRadius: 4 },
@@ -136,4 +141,4 @@ const styles = StyleSheet.create({
   // Wider than its bar, so a label never gets cut off when bars are thin.
   day: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 11, marginHorizontal: -12, textAlign: 'center' },
   daySelected: { color: colors.text, fontFamily: fonts.bodySemi },
-});
+}));

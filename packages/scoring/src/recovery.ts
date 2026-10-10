@@ -10,10 +10,17 @@ export const SLEEP_BENCHMARK = 80;
 /** A night exactly at your baseline scores this, so factors are shown as points above or below it. */
 const OFFSET = 0.3;
 const WEIGHTS = { hrv: 0.6, restingHr: 0.25, sleep: 0.15 } as const;
+/**
+ * With breathing rate known (tonight and on enough past nights), it takes a share from HRV and
+ * resting HR. A raised breathing rate during sleep is an early sign of illness or overreaching.
+ */
+const WEIGHTS_WITH_BREATHING = { hrv: 0.55, restingHr: 0.2, respiratoryRate: 0.1, sleep: 0.15 } as const;
 
 export interface NightMetrics {
   hrvRmssd: number;
   restingHr: number;
+  /** Breaths per minute asleep, when the band recorded it. */
+  respiratoryRate?: number;
 }
 
 export interface RecoveryInput {
@@ -27,8 +34,8 @@ export interface RecoveryInput {
 export type RecoveryZone = "green" | "yellow" | "red";
 
 export interface RecoveryFactor {
-  key: "hrv" | "restingHr" | "sleep";
-  /** Last night's value: HRV in ms, resting HR in bpm, sleep score in %. */
+  key: "hrv" | "restingHr" | "respiratoryRate" | "sleep";
+  /** Last night's value: HRV in ms, resting HR in bpm, breathing in breaths/min, sleep score in %. */
   today: number;
   /** What it was compared with: your 30-day median, or the sleep benchmark. */
   baseline: number;
@@ -74,13 +81,22 @@ export function computeRecovery(input: RecoveryInput): RecoveryResult {
   // A lower resting heart rate than usual is good, so flip the sign.
   const restingHrZ = -zScore(input.today.restingHr, rhrBaseline);
   const sleepZ = input.sleepScore === undefined ? 0 : (input.sleepScore - SLEEP_BENCHMARK) / 15;
+  const breathingHistory = history.flatMap((h) => (h.respiratoryRate !== undefined ? [h.respiratoryRate] : []));
+  const breathingBaseline =
+    input.today.respiratoryRate !== undefined && breathingHistory.length >= MIN_BASELINE_DAYS
+      ? robustBaseline(breathingHistory, 0.5)
+      : null;
+  // Faster breathing than usual is bad, so flip the sign.
+  const breathingZ = breathingBaseline ? -zScore(input.today.respiratoryRate!, breathingBaseline) : 0;
+  const weights = breathingBaseline ? WEIGHTS_WITH_BREATHING : { ...WEIGHTS, respiratoryRate: 0 };
 
   const contributions = {
-    hrv: WEIGHTS.hrv * hrvZ,
-    restingHr: WEIGHTS.restingHr * restingHrZ,
-    sleep: WEIGHTS.sleep * sleepZ,
+    hrv: weights.hrv * hrvZ,
+    restingHr: weights.restingHr * restingHrZ,
+    respiratoryRate: weights.respiratoryRate * breathingZ,
+    sleep: weights.sleep * sleepZ,
   };
-  const combined = contributions.hrv + contributions.restingHr + contributions.sleep;
+  const combined = contributions.hrv + contributions.restingHr + contributions.respiratoryRate + contributions.sleep;
   // The sigmoid squashes the ends, so only a truly unusual night reaches 5% or 95%.
   const exact = 100 * sigmoid(OFFSET + combined);
   const score = Math.round(exact);
@@ -96,6 +112,13 @@ export function computeRecovery(input: RecoveryInput): RecoveryResult {
     { key: "hrv", today: input.today.hrvRmssd, baseline: Math.round(Math.exp(hrvBaseline.center)) },
     { key: "restingHr", today: input.today.restingHr, baseline: Math.round(rhrBaseline.center) },
   ];
+  if (breathingBaseline) {
+    factors.push({
+      key: "respiratoryRate",
+      today: Math.round(input.today.respiratoryRate! * 10) / 10,
+      baseline: Math.round(breathingBaseline.center * 10) / 10,
+    });
+  }
   if (input.sleepScore !== undefined) {
     factors.push({ key: "sleep", today: input.sleepScore, baseline: SLEEP_BENCHMARK });
   }

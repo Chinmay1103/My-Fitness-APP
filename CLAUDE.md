@@ -26,20 +26,31 @@ Open design to-dos from the Sep 30 screen-recording review: [docs/design-review-
 - **Native modules that throw on import** (Health Connect, AsyncStorage) are loaded lazily behind a
   `TurboModuleRegistry.get` check, so an older build or Expo Go doesn't crash.
 - **The coach gives wellness guidance, not medical advice.**
-- **Dark mode only for now**; light mode later, once the screens settle (see ROADMAP).
+- **Light and dark mode** (Oct 10): System / Light / Dark on the Account screen (`lib/theme.tsx`).
+  Screens get colors from `useColors()` / `makeStyles((c) => ...)`, never a fixed palette; only
+  code outside React (widget, notification) uses `palettes.dark`.
+- **Battery**: backgrounds settle after 2 min (`motion.backgroundMotion`); live heart rate stops
+  itself after 30 min, or after 10 min without the band, unless the heart-rate alert is on.
 
 ## How the scores work (`packages/scoring/src/`)
 
 - **Strain (0–21)** `strain.ts`: Banister TRIMP over heart-rate-reserve fraction; time below 30% of
-  reserve is ignored; gaps over 5 min aren't counted; `21 * (1 - e^(-TRIMP/120))`.
+  reserve is ignored; gaps over 5 min aren't counted; `21 * (1 - e^(-TRIMP/120))`. A logged workout
+  with an effort rating (from the coach) tops up what heart rate missed: session RPE
+  (effort × minutes × 0.25) minus the heart-rate TRIMP in its window, never less (`effortStrain`).
 - **Sleep (0–100)** `sleep.ts`: `sufficiency * (0.7 + 0.3 * quality)`. Hours vs. need sets the
   ceiling; quality (efficiency, deep+REM share, bedtime consistency) can only take points off.
   Need = base (8h) + extra after strain > 8 + a third of the last 3 nights' shortfall (capped at 60
   min). Shortfall is measured against the *base* need, or debt ratchets up to the cap.
 - **Recovery (0–100)** `recovery.ts`: z-scores of ln(HRV) and resting HR against a robust
   (median/MAD) 30-day personal baseline, plus sleep; `sigmoid(0.3 + combined)`. No score before 4
-  days of history; flagged "calibrating" until 14. Median/MAD, z clipping and the sigmoid are there
+  days of history; flagged "calibrating" until 14. Breathing rate joins (weight 0.1, taken from HRV
+  and resting HR) once it has 4 nights of history. Median/MAD, z clipping and the sigmoid are there
   deliberately: Fitbit-based scores in other apps swing to extremes.
+
+Display-only metrics (`steps.ts`, `activity.ts`): `combineSteps` merges band and phone steps per 5
+min and drops ghost steps (band-only, flat heart rate, low cadence); Active Zone Minutes the Fitbit
+way (1/min fat burn, 2/min cardio and peak; 150 a week).
 
 When changing a formula, check the numbers on mock data still look like a real Whoop week, not
 just that tests pass.
@@ -53,7 +64,10 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
 
 - `packages/scoring/`: pure TypeScript scoring and mock data, Vitest tests. Consumed as source
   (`main: src/index.ts`), no build step.
-- `apps/mobile/`: Expo SDK 57 app with expo-router. Tabs live in `app/(tabs)/`: Today (`index.tsx`),
+- `apps/mobile/`: Expo SDK 57 app with expo-router. **Today is the dashboard**: rings, Next steps
+  (`lib/nextSteps.ts`, rule-based), the latest coach note, then a tile per metric (`lib/metrics.ts`:
+  definitions, per-day values, "your usual" range). Every tile opens `app/metric/[key].tsx`. Logged
+  workouts, meals and weigh-ins are read back from Supabase in `lib/logged.ts`. Tabs live in `app/(tabs)/`: Today (`index.tsx`),
   Sleep, Strain, Coach; `app/recovery.tsx` is the Recovery detail screen; `app/heart-rate.tsx` is the
   all-day heart rate screen (opened from the Today card `components/HeartRateCard.tsx`). It re-reads
   today's heart rate every minute while open (`lib/heartRate.ts`; Health Connect only gets the band's
@@ -79,8 +93,9 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
   home-screen **Heart rate widget** (`lib/heartRateWidget.ts`, drawing in `lib/widget/`,
   react-native-android-widget) is registered in the entry file `index.ts`. The **heart-rate alert**
   (`lib/heartRateAlert.ts`, rule `sustainedAbove()` in scoring) messages a chosen contact when live
-  heart rate stays above a limit for 2 min: SMS via our local native module `modules/sms-sender`
-  and WhatsApp via CallMeBot (Chinmay's pick; WhatsApp doesn't allow tap-free sending from his own account). Design tokens (colors, gradients,
+  heart rate stays above a limit for 2 min, on WhatsApp via CallMeBot (Chinmay's pick; WhatsApp
+  doesn't allow tap-free sending from his own account). **No SMS** (removed Oct 10): Android blocks
+  SEND_SMS for sideloaded apps and Play Protect flagged the app as harmful because of it. Design tokens (colors, gradients,
   fonts, motion) in `constants/theme.ts`. Charts are in `components/charts/` (bars, line, combo, donut, sleep-stage
   hypnogram; all react-native-svg, no chart library). The background behind every screen is either
   **Scenes** (bundled public-domain photos per time of day, `components/SceneBackdrop.tsx`) or
@@ -118,8 +133,9 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | 1 | Health Connect data in | Band arrived Oct 3: heart rate flows from Google Health into Health Connect and strain scores on it; heart rate screen added. To do: check sleep, HRV and resting HR after the first nights |
 | 2 | Scores + Today rings | Done on demo data; tune against real data |
 | 3 | Logging: workouts, plans, meals (AI macros) | Merged into 4: the user types or speaks what they did or ate in the Coach chat and the AI records it (no forms) |
-| 4 | AI coach (in the Claude app; also does all logging) | "Ask Claude" handoff done; coach connector live (read scores; log/list/delete workouts, meals, weight; profile; daily coach note on Today; `get_coach_notes` so each new chat picks up from earlier days). To do: the app reads logged workouts back |
-| 4b | Live heart rate + home-screen widget + heart-rate alert (SMS/WhatsApp) | Code ready (Oct 6–7); needs a new EAS build and a test with the band |
+| 4 | AI coach (in the Claude app; also does all logging) | "Ask Claude" handoff done; coach connector live (read scores; log/list/delete workouts, meals, weight; profile; daily coach note on Today; `get_coach_notes` so each new chat picks up from earlier days). App reads logged workouts (they count toward strain), meals and weight back (Oct 10). To do: deploy the mcp function (now asks for workout effort) |
+| 4c | Dashboard revamp (Oct 10) | Today dashboard with Next steps + metric tiles and drill-downs, phone+band steps, rebuilt hypnogram, light mode, battery limits. Needs a new EAS build (Weight permission, `userInterfaceStyle: automatic`); then check on the phone which device Health Connect labels steps with (Health data screen) |
+| 4b | Live heart rate + home-screen widget + heart-rate alert (WhatsApp) | Code ready (Oct 6–7); needs a new EAS build and a test with the band |
 | 5 | Trends, weekly report, notifications, MCP server | Not started |
 
 Keep this table up to date when a milestone moves.

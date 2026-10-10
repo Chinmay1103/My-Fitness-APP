@@ -2,7 +2,8 @@ import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { PanResponder, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 
-import { colors, fonts, motion } from '@/constants/theme';
+import { fonts, motion } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { useAnimatedTarget } from '@/lib/animation';
 import { tapHaptic } from '@/lib/haptics';
 
@@ -80,6 +81,7 @@ export function RangeSwitch({
   onChange: (r: number) => void;
   unit?: 'D' | 'm';
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.ranges} accessibilityRole="tablist">
       {ranges.map((r) => (
@@ -104,6 +106,7 @@ export function RangeSwitch({
 
 /** Big value on the left with a line or two under the day's name, controls on the right. */
 export function ChartHeader({ value, color, title, detail, right }: { value: string; color: string; title: string; detail?: string; right?: ReactNode }) {
+  const styles = useStyles();
   return (
     <View style={styles.header}>
       <View style={styles.readout} accessibilityLiveRegion="polite">
@@ -126,6 +129,7 @@ export function ChartHeader({ value, color, title, detail, right }: { value: str
 
 /** Colored dot + name, for charts showing more than one thing. */
 export function Legend({ items }: { items: { label: string; color: string; dashed?: boolean }[] }) {
+  const styles = useStyles();
   return (
     <View style={styles.legend}>
       {items.map((it) => (
@@ -194,7 +198,7 @@ export function smoothPath(p: { x: number; y: number }[]): string {
   return path;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   readout: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
   readoutValue: { fontFamily: fonts.number, fontSize: 30, fontVariant: ['tabular-nums'] },
@@ -210,4 +214,4 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendMark: { width: 12, height: 4, borderRadius: 2 },
   legendText: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 12 },
-});
+}));

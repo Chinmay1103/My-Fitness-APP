@@ -1,3 +1,5 @@
+import type { StepRecord } from "./steps";
+
 /** Epoch milliseconds. */
 export type Timestamp = number;
 
@@ -39,6 +41,18 @@ export interface UserProfile {
   baseSleepNeedMinutes?: number;
 }
 
+/** A workout the user told the coach about (from the `workouts` table). */
+export interface LoggedWorkout {
+  id: string;
+  start: Timestamp;
+  end: Timestamp;
+  /** e.g. 'strength', 'run', 'walk'. */
+  kind: string;
+  title?: string;
+  /** How hard it felt, 1 (very easy) to 10 (all out). Without it the workout can't add strain. */
+  effort?: number;
+}
+
 /**
  * Everything we know about one calendar day.
  * `sleep`, `restingHr` and `hrvRmssd` describe the night that ended on the morning of `date`;
@@ -53,4 +67,14 @@ export interface DayData {
   sleep?: SleepSession;
   restingHr?: number;
   hrvRmssd?: number;
+  /** Breaths per minute during last night's sleep. Optional recovery factor. */
+  respiratoryRate?: number;
+  /** Workouts logged through the coach that started this day. Can add strain heart rate missed. */
+  workouts?: LoggedWorkout[];
+  /** Step counts from the band and the phone, combined with `combineSteps`. Shown, not scored. */
+  steps?: StepRecord[];
+  /** Average blood oxygen during last night's sleep, %. Shown, not scored. */
+  spo2?: number;
+  /** Energy burned over the whole day, kcal, as the band's app estimates it. Shown, not scored. */
+  caloriesBurned?: number;
 }

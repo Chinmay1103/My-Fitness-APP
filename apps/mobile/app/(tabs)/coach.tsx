@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button, Card, Input, Muted, Pill, Screen } from '@/components/ui';
-import { colors, spacing } from '@/constants/theme';
+import { spacing } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { continueInClaude, openInClaude, shareToClaude } from '@/lib/claudeHandoff';
 import { parseChatLink, setCoachChat, useCoachChat } from '@/lib/coachChat';
 import { useScores } from '@/lib/ScoresProvider';
@@ -25,6 +26,8 @@ const SYNC_WAIT_MS = 4000;
  * conversation keeps its context; "New chat instead" still starts a fresh one.
  */
 export default function CoachScreen() {
+  const colors = useColors();
+  const styles = useStyles();
   const { sourceId, syncNow } = useScores();
   const [question, setQuestion] = useState('');
   const [opening, setOpening] = useState(false);
@@ -143,7 +146,7 @@ export default function CoachScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   question: { minHeight: 80, textAlignVertical: 'top' },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-});
+}));

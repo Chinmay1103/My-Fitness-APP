@@ -12,7 +12,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { colors, timeOfDay, withAlpha, type TimeOfDay } from '@/constants/theme';
+import { motion, timeOfDay, withAlpha, type TimeOfDay } from '@/constants/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { useHour } from '@/lib/useHour';
 
 type Scene = {
@@ -79,6 +80,8 @@ const DRIFT_MS = 40000;
  * bottom. Still when "reduce motion" is on.
  */
 export function SceneBackdrop({ color }: { color: string }) {
+  const colors = useColors();
+  const styles = useStyles();
   const focused = useIsFocused();
   const reduced = useReducedMotion();
   const scene = timeOfDay(useHour(focused));
@@ -98,7 +101,8 @@ export function SceneBackdrop({ color }: { color: string }) {
       cancelAnimation(t);
       return;
     }
-    t.value = withRepeat(withTiming(1, { duration: DRIFT_MS, easing: Easing.inOut(Easing.sin) }), -1, true);
+    const passes = Math.max(2, Math.round(motion.backgroundMotion / DRIFT_MS));
+    t.value = withRepeat(withTiming(1, { duration: DRIFT_MS, easing: Easing.inOut(Easing.sin) }), passes, true);
     return () => cancelAnimation(t);
   }, [focused, reduced, t]);
 
@@ -144,7 +148,7 @@ export function SceneBackdrop({ color }: { color: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => StyleSheet.create({
   clip: { overflow: 'hidden' },
   photo: { position: 'absolute' },
-});
+}));
