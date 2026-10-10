@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { daySamples, summarizeHeartRate } from '@fitness/scoring';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -51,14 +52,19 @@ export default function HeartRateScreen() {
       </Card>
 
       {summary ? (
-        <Card title="THE DAY IN NUMBERS">
+        <Card title="THE DAY IN NUMBERS" href={{ pathname: '/metric/[key]', params: { key: 'heartRate' } }} linkLabel="30 days">
           <Row>
             <Stat label="Low" value={`${summary.low} bpm`} />
             <Stat label="Average" value={`${Math.round(summary.avg)} bpm`} />
             <Stat label="High" value={`${summary.high} bpm`} />
           </Row>
           <Row>
-            <Stat label="Resting" value={day?.restingHr ? `${day.restingHr} bpm` : '--'} hint="from last night" />
+            <Stat
+              label="Resting"
+              value={day?.restingHr ? `${day.restingHr} bpm` : '--'}
+              hint="from last night"
+              onPress={() => router.push({ pathname: '/metric/[key]', params: { key: 'restingHr' } })}
+            />
             <Stat label="Latest" value={formatTime(summary.latest.time)} hint={isToday ? ago(summary.latest.time) : undefined} />
             <Stat label="Tracked" value={`${Math.round((summary.minutesCovered / 60) * 10) / 10} h`} hint="hours with readings" />
           </Row>

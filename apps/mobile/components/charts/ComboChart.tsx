@@ -5,7 +5,7 @@ import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react
 import { fonts, gradientFor } from '@/constants/theme';
 import { makeStyles, useColors } from '@/lib/theme';
 import { shortDay } from '@/lib/format';
-import { ChartHeader, DEFAULT_RANGES, Legend, RangeSwitch, Reveal, dayName, smoothPath, usePickedDay, useScrub } from './parts';
+import { ChartHeader, OpenDayLink, DEFAULT_RANGES, Legend, RangeSwitch, Reveal, dayName, smoothPath, usePickedDay, useScrub } from './parts';
 
 export interface ComboPoint {
   date: string;
@@ -70,6 +70,7 @@ export function ComboChart({ points: all, bar, line, describe, height = 130 }: P
           />
         }
       />
+      <OpenDayLink back={n - 1 - index} date={points[index]?.date} />
       <View {...scrubProps} accessible accessibilityLabel={`${bar.label} and ${line.label}, last ${n} days.`}>
         {width > 0 ? (
           <View pointerEvents="none">

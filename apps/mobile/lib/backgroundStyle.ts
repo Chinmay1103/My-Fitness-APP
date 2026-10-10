@@ -2,8 +2,11 @@ import { useSyncExternalStore } from 'react';
 
 import { localStore } from './storage';
 
-/** What's behind every screen: painted landscapes that follow the time of day, or moving lights. */
-export type BackgroundStyle = 'scenes' | 'aurora';
+/**
+ * What's behind every screen: photos that follow the time of day, moving lights, or a still, plain
+ * page with a soft wash of the screen's color. Light mode shows Plain in place of Scenes (see Screen).
+ */
+export type BackgroundStyle = 'scenes' | 'aurora' | 'plain';
 
 const KEY = 'backgroundStyle';
 let current: BackgroundStyle = 'scenes';
@@ -12,7 +15,7 @@ const listeners = new Set<() => void>();
 localStore
   .getItem(KEY)
   .then((saved) => {
-    if (saved === 'scenes' || saved === 'aurora') setBackgroundStyle(saved, false);
+    if (saved === 'scenes' || saved === 'aurora' || saved === 'plain') setBackgroundStyle(saved, false);
   })
   .catch(() => {});
 

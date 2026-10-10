@@ -4,7 +4,7 @@ import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react
 
 import { fonts, withAlpha } from '@/constants/theme';
 import { makeStyles, useColors } from '@/lib/theme';
-import { ChartHeader, DEFAULT_RANGES, Legend, RangeSwitch, Reveal, dayName, smoothPath, usePickedDay, useScrub } from './parts';
+import { ChartHeader, OpenDayLink, DEFAULT_RANGES, Legend, RangeSwitch, Reveal, dayName, smoothPath, usePickedDay, useScrub } from './parts';
 
 interface Point {
   date: string;
@@ -83,6 +83,7 @@ export function LineChart({ label, points: all, color, format, higherIsBetter, h
           />
         }
       />
+      <OpenDayLink back={n - 1 - index} date={points[index]?.date} />
       <View {...scrubProps} accessible accessibilityLabel={`${label}, last ${n} days. Your normal ${format(low)} to ${format(high)}.`}>
         {width > 0 ? (
           <View pointerEvents="none">

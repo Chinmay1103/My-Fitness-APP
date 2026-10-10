@@ -18,6 +18,7 @@ export default function AccountScreen() {
   const styles = useStyles();
   const background = useBackgroundStyle();
   const { preference, setPreference } = useTheme();
+  const colors = useColors();
   const { enabled, session } = useAuth();
   const { sourceId, syncStatus, refresh } = useScores();
   const [email, setEmail] = useState('');
@@ -156,11 +157,14 @@ export default function AccountScreen() {
         <View style={styles.chips}>
           <Chip label="Scenes" selected={background === 'scenes'} onPress={() => setBackgroundStyle('scenes')} />
           <Chip label="Aurora" selected={background === 'aurora'} onPress={() => setBackgroundStyle('aurora')} />
+          <Chip label="Plain" selected={background === 'plain'} onPress={() => setBackgroundStyle('plain')} />
         </View>
         <Muted>
           {background === 'scenes'
-            ? 'Mountain photos that follow the time of day: dawn, day, dusk and night.'
-            : 'Soft moving lights in your score colors, shifting with the time of day.'}
+            ? `Photos that follow the time of day: dawn, day, dusk and night.${colors.scheme === 'light' ? ' They show in dark mode only; in light mode you get Plain.' : ''}`
+            : background === 'aurora'
+              ? 'Soft moving lights in your score colors, shifting with the time of day.'
+              : 'A still page with a soft wash of each screen’s color at the top. Calmest, and easiest on the battery.'}
         </Muted>
       </Card>
     </Screen>

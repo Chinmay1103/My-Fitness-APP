@@ -93,7 +93,6 @@ const useStyles = makeStyles((colors) => StyleSheet.create({
     borderRadius: BAR_HEIGHT / 2,
     backgroundColor: colors.tabBar,
     borderColor: colors.border,
-    borderTopColor: colors.cardEdge,
     borderWidth: StyleSheet.hairlineWidth,
   },
   highlight: {

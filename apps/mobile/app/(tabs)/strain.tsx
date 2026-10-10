@@ -93,15 +93,14 @@ export default function StrainScreen() {
         </Muted>
       </Card>
 
-      <Card title="LIVE HEART RATE">
+      <Card title="LIVE HEART RATE" href="/live" linkLabel="Open" wholeCard>
         <Muted>Watch your heart rate and zone second by second during a workout, straight from the band.</Muted>
-        <Button label="Open live heart rate" variant="secondary" onPress={() => router.push('/live')} />
       </Card>
 
-      <Card title="TIME IN HEART RATE ZONES">
+      <Card title="TIME IN HEART RATE ZONES" href="/heart-rate" linkLabel="Full day">
         {zoneMinutes.map((minutes, i) => (
           <View key={i} style={styles.zoneRow}>
-            <Stat label={`Zone ${i + 1}`} value={formatMinutes(minutes)} color={colors.hrZones[i]} />
+            <Stat label={`Zone ${i + 1}`} value={formatMinutes(minutes)} color={colors.hrZones[i]} onPress={() => router.push('/heart-rate')} />
             <ZoneBar index={i} fraction={minutes / maxZone} color={colors.hrZones[i]} />
           </View>
         ))}
@@ -112,7 +111,7 @@ export default function StrainScreen() {
         />
       </Card>
 
-      <Card title="STRAIN VS RECOVERY">
+      <Card title="STRAIN VS RECOVERY" href="/recovery" linkLabel="Recovery">
         <ComboChart
           points={scores.slice(-30).map((s) => ({
             date: s.date,

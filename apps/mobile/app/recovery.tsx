@@ -88,7 +88,7 @@ export default function RecoveryScreen() {
         </Card>
       ) : null}
 
-      <Card title="HEART RATE VARIABILITY">
+      <Card title="HEART RATE VARIABILITY" href={{ pathname: '/metric/[key]', params: { key: 'hrv' } }}>
         <LineChart
           label="HRV"
           points={days.slice(-30).map((d) => ({ date: d.date, value: d.hrvRmssd ?? null }))}
@@ -98,7 +98,7 @@ export default function RecoveryScreen() {
         />
       </Card>
 
-      <Card title="RESTING HEART RATE">
+      <Card title="RESTING HEART RATE" href={{ pathname: '/metric/[key]', params: { key: 'restingHr' } }}>
         <LineChart
           label="Resting HR"
           points={days.slice(-30).map((d) => ({ date: d.date, value: d.restingHr ?? null }))}
@@ -109,7 +109,7 @@ export default function RecoveryScreen() {
       </Card>
 
       {days.slice(-30).some((d) => d.respiratoryRate != null) ? (
-        <Card title="BREATHING RATE">
+        <Card title="BREATHING RATE" href={{ pathname: '/metric/[key]', params: { key: 'breathing' } }}>
           <LineChart
             label="Breathing"
             points={days.slice(-30).map((d) => ({ date: d.date, value: d.respiratoryRate ?? null }))}

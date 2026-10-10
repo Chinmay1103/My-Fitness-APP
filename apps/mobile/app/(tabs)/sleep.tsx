@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { Breakdown, BreakdownFactor, BreakdownTotal } from '@/components/Breakdown';
@@ -11,6 +12,9 @@ import { Card, Muted, Row, Screen, Stat } from '@/components/ui';
 import { makeStyles, useColors } from '@/lib/theme';
 import { formatDate, formatMinutes } from '@/lib/format';
 import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
+import { trendHref, type TrendKey } from '@/lib/trends';
+
+const open = (key: TrendKey) => () => router.push(trendHref(key));
 
 const STAGES = [
   { key: 'deep', label: 'Deep' },
@@ -59,12 +63,12 @@ export default function SleepScreen() {
       </Card>
 
       {session.segments?.length ? (
-        <Card title={isLatest ? 'LAST NIGHT, STAGE BY STAGE' : 'STAGE BY STAGE'}>
+        <Card title={isLatest ? 'LAST NIGHT, STAGE BY STAGE' : 'STAGE BY STAGE'} onPress={open('restorative')} linkLabel="Deep + REM">
           <Hypnogram segments={session.segments} />
         </Card>
       ) : null}
 
-      <Card title={`WHY ${sleep.score}%`}>
+      <Card title={`WHY ${sleep.score}%`} onPress={open('hoursSlept')} linkLabel="Hours">
         <Breakdown>
           <BreakdownTotal
             label="Hours vs need"
@@ -76,12 +80,14 @@ export default function SleepScreen() {
             detail={`${Math.round(sleep.efficiency * 100)}% of your time in bed was asleep (95% is ideal)`}
             delta={-penalties.efficiency}
             scale={penaltyScale}
+            onPress={open('efficiency')}
           />
           <BreakdownFactor
             label="Restorative sleep"
             detail={`${Math.round(sleep.restorativeRatio * 100)}% deep + REM (40% or more is ideal)`}
             delta={-penalties.restorative}
             scale={penaltyScale}
+            onPress={open('restorative')}
           />
           <BreakdownFactor
             label="Consistency"
@@ -92,6 +98,7 @@ export default function SleepScreen() {
             }
             delta={-penalties.consistency}
             scale={penaltyScale}
+            onPress={open('consistency')}
           />
           <BreakdownTotal label="Sleep performance" value={`${sleep.score}%`} color={colors.sleep} />
         </Breakdown>
@@ -99,7 +106,7 @@ export default function SleepScreen() {
       </Card>
 
       {need ? (
-        <Card title={`${isLatest ? 'LAST NIGHT ' : ''}YOU NEEDED ${formatMinutes(need.total).toUpperCase()}`}>
+        <Card title={`${isLatest ? 'LAST NIGHT ' : ''}YOU NEEDED ${formatMinutes(need.total).toUpperCase()}`} onPress={open('sleepNeed')} linkLabel="30 days">
           <Breakdown>
             <BreakdownTotal label="Base need" detail="What an average adult needs; adjustable later" value={formatMinutes(need.base)} />
             <BreakdownFactor
@@ -113,6 +120,7 @@ export default function SleepScreen() {
               scale={Math.max(need.strain, need.debt, 1)}
               unit="m"
               color={colors.sleep}
+              onPress={() => router.navigate('/strain')}
             />
             <BreakdownFactor
               label="Sleep debt"
@@ -125,12 +133,13 @@ export default function SleepScreen() {
               scale={Math.max(need.strain, need.debt, 1)}
               unit="m"
               color={colors.sleep}
+              onPress={open('sleepDebt')}
             />
           </Breakdown>
         </Card>
       ) : null}
 
-      <Card title="STAGES">
+      <Card title="STAGES" onPress={open('deep')} linkLabel="Deep sleep">
         <Donut
           center={formatMinutes(sleep.asleepMinutes)}
           centerLabel="asleep"
@@ -147,13 +156,13 @@ export default function SleepScreen() {
 
       <Card title="QUALITY">
         <Row>
-          <Stat label="Efficiency" value={`${Math.round(sleep.efficiency * 100)}%`} hint="asleep / in bed" />
-          <Stat label="Restorative" value={`${Math.round(sleep.restorativeRatio * 100)}%`} hint="deep + REM" />
-          <Stat label="Consistency" value={`${Math.round(sleep.consistency * 100)}%`} hint="bedtime vs usual" />
+          <Stat label="Efficiency" value={`${Math.round(sleep.efficiency * 100)}%`} hint="asleep / in bed" onPress={open('efficiency')} />
+          <Stat label="Restorative" value={`${Math.round(sleep.restorativeRatio * 100)}%`} hint="deep + REM" onPress={open('restorative')} />
+          <Stat label="Consistency" value={`${Math.round(sleep.consistency * 100)}%`} hint="bedtime vs usual" onPress={open('consistency')} />
         </Row>
       </Card>
 
-      <Card title="HOURS SLEPT VS NEEDED">
+      <Card title="HOURS SLEPT VS NEEDED" onPress={open('hoursSlept')}>
         <ComboChart
           points={scores.slice(-30).map((s) => ({ date: s.date, bar: s.sleep?.asleepMinutes ?? null, line: s.sleep?.needMinutes ?? null }))}
           bar={{ label: 'Slept', color: colors.sleep, max: 11 * 60, format: formatMinutes }}
@@ -166,7 +175,7 @@ export default function SleepScreen() {
         />
       </Card>
 
-      <Card title="SLEEP TREND">
+      <Card title="SLEEP TREND" href="/recovery" linkLabel="Effect on recovery">
         <TrendBars
           label="Sleep performance"
           max={100}

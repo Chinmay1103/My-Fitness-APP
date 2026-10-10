@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import Svg, { Line } from 'react-native-svg';
 
-import { ChartHeader, DEFAULT_RANGES, RangeSwitch, dayName, usePickedDay, useScrub } from '@/components/charts/parts';
+import { ChartHeader, OpenDayLink, DEFAULT_RANGES, RangeSwitch, dayName, usePickedDay, useScrub } from '@/components/charts/parts';
 import { fonts, gradientFor, motion } from '@/constants/theme';
 import { makeStyles, useColors } from '@/lib/theme';
 import { useAnimatedTarget } from '@/lib/animation';
@@ -75,6 +75,7 @@ export function TrendBars({ label, points: allPoints, max, color, height = 110, 
           />
         }
       />
+      <OpenDayLink back={n - 1 - index} date={points[index]?.date} />
 
       <View
         {...scrubProps}

@@ -29,6 +29,11 @@ Open design to-dos from the Sep 30 screen-recording review: [docs/design-review-
 - **Light and dark mode** (Oct 10): System / Light / Dark on the Account screen (`lib/theme.tsx`).
   Screens get colors from `useColors()` / `makeStyles((c) => ...)`, never a fixed palette; only
   code outside React (widget, notification) uses `palettes.dark`.
+- **Flat cards, drill-down everywhere** (Oct 10): cards are one solid fill and a hairline border (no
+  glass, lit edges or ring glow); gradients stay on rings and charts. Every card, number and chart
+  should open something deeper: `Card` takes `href`/`onPress` (title-row link, or `wholeCard`),
+  `Stat` and `BreakdownFactor` take `onPress`, and day-by-day charts show `OpenDayLink` to switch the
+  screen to the scrubbed day. Sleep-score parts open `app/trend/[key].tsx` (`lib/trends.ts`).
 - **Battery**: backgrounds settle after 2 min (`motion.backgroundMotion`); live heart rate stops
   itself after 30 min, or after 10 min without the band, unless the heart-rate alert is on.
 
@@ -98,8 +103,9 @@ activities + everyday movement). The app shows these as "WHY 81%" cards, worded 
   SEND_SMS for sideloaded apps and Play Protect flagged the app as harmful because of it. Design tokens (colors, gradients,
   fonts, motion) in `constants/theme.ts`. Charts are in `components/charts/` (bars, line, combo, donut, sleep-stage
   hypnogram; all react-native-svg, no chart library). The background behind every screen is either
-  **Scenes** (bundled public-domain photos per time of day, `components/SceneBackdrop.tsx`) or
-  **Aurora** (moving lights), picked on the Account screen (`lib/backgroundStyle.ts`); the tab bar is
+  **Scenes** (bundled photos per time of day, `components/SceneBackdrop.tsx`; dark mode only, light
+  mode shows Plain instead), **Aurora** (moving lights) or **Plain** (`components/PlainBackdrop.tsx`,
+  a still color wash), picked on the Account screen (`lib/backgroundStyle.ts`); the tab bar is
   `components/TabBar.tsx`.
   **Swiping** (`components/Swipe.tsx`, plain PanResponder): left/right anywhere on a tab screen changes tab;
   on the score rings (`DayPager`) it changes day. The picked day (`dayBack`, `useSelectedDay()` in
@@ -134,7 +140,7 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | 2 | Scores + Today rings | Done on demo data; tune against real data |
 | 3 | Logging: workouts, plans, meals (AI macros) | Merged into 4: the user types or speaks what they did or ate in the Coach chat and the AI records it (no forms) |
 | 4 | AI coach (in the Claude app; also does all logging) | "Ask Claude" handoff done; coach connector live (read scores; log/list/delete workouts, meals, weight; profile; daily coach note on Today; `get_coach_notes` so each new chat picks up from earlier days). App reads logged workouts (they count toward strain), meals and weight back (Oct 10). To do: deploy the mcp function (now asks for workout effort) |
-| 4c | Dashboard revamp (Oct 10) | Today dashboard with Next steps + metric tiles and drill-downs, phone+band steps, rebuilt hypnogram, light mode, battery limits. Needs a new EAS build (Weight permission, `userInterfaceStyle: automatic`); then check on the phone which device Health Connect labels steps with (Health data screen) |
+| 4c | Dashboard revamp (Oct 10) | Today dashboard with Next steps + metric tiles and drill-downs, phone+band steps, rebuilt hypnogram, light mode, battery limits. Then: flat cards, Plain background (light mode no longer shows the photos), drill-down links on every card and chart, sleep-part detail screens, tap/drag to read the live heart-rate graph. Needs a new EAS build (Weight permission, `userInterfaceStyle: automatic`); then check on the phone which device Health Connect labels steps with (Health data screen) |
 | 4b | Live heart rate + home-screen widget + heart-rate alert (WhatsApp) | Code ready (Oct 6–7); needs a new EAS build and a test with the band |
 | 5 | Trends, weekly report, notifications, MCP server | Not started |
 

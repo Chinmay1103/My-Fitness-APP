@@ -10,7 +10,7 @@ import type { CoachNote } from '@/lib/coachNote';
 export function CoachNoteCard({ note, accent }: { note: CoachNote; accent: string }) {
   const styles = useStyles();
   return (
-    <Card title="COACH NOTE">
+    <Card title="COACH NOTE" href="/coach" linkLabel="Ask about it" wholeCard>
       <Text style={[styles.headline, { color: accent }]}>{note.headline}</Text>
       <Text style={styles.body}>{note.why}</Text>
       {note.tips.length ? (

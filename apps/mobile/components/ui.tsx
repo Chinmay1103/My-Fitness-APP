@@ -1,7 +1,6 @@
-import { router, useNavigation } from 'expo-router';
+import { router, useNavigation, type Href } from 'expo-router';
 import { BottomTabBarHeightContext } from 'expo-router/tabs';
 import { SymbolView } from 'expo-symbols';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useContext, type ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -17,10 +16,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Aurora } from '@/components/Aurora';
+import { PlainBackdrop } from '@/components/PlainBackdrop';
 import { SceneBackdrop } from '@/components/SceneBackdrop';
 import { useHorizontalSwipe, type SwipeDirection } from '@/components/Swipe';
 import { radius, spacing, type } from '@/constants/theme';
-import { makeStyles, useColors, useTheme } from '@/lib/theme';
+import { makeStyles, useColors } from '@/lib/theme';
 import { useBackgroundStyle } from '@/lib/backgroundStyle';
 import { refreshHaptic, tapHaptic } from '@/lib/haptics';
 import { useScores } from '@/lib/ScoresProvider';
@@ -66,10 +66,13 @@ export function Screen({ children, overline, title, accessory, back, glow, glow2
 
   return (
     <View style={styles.screen} {...swipeTabs}>
-      {backgroundStyle === 'scenes' ? (
+      {backgroundStyle === 'aurora' ? (
+        <Aurora color={glow ?? colors.muted} second={glow2} strength={glow ? 1 : 0.7} />
+      ) : backgroundStyle === 'scenes' && colors.scheme === 'dark' ? (
         <SceneBackdrop color={glow ?? colors.muted} />
       ) : (
-        <Aurora color={glow ?? colors.muted} second={glow2} strength={glow ? 1 : 0.7} />
+        // Plain, and Scenes in light mode: the photos are dark-toned and look muddy on a light page.
+        <PlainBackdrop color={glow ?? colors.muted} />
       )}
       <ScrollView
         keyboardShouldPersistTaps="handled"
@@ -139,30 +142,102 @@ function useTabSwipe(inTabs: boolean) {
 }
 
 /**
- * Glass tile: a see-through white gradient (a little brighter at the top) with a lit top edge,
- * so the screen's color tint shows through and the card still reads as a raised pane.
- * Over the photo backgrounds it's tinted dark ("frosted dark glass").
+ * A flat card: one solid fill and a hairline border, no glass or lit edge, so it reads as a plain
+ * panel on any background. Every card should lead somewhere deeper: with `onPress` or `href` the
+ * title row gets "Details ›" and opens the detail screen. Cards with a chart inside keep the plot
+ * for scrubbing, so only the title row is the link; `wholeCard` makes the whole card tappable
+ * (for cards of plain text and numbers).
  */
-export function Card({ title, children }: { title?: string; children: ReactNode }) {
-  const { gradients } = useTheme();
+export function Card({
+  title,
+  children,
+  onPress,
+  href,
+  linkLabel = 'Details',
+  wholeCard = false,
+}: {
+  title?: string;
+  children: ReactNode;
+  onPress?: () => void;
+  href?: Href;
+  /** Text next to the chevron, e.g. "Full day". */
+  linkLabel?: string;
+  wholeCard?: boolean;
+}) {
+  const colors = useColors();
   const styles = useStyles();
-  // Over photos, the glass gets a dark tint so white text stays readable on bright skies and snow.
-  const overPhoto = useBackgroundStyle() === 'scenes';
+  const open = onPress ?? (href ? () => router.push(href) : undefined);
+  const go = open
+    ? () => {
+        tapHaptic();
+        open();
+      }
+    : undefined;
+  const head =
+    title || go ? (
+      <View style={styles.cardHead}>
+        {title ? (
+          <Text style={styles.cardTitle} accessibilityRole="header">
+            {title}
+          </Text>
+        ) : (
+          <View />
+        )}
+        {go ? (
+          <View style={styles.cardLink}>
+            <Text style={styles.cardLinkText}>{linkLabel}</Text>
+            <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }} tintColor={colors.muted} size={16} />
+          </View>
+        ) : null}
+      </View>
+    ) : null;
+  const label = title ? `${title}, ${linkLabel}` : linkLabel;
+
+  if (go && wholeCard) {
+    return (
+      <Pressable onPress={go} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+        {head}
+        {children}
+      </Pressable>
+    );
+  }
   return (
-    <View style={[styles.card, overPhoto && styles.cardOverPhoto]}>
-      <LinearGradient colors={gradients.card} style={styles.cardFill} />
-      {title ? (
-        <Text style={styles.cardTitle} accessibilityRole="header">
-          {title}
-        </Text>
-      ) : null}
+    <View style={styles.card}>
+      {go ? (
+        <Pressable onPress={go} hitSlop={10} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => pressed && styles.pressed}>
+          {head}
+        </Pressable>
+      ) : (
+        head
+      )}
       {children}
     </View>
   );
 }
 
-export function Stat({ label, value, hint, color }: { label: string; value: string; hint?: string; color?: string }) {
+/** A labelled number. With `onPress` it opens that number's detail screen (a "›" marks it). */
+export function Stat({ label, value, hint, color, onPress }: { label: string; value: string; hint?: string; color?: string; onPress?: () => void }) {
   const styles = useStyles();
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={() => {
+          tapHaptic();
+          onPress();
+        }}
+        hitSlop={6}
+        accessibilityRole="button"
+        accessibilityLabel={`${label} ${value}, details`}
+        style={({ pressed }) => [styles.stat, pressed && styles.pressed]}>
+        <View style={styles.statLabelRow}>
+          {color ? <View style={[styles.statDot, { backgroundColor: color }]} /> : null}
+          <Text style={styles.statLabel}>{`${label}  ›`}</Text>
+        </View>
+        <Text style={styles.statValue}>{value}</Text>
+        {hint ? <Text style={styles.statHint}>{hint}</Text> : null}
+      </Pressable>
+    );
+  }
   return (
     <View style={styles.stat}>
       <View style={styles.statLabelRow}>
@@ -272,16 +347,17 @@ const useStyles = makeStyles((colors) => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
   error: { ...type.body, color: colors.recovery.red },
   card: {
+    backgroundColor: colors.card,
     borderColor: colors.border,
-    borderTopColor: colors.cardEdge,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radius.lg,
     padding: spacing.md + 2,
     gap: spacing.md,
   },
-  cardOverPhoto: { backgroundColor: colors.cardOverPhoto },
-  cardFill: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: radius.lg },
-  cardTitle: { ...type.overline, color: colors.muted },
+  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
+  cardTitle: { ...type.overline, color: colors.muted, flexShrink: 1 },
+  cardLink: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  cardLinkText: { ...type.caption, color: colors.muted },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   stat: { flex: 1, gap: 2 },
   statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

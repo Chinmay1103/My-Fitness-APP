@@ -6,6 +6,7 @@ import { fonts, motion } from '@/constants/theme';
 import { makeStyles, useColors } from '@/lib/theme';
 import { useAnimatedTarget } from '@/lib/animation';
 import { tapHaptic } from '@/lib/haptics';
+import { useScores } from '@/lib/ScoresProvider';
 
 /**
  * Pieces every chart shares, so they all look and behave the same: drag-to-scrub, the 7D/14D/30D
@@ -127,6 +128,33 @@ export function ChartHeader({ value, color, title, detail, right }: { value: str
   );
 }
 
+/**
+ * Under every day-by-day chart: once you scrub to a day other than the one the screen shows, a
+ * link that switches the whole screen (and Today, Sleep, Strain, Recovery) to that day, so any bar
+ * leads to that day's full report. `back` counts days back from the latest, like `dayBack`.
+ */
+export function OpenDayLink({ back, date }: { back: number; date?: string }) {
+  const styles = useStyles();
+  const { dayBack, setDayBack } = useScores();
+  const showing = back === dayBack;
+  if (!date || showing) {
+    return <Text style={styles.openHint}>Drag across the chart to pick a day</Text>;
+  }
+  return (
+    <Pressable
+      onPress={() => {
+        tapHaptic();
+        setDayBack(back);
+      }}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityHint="Switches the screen above to this day"
+      style={({ pressed }) => [styles.openLink, pressed && { opacity: 0.6 }]}>
+      <Text style={styles.openLinkText}>{`Show ${dayName(date, back === 0)} above  ↑`}</Text>
+    </Pressable>
+  );
+}
+
 /** Colored dot + name, for charts showing more than one thing. */
 export function Legend({ items }: { items: { label: string; color: string; dashed?: boolean }[] }) {
   const styles = useStyles();
@@ -210,6 +238,9 @@ const useStyles = makeStyles((colors) => StyleSheet.create({
   rangeSelected: { backgroundColor: colors.text },
   rangeText: { color: colors.muted, fontFamily: fonts.bodySemi, fontSize: 11 },
   rangeTextSelected: { color: colors.background },
+  openHint: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 11 },
+  openLink: { alignSelf: 'flex-start', borderColor: colors.border, borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  openLinkText: { color: colors.text, fontFamily: fonts.bodySemi, fontSize: 12 },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendMark: { width: 12, height: 4, borderRadius: 2 },

@@ -10,27 +10,23 @@ import type { TextStyle } from 'react-native';
 type Gradient = readonly [string, string];
 
 /**
- * No blue or navy anywhere: a near-black page with warm greys, and see-through "glass" cards that
- * let each screen's color tint show through. Hex values that get an alpha suffix appended
- * (score colors, `muted`, `hrZones`) must stay 6-digit hex.
+ * No blue or navy anywhere: a near-black page with warm greys, and flat cards (one solid fill, a
+ * hairline border; no glass, gradients or lit edges since Oct 10, which read as too 3D). Gradients
+ * stay on the score rings and charts. Hex values that get an alpha suffix appended (score colors,
+ * `muted`, `hrZones`) must stay 6-digit hex.
  */
 const dark = {
   scheme: 'dark' as 'dark' | 'light',
   background: '#050505',
-  /** Glass card fill, bottom and top of its gradient: white at low opacity over the tinted page. */
-  card: 'rgba(255,255,255,0.035)',
-  cardHighlight: 'rgba(255,255,255,0.085)',
-  /** Dark tint under the glass when the background is a photo, so text reads on bright skies. */
-  cardOverPhoto: 'rgba(8,8,8,0.38)',
-  /** Top edge of a card, as if lit from above. */
-  cardEdge: 'rgba(255,255,255,0.22)',
+  /** Card fill: warm dark grey, nearly opaque so text reads on any background, photos included. */
+  card: 'rgba(24,22,21,0.86)',
   /** Solid dark grey, for the few things that can't be see-through (the refresh spinner's disc). */
   surface: '#1C1A19',
   /** Floating tab bar: dark glass, so the moving background still shows through a little. */
   tabBar: 'rgba(16,15,14,0.86)',
   /** The pill behind the selected tab icon. */
   tabActive: 'rgba(255,255,255,0.12)',
-  border: 'rgba(255,255,255,0.10)',
+  border: 'rgba(255,255,255,0.08)',
   text: '#FAFAF9',
   muted: '#A8A29E',
   /** Empty part of rings and bars. */
@@ -75,16 +71,13 @@ const dark = {
 export type Palette = typeof dark;
 
 /**
- * Light mode: warm paper instead of near-black, frosted white glass cards, and slightly deeper
- * score colors so they keep their contrast on a light page. Same names as the dark palette.
+ * Light mode: warm paper instead of near-black, flat white cards, and slightly deeper score colors
+ * so they keep their contrast on a light page. Same names as the dark palette.
  */
 const light: Palette = {
   scheme: 'light',
   background: '#F4F1EC',
-  card: 'rgba(255,255,255,0.62)',
-  cardHighlight: 'rgba(255,255,255,0.86)',
-  cardOverPhoto: 'rgba(255,255,255,0.55)',
-  cardEdge: 'rgba(255,255,255,0.95)',
+  card: 'rgba(255,255,255,0.9)',
   surface: '#FFFFFF',
   tabBar: 'rgba(255,255,255,0.9)',
   tabActive: 'rgba(28,25,23,0.08)',
@@ -121,7 +114,6 @@ export function gradientsFor(c: Palette) {
       yellow: [lightMode ? '#FFD34D' : '#FFE483', c.recovery.yellow],
       red: [lightMode ? '#FF7F8C' : '#FF97A0', c.recovery.red],
     } satisfies Record<RecoveryZone, Gradient>,
-    card: [c.cardHighlight, c.card] as Gradient,
     neutral: [lightMode ? '#D6D3D1' : '#E7E5E4', c.muted] as Gradient,
   };
 }
@@ -183,7 +175,7 @@ export const type = {
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
 
-export const radius = { sm: 4, md: 12, lg: 20 };
+export const radius = { sm: 4, md: 12, lg: 16 };
 
 /** Durations in ms. Big reveals are slow enough to notice; feedback stays fast. */
 export const motion = {

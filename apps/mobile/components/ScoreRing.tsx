@@ -32,9 +32,7 @@ export function ScoreRing({ label, value, decimals = 0, suffix = '', progress, c
   const colors = useColors();
   const styles = useStyles();
   const stroke = size * 0.09;
-  const glowWidth = stroke * 1.6;
-  // Leave room for the glow so it isn't clipped at the edge.
-  const radius = (size - glowWidth) / 2;
+  const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const target = Math.min(Math.max(progress, 0), 1);
   const [light, dark] = gradientFor(color, colors);
@@ -44,7 +42,6 @@ export function ScoreRing({ label, value, decimals = 0, suffix = '', progress, c
   const filled = useAnimatedTarget(target, motion.ring);
   const counted = useCountUp(value ?? 0, motion.countUp);
   const arcProps = useAnimatedProps(() => ({ strokeDashoffset: circumference * (1 - filled.value) }));
-  const glowProps = useAnimatedProps(() => ({ strokeDashoffset: circumference * (1 - filled.value) }));
 
   const display = value === null ? '--' : `${counted.toFixed(decimals)}${suffix}`;
   const finalDisplay = value === null ? '--' : `${value.toFixed(decimals)}${suffix}`;
@@ -78,20 +75,6 @@ export function ScoreRing({ label, value, decimals = 0, suffix = '', progress, c
           <Circle cx={center} cy={center} r={radius} stroke={colors.track} strokeWidth={stroke} fill="none" />
           {target > 0 ? (
             <>
-              {/* Soft glow: the same arc, wider and faint. */}
-              <AnimatedCircle
-                cx={center}
-                cy={center}
-                r={radius}
-                stroke={dark}
-                strokeOpacity={0.16}
-                strokeWidth={glowWidth}
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray={`${circumference} ${circumference}`}
-                animatedProps={glowProps}
-                transform={rotate}
-              />
               <AnimatedCircle
                 cx={center}
                 cy={center}
@@ -123,7 +106,7 @@ export function ScoreRing({ label, value, decimals = 0, suffix = '', progress, c
 
 const useStyles = makeStyles((colors) => StyleSheet.create({
   wrap: { alignItems: 'center', gap: 8, minWidth: 48 },
-  pressed: { opacity: 0.7, transform: [{ scale: 0.97 }] },
+  pressed: { opacity: 0.7 },
   center: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
   value: { color: colors.text, fontFamily: fonts.number, fontVariant: ['tabular-nums'] },
   label: { ...type.overline, color: colors.muted },

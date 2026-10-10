@@ -1,13 +1,15 @@
-import { ZONE_BOUNDS, type HeartRateSample } from '@fitness/scoring';
-import { useState } from 'react';
-import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { heartRateZone, ZONE_BOUNDS, type HeartRateSample } from '@fitness/scoring';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
 import { fonts } from '@/constants/theme';
 import { makeStyles, useColors } from '@/lib/theme';
-import { RangeSwitch, smoothPath } from './parts';
+import { ChartHeader, RangeSwitch, smoothPath, useScrub } from './parts';
 
 const WINDOWS = [5, 15, 30] as const;
+/** How long a picked moment stays shown after you lift your finger. */
+const PICK_HOLD_MS = 6000;
 const PAD_Y = 8;
 /** One point per this many pixels, each the average of the readings in it. */
 const PX_PER_POINT = 3;
@@ -22,18 +24,30 @@ interface Props {
 
 /**
  * The last few minutes of live heart rate, over faint bands for the five heart-rate zones, so you
- * can see which zone you're in and how fast you come down after an effort. Redraws with every
- * reading, so no reveal animation.
+ * can see which zone you're in and how fast you come down after an effort. Tap or drag across it
+ * to read any moment (to the second); the pick stays a few seconds after you let go and moves left
+ * with the graph as new readings arrive. Redraws with every reading, so no reveal animation.
  */
 export function LiveHeartChart({ samples, restingHr, maxHr, height = 170 }: Props) {
   const colors = useColors();
   const styles = useStyles();
   const [minutes, setMinutes] = useState<number>(WINDOWS[1]);
-  const [width, setWidth] = useState(0);
-  const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
+  const [picked, setPicked] = useState<number | null>(null);
+  const hold = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (hold.current) clearTimeout(hold.current);
+  }, []);
 
   const end = samples.at(-1)?.time ?? Date.now();
   const start = end - minutes * 60_000;
+  const { width, scrubProps } = useScrub((f) => {
+    if (hold.current) clearTimeout(hold.current);
+    setPicked(start + f * (end - start));
+  });
+  const letGo = () => {
+    if (hold.current) clearTimeout(hold.current);
+    hold.current = setTimeout(() => setPicked(null), PICK_HOLD_MS);
+  };
   const shown = samples.filter((s) => s.time >= start);
   const reserve = Math.max(maxHr - restingHr, 1);
   const zoneBpm = ZONE_BOUNDS.map((b) => restingHr + b * reserve);
@@ -71,21 +85,37 @@ export function LiveHeartChart({ samples, restingHr, maxHr, height = 170 }: Prop
 
   const latest = samples.at(-1);
   const avg = values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null;
+  const sel = picked !== null && picked >= start ? nearest(shown, picked) : null;
+  const selZone = sel ? heartRateZone(sel.bpm, restingHr, maxHr) : -1;
+  const selColor = selZone < 0 ? colors.text : colors.hrZones[selZone];
+  const agoS = sel ? Math.round((end - sel.time) / 1000) : 0;
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.header}>
-        <Text style={styles.summary}>
-          {avg != null ? `avg ${avg} · low ${low} · high ${high} bpm` : 'Waiting for readings…'}
-        </Text>
-        <RangeSwitch ranges={WINDOWS} value={minutes} onChange={setMinutes} unit="m" />
-      </View>
+      {sel ? (
+        <ChartHeader
+          value={`${sel.bpm}`}
+          color={selColor}
+          title={`${clockTime(sel.time)} · bpm`}
+          detail={`${selZone < 0 ? 'Everyday' : `Zone ${selZone + 1}`} · ${agoS < 60 ? `${agoS}s` : `${Math.floor(agoS / 60)}m ${agoS % 60}s`} ago`}
+          right={<RangeSwitch ranges={WINDOWS} value={minutes} onChange={setMinutes} unit="m" />}
+        />
+      ) : (
+        <View style={styles.header}>
+          <Text style={styles.summary}>
+            {avg != null ? `avg ${avg} · low ${low} · high ${high} bpm · tap the graph to read a moment` : 'Waiting for readings…'}
+          </Text>
+          <RangeSwitch ranges={WINDOWS} value={minutes} onChange={setMinutes} unit="m" />
+        </View>
+      )}
       <View
-        onLayout={onLayout}
+        {...scrubProps}
+        onTouchEnd={letGo}
+        onTouchCancel={letGo}
         accessible
         accessibilityLabel={avg != null ? `Heart rate, last ${minutes} minutes: average ${avg}, low ${low}, high ${high} beats per minute` : 'No heart rate readings yet'}>
         {width > 0 ? (
-          <Svg width={width} height={height}>
+          <Svg width={width} height={height} pointerEvents="none">
             <Defs>
               <LinearGradient id="liveFill" x1="0" y1="0" x2="0" y2="1">
                 <Stop offset="0" stopColor={colors.restingHr} stopOpacity={0.3} />
@@ -117,6 +147,12 @@ export function LiveHeartChart({ samples, restingHr, maxHr, height = 170 }: Prop
             })}
             {area ? <Path d={area} fill="url(#liveFill)" /> : null}
             <Path d={line} stroke={colors.restingHr} strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            {sel ? (
+              <>
+                <Line x1={xAt(sel.time)} x2={xAt(sel.time)} y1={0} y2={height} stroke={colors.text} strokeOpacity={0.35} />
+                <Circle cx={xAt(sel.time)} cy={yAt(sel.bpm)} r={5} fill={colors.text} stroke={selColor} strokeWidth={2.5} />
+              </>
+            ) : null}
             {latest && latest.time >= start ? (
               <>
                 <Circle cx={Math.min(xAt(latest.time), width - 4)} cy={yAt(latest.bpm)} r={7} fill={colors.restingHr} opacity={0.25} />
@@ -134,6 +170,18 @@ export function LiveHeartChart({ samples, restingHr, maxHr, height = 170 }: Prop
       </View>
     </View>
   );
+}
+
+/** The reading closest to `time`, if one is within 10 seconds of it (a gap shows nothing). */
+function nearest(samples: HeartRateSample[], time: number): HeartRateSample | null {
+  let best: HeartRateSample | null = null;
+  for (const s of samples) if (!best || Math.abs(s.time - time) < Math.abs(best.time - time)) best = s;
+  return best && Math.abs(best.time - time) <= 10_000 ? best : null;
+}
+
+/** "6:42:15 PM": live readings come every second, so seconds matter here. */
+function clockTime(ms: number): string {
+  return new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', second: '2-digit' });
 }
 
 const useStyles = makeStyles((colors) => StyleSheet.create({

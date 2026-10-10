@@ -58,6 +58,7 @@ export default function RootLayout() {
               <Stack.Screen name="account" options={{ title: 'Account' }} />
               <Stack.Screen name="live" options={{ title: 'Live heart rate' }} />
               <Stack.Screen name="metric/[key]" options={{ title: 'Metric' }} />
+              <Stack.Screen name="trend/[key]" options={{ title: 'Sleep detail' }} />
               <Stack.Screen name="activity" options={{ title: 'Activity' }} />
             </Stack>
           </ScoresProvider>
