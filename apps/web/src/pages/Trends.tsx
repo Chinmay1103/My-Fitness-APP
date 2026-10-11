@@ -142,13 +142,17 @@ function missingHint(key: MetricKey): string {
   return '';
 }
 
+/** Days with both numbers needed before the comparison draws a line or calls a link. */
+const MIN_COMPARE_DAYS = 14;
+
 /** Does one thing go with another? E.g. strain against next morning's recovery. */
 function Compare({ rows, first, openDay }: { rows: PageProps['rows']; first: MetricKey; openDay: (d: string) => void }) {
   const [x, setX] = useState<MetricKey>(first === 'recovery' ? 'strain' : first);
   const [y, setY] = useState<MetricKey>('recovery');
   const [when, setWhen] = useState<'same' | 'next'>('next');
   const pts = pairs(rows, x, y, when === 'next');
-  const f = fit(pts);
+  // With a handful of days any line looks "strong"; only call a link once there are enough.
+  const f = pts.length >= MIN_COMPARE_DAYS ? fit(pts) : null;
   const dx = METRICS[x];
   const dy = METRICS[y];
   const options = METRIC_ORDER.map((k) => (
@@ -189,7 +193,13 @@ function Compare({ rows, first, openDay }: { rows: PageProps['rows']; first: Met
             : `: ${lower(dx.label)} doesn't tell you much about ${when === 'next' ? "the next day's " : ''}${lower(dy.label)}.`}
         </p>
       ) : null}
-      {pts.length >= 5 ? (
+      {pts.length && pts.length < MIN_COMPARE_DAYS ? (
+        <p className="muted">
+          Only {pts.length} {pts.length === 1 ? 'day has' : 'days have'} both numbers so far. With fewer than {MIN_COMPARE_DAYS}, any pattern is
+          mostly chance, so no line or verdict yet.
+        </p>
+      ) : null}
+      {pts.length ? (
         <Scatter
           points={pts}
           fit={f}
@@ -198,13 +208,13 @@ function Compare({ rows, first, openDay }: { rows: PageProps['rows']; first: Met
           yLabel={when === 'next' ? `${dy.label}, next day` : dy.label}
           xFormat={dx.format}
           yFormat={dy.format}
-          xZero={dx.zeroBased}
-          yZero={dy.zeroBased}
+          xLimits={dx.domain}
+          yLimits={dy.domain}
           onPick={openDay}
           summary={`${dx.label} against ${dy.label} over ${pts.length} days.`}
         />
       ) : (
-        <Empty>Not enough days with both numbers yet (needs 5).</Empty>
+        <Empty>No days with both numbers in this range yet.</Empty>
       )}
     </Card>
   );
