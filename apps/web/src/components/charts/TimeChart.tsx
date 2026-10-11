@@ -21,6 +21,8 @@ export interface LineSeries {
   faint?: boolean;
   /** Draw across missing days (for things logged now and then, like weight). */
   connectGaps?: boolean;
+  /** A dot on every value (e.g. each gym session). */
+  dots?: boolean;
 }
 
 export interface BarSeries {
@@ -283,12 +285,12 @@ export function TimeChart({ dates, series, height = 220, zeroBased = true, domai
           // A lone point between gaps has no line to sit on: give it a dot.
           // Measurements taken now and then (faint, gaps connected) get a dot on each one; averages don't.
           const lone = s.connectGaps
-            ? s.values.map((v) => v != null && !!s.faint)
+            ? s.values.map((v) => v != null && (!!s.faint || !!s.dots))
             : s.values.map((v, i) => v != null && s.values[i - 1] == null && s.values[i + 1] == null);
           return (
             <g key={si} opacity={s.faint ? 0.35 : 1}>
               <path d={linePath(xs, ys, !!s.connectGaps)} fill="none" stroke={s.color} strokeWidth={s.faint ? 1.5 : 2} strokeLinejoin="round" strokeLinecap="round" />
-              {ys.map((yy, i) => (yy != null && lone[i] && (s.connectGaps ? n <= 120 : true) ? <circle key={i} cx={xs[i]} cy={yy} r={s.faint && !s.connectGaps ? 2 : 3} fill={s.color} /> : null))}
+              {ys.map((yy, i) => (yy != null && lone[i] && (s.connectGaps && !s.dots ? n <= 120 : true) ? <circle key={i} cx={xs[i]} cy={yy} r={s.faint && !s.connectGaps ? 2 : 3} fill={s.color} /> : null))}
             </g>
           );
         })}

@@ -46,6 +46,8 @@ export interface Workout {
   effort: number | null;
   distanceKm: number | null;
   notes: string | null;
+  /** Sets the coach recorded for gym work. */
+  exercises: { name: string; sets: { reps: number | null; weightKg: number | null }[] }[];
 }
 
 export interface Meal {
@@ -210,6 +212,7 @@ export async function fetchDataset(): Promise<Dataset> {
         effort: num(d.effort as number | null),
         distanceKm: num(d.distanceKm as number | null),
         notes: w.notes,
+        exercises: Array.isArray(d.exercises) ? (d.exercises as Workout['exercises']) : [],
       };
     }),
     meals: meals.map((m) => {

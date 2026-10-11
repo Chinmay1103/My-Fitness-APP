@@ -25,6 +25,65 @@ function mulberry32(seed: number) {
 }
 
 /**
+ * Push / pull / legs in turn, with weights creeping up over the year the way a real log does:
+ * steady gains, plateaus, a lift that slips (overhead press) and bodyweight pull-ups adding reps.
+ */
+const PLAN = [
+  {
+    title: 'Push day',
+    lifts: [
+      { name: 'Bench press', start: 50, perMonth: 1.6, reps: 8 },
+      { name: 'Overhead press', start: 35, perMonth: 0.6, reps: 6, slipAfter: 0.6 },
+      { name: 'Incline dumbbell press', start: 18, perMonth: 0.6, reps: 10 },
+      { name: 'Tricep pushdown', start: 20, perMonth: 0.5, reps: 12 },
+      { name: 'Lateral raise', start: 6, perMonth: 0.15, reps: 15 },
+    ],
+  },
+  {
+    title: 'Pull day',
+    lifts: [
+      { name: 'Deadlift', start: 80, perMonth: 2.4, reps: 5 },
+      { name: 'Pull-ups', start: 5, perMonth: 0.5, reps: 0 },
+      { name: 'Barbell row', start: 45, perMonth: 1, reps: 8 },
+      { name: 'Bicep curl', start: 10, perMonth: 0, reps: 10 },
+      { name: 'Face pull', start: 15, perMonth: 0.4, reps: 15 },
+    ],
+  },
+  {
+    title: 'Leg day',
+    lifts: [
+      { name: 'Back squat', start: 60, perMonth: 2, reps: 6 },
+      { name: 'Romanian deadlift', start: 50, perMonth: 1.2, reps: 8 },
+      { name: 'Leg press', start: 100, perMonth: 3, reps: 10 },
+      { name: 'Standing calf raise', start: 40, perMonth: 0, reps: 12 },
+      { name: 'Plank', start: 0, perMonth: 0, reps: 0 },
+    ],
+  },
+];
+
+function demoSession(index: number, start: number) {
+  const day = PLAN[index % PLAN.length]!;
+  const monthsIn = (start - (Date.now() - DEMO_DAYS * 86_400_000)) / (30 * 86_400_000);
+  const progress = monthsIn / (DEMO_DAYS / 30);
+  return {
+    title: day.title,
+    exercises: day.lifts
+      .filter((l) => l.name !== 'Plank')
+      .map((l) => {
+        if (l.reps === 0) {
+          // Bodyweight: reps go up instead of weight.
+          const reps = Math.round(l.start + l.perMonth * monthsIn);
+          return { name: l.name, sets: [reps, reps - 1, reps - 2].map((r) => ({ reps: r, weightKg: null })) };
+        }
+        // Weights move in 2.5 kg plates; the overhead press slips back late in the year.
+        const months = l.slipAfter != null && progress > l.slipAfter ? monthsIn - (progress - l.slipAfter) * 30 : monthsIn;
+        const kg = Math.max(2.5, Math.round((l.start + l.perMonth * months) / 2.5) * 2.5);
+        return { name: l.name, sets: Array.from({ length: 3 }, () => ({ reps: l.reps, weightKg: kg })) };
+      }),
+  };
+}
+
+/**
  * A year and a bit of made-up days from the same generator the phone uses, scored with the real
  * scoring code, so the website can be tried before the band has filled the cloud. Never uploaded.
  */
@@ -82,19 +141,23 @@ export function demoDataset(): Dataset {
     timeZone: undefined,
     demo: true,
     days,
-    workouts: raw.flatMap((d) =>
-      (d.workouts ?? []).map((w) => ({
-        id: w.id,
-        date: localDate(w.start),
-        start: w.start,
-        end: w.end,
-        kind: w.kind,
-        title: w.title ?? null,
-        effort: w.effort ?? null,
-        distanceKm: null,
-        notes: null,
-      })),
-    ),
+    workouts: raw
+      .flatMap((d) => d.workouts ?? [])
+      .map((w, i) => {
+        const gym = w.kind === 'strength' ? demoSession(i, w.start) : null;
+        return {
+          id: w.id,
+          date: localDate(w.start),
+          start: w.start,
+          end: w.end,
+          kind: w.kind,
+          title: gym?.title ?? w.title ?? null,
+          effort: w.effort ?? null,
+          distanceKm: null,
+          notes: null,
+          exercises: gym?.exercises ?? [],
+        };
+      }),
     meals,
     weights,
     habits: generateMockHabits(raw).map((h) => ({ date: h.date, kind: h.kind, amount: h.amount ?? null, note: null })),

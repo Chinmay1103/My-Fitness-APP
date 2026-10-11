@@ -628,6 +628,37 @@ button.stat:not(:disabled):hover {
   margin-top: 0.75rem;
 }
 
+/* Overload ------------------------------------------------------------------------------ */
+
+.badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: var(--track);
+  white-space: nowrap;
+}
+.badge.good {
+  color: var(--good);
+  background: color-mix(in srgb, var(--good) 14%, transparent);
+}
+.badge.bad {
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 14%, transparent);
+}
+.badge.neutral {
+  color: var(--muted);
+}
+.table tr.selected {
+  background: var(--hover);
+}
+.exercise-chart {
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
 /* Notes ----------------------------------------------------------------------------------- */
 
 .note-headline {

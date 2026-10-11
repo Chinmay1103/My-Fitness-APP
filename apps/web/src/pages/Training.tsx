@@ -2,6 +2,7 @@ import { trainingLoad, WEEKLY_ZONE_MINUTES_GOAL } from '@fitness/scoring';
 import { useState } from 'react';
 
 import { Legend, TimeChart } from '../components/charts/TimeChart';
+import { Overload } from '../components/Overload';
 import { Card, DayLink, Empty, StatTile } from '../components/ui';
 import { formatDate, formatMinutes, formatNumber } from '../lib/format';
 import { buildRows, METRICS } from '../lib/metrics';
@@ -56,6 +57,8 @@ export function Training({ data, rows, prevRows, openDay, openTrend }: PageProps
         </div>
         <StatTile def={METRICS.steps} value={summarize(rows, 'steps').avg} previous={summarize(prevRows, 'steps').avg} onClick={() => openTrend('steps')} />
       </div>
+
+      <Overload workouts={workouts} dates={rows.map((r) => r.date)} openDay={openDay} />
 
       <Card title="Training load" subtitle="The last 7 days' average load against the last 28 days'. Days without data count as rest.">
         {latest ? <p className="finding">Now: {LOAD_WORDS[latest.zone!]} (ratio {latest.ratio!.toFixed(2)}).</p> : null}

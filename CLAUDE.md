@@ -58,7 +58,10 @@ median sleep before your best-recovery third of mornings (blended by nights/(nig
 the app scores twice (default, then learned). **Insights** (shown, never scored): `bodyCheck.ts`
 (skin temp, breathing, resting HR vs 30-night robust baseline; 2+ raised = alert), `load.ts`
 (7-day vs 28-day TRIMP ratio), `habits.ts` (next-morning recovery and sleep with vs without each
-habit), `week.ts` (week summary + rule-based focus).
+habit), `week.ts` (week summary + rule-based focus), `lifts.ts` (progressive overload: each exercise's
+best set by estimated max (Epley, reps capped at 12; bodyweight moves by reps), first vs latest session
+→ progressing / holding (±2%) / slipping, "new bests" = sessions that beat every earlier one; muscle
+from the exercise name by keyword rules, `muscleFor`).
 
 Display-only metrics (`steps.ts`, `activity.ts`): `combineSteps` merges band and phone steps per 5
 min and drops ghost steps (band-only, flat heart rate, low cadence); Active Zone Minutes the Fitbit
@@ -130,7 +133,8 @@ summary (`lib/morningSummary.ts`) is a background task defined in `index.ts`; sw
   are built around Health Connect and touch, the website around wide screens and long ranges).
   Read-only view of the cloud copy (`daily_summaries`, workouts, meals, weights, habits, notes,
   weekly reports) over any range (30 days to all time), since the phone only sees 30 days. Pages:
-  Overview, Trends (any metric + "compare two things" scatter), Sleep, Training, Body & food, Habits,
+  Overview, Trends (any metric + "compare two things" scatter, no line or verdict under 14 days),
+  Sleep, Training (progressive overload per muscle and exercise, `components/Overload.tsx`), Body & food, Habits,
   Reports (weekly/monthly table, CSV, print), and a day panel (`?day=` in the hash). Same sign-in,
   same Supabase project and tokens (`src/styles.css` mirrors `constants/theme.ts`; keep them in step),
   installable as an app (manifest + `public/sw.js`). Charts are hand-drawn SVG in

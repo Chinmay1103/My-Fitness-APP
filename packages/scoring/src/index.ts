@@ -13,3 +13,4 @@ export * from "./load";
 export * from "./personal";
 export * from "./habits";
 export * from "./week";
+export * from "./lifts";
