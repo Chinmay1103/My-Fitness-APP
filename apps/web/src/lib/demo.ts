@@ -140,6 +140,8 @@ export function demoDataset(): Dataset {
   return {
     timeZone: undefined,
     demo: true,
+    // The demo diet is a slow cut, so a lower goal weight.
+    goals: { weightKg: 61, calories: 2000, proteinG: 110 },
     days,
     workouts: raw
       .flatMap((d) => d.workouts ?? [])

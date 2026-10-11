@@ -225,28 +225,37 @@ export type Database = {
         Row: {
           base_sleep_need_minutes: number
           birth_date: string | null
+          calorie_target: number | null
           created_at: string
           display_name: string | null
+          goal_weight_kg: number | null
           id: string
           max_hr: number | null
+          protein_target_g: number | null
           timezone: string
         }
         Insert: {
           base_sleep_need_minutes?: number
           birth_date?: string | null
+          calorie_target?: number | null
           created_at?: string
           display_name?: string | null
+          goal_weight_kg?: number | null
           id: string
           max_hr?: number | null
+          protein_target_g?: number | null
           timezone?: string
         }
         Update: {
           base_sleep_need_minutes?: number
           birth_date?: string | null
+          calorie_target?: number | null
           created_at?: string
           display_name?: string | null
+          goal_weight_kg?: number | null
           id?: string
           max_hr?: number | null
+          protein_target_g?: number | null
           timezone?: string
         }
         Relationships: []

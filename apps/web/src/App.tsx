@@ -14,16 +14,18 @@ import { supabase } from './lib/supabase';
 import { Body } from './pages/Body';
 import { Habits } from './pages/Habits';
 import { Overview } from './pages/Overview';
+import { Progress } from './pages/Progress';
 import { Reports } from './pages/Reports';
 import { SignIn } from './pages/SignIn';
 import { Sleep } from './pages/Sleep';
 import { Training } from './pages/Training';
 import { Trends } from './pages/Trends';
 
-type PageKey = 'overview' | 'trends' | 'sleep' | 'training' | 'body' | 'habits' | 'reports';
+type PageKey = 'overview' | 'progress' | 'trends' | 'sleep' | 'training' | 'body' | 'habits' | 'reports';
 
 const PAGES: { key: PageKey; label: string }[] = [
   { key: 'overview', label: 'Overview' },
+  { key: 'progress', label: 'Progress' },
   { key: 'trends', label: 'Trends' },
   { key: 'sleep', label: 'Sleep' },
   { key: 'training', label: 'Training' },
@@ -268,6 +270,7 @@ export function App() {
         ) : (
           <div className={loading ? 'page loading' : 'page'}>
             {route.page === 'overview' ? <Overview {...pageProps} /> : null}
+            {route.page === 'progress' ? <Progress {...pageProps} /> : null}
             {route.page === 'trends' ? <Trends {...pageProps} metric={route.metric} setMetric={(k) => navigate({ metric: k })} /> : null}
             {route.page === 'sleep' ? <Sleep {...pageProps} /> : null}
             {route.page === 'training' ? <Training {...pageProps} /> : null}

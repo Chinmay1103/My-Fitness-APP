@@ -133,7 +133,9 @@ summary (`lib/morningSummary.ts`) is a background task defined in `index.ts`; sw
   are built around Health Connect and touch, the website around wide screens and long ranges).
   Read-only view of the cloud copy (`daily_summaries`, workouts, meals, weights, habits, notes,
   weekly reports) over any range (30 days to all time), since the phone only sees 30 days. Pages:
-  Overview, Trends (any metric + "compare two things" scatter, no line or verdict under 14 days),
+  Overview, Progress (road to the goal weight, food vs daily targets with each day's meals, each lift's
+  sets per session with "go up a step" at 12 reps, training calendar; `src/lib/progress.ts`; goals are
+  `profiles.goal_weight_kg` / `calorie_target` / `protein_target_g`, set by telling the coach), Trends (any metric + "compare two things" scatter, no line or verdict under 14 days),
   Sleep, Training (progressive overload per muscle and exercise, `components/Overload.tsx`), Body & food, Habits,
   Reports (weekly/monthly table, CSV, print), and a day panel (`?day=` in the hash). Same sign-in,
   same Supabase project and tokens (`src/styles.css` mirrors `constants/theme.ts`; keep them in step),
@@ -174,6 +176,6 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | 4c | Dashboard revamp (Oct 10) | Today dashboard with Next steps + metric tiles and drill-downs, phone+band steps, rebuilt hypnogram, light mode, battery limits. Then: flat cards, Plain background (light mode no longer shows the photos), drill-down links on every card and chart, sleep-part detail screens, tap/drag to read the live heart-rate graph. Needs a new EAS build (Weight permission, `userInterfaceStyle: automatic`); then check on the phone which device Health Connect labels steps with (Health data screen) |
 | 4b | Live heart rate + home-screen widget + heart-rate alert (WhatsApp) | Code ready (Oct 6–7); needs a new EAS build and a test with the band |
 | 5 | Trends, weekly report, notifications, MCP server | Done Oct 10 (needs a build to test): body check, training load, learned sleep need, habits, weekly report (Claude writes it via `save_weekly_report`), workout history with lift progress, morning summary notification (background task, Health Connect background read). App icon from the logo-designer skill (`logos/`) |
-| 6 | Website (long-range trends and reports) | Built Oct 10 (`apps/web/`, tried on demo data). To do: `npm run db:push` (extras column), update the phone app, check the site at chinmay1103.github.io/My-Fitness-APP/web/ with real data |
+| 6 | Website (long-range trends and reports) | Built Oct 10 (`apps/web/`, tried on demo data); extras column and goals (Oct 11) pushed, connector redeployed. Progress page added Oct 11. To do: install the Oct 11 preview build, tell the coach the goals, check the site at chinmay1103.github.io/My-Fitness-APP/web/ with real data |
 
 Keep this table up to date when a milestone moves.

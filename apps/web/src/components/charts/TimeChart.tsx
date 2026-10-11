@@ -131,7 +131,14 @@ export function TimeChart({ dates, series, height = 220, zeroBased = true, domai
   const base = invert ? M.top : M.top + plotH;
   const barW = Math.max(1, Math.min(24, step >= 4 ? step - 2 : step));
   const ticks = clockTicks ?? niceTicks(lo, hi);
-  const xTicks = dateTicks(dates);
+  // Drop labels that would run into the one before (a few sessions on a phone-width chart).
+  let lastX = -Infinity;
+  const xTicks = dateTicks(dates).filter((t) => {
+    const x = M.left + step * (t.index + 0.5);
+    if (x - lastX < 52) return false;
+    lastX = x;
+    return true;
+  });
   const fmtY = yFormat ?? ((v: number) => String(v));
   const radius = Math.min(4, barW / 2);
 

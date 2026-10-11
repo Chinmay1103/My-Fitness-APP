@@ -88,6 +88,13 @@ export interface WeeklyReport {
   focus: string;
 }
 
+/** Goals the user told the coach (profile). Any of them may be unset. */
+export interface Goals {
+  weightKg: number | null;
+  calories: number | null;
+  proteinG: number | null;
+}
+
 export interface Dataset {
   days: Day[];
   workouts: Workout[];
@@ -96,6 +103,7 @@ export interface Dataset {
   habits: Habit[];
   notes: CoachNote[];
   reports: WeeklyReport[];
+  goals: Goals;
   timeZone: string | undefined;
   demo: boolean;
 }
@@ -171,7 +179,7 @@ async function readAll<T>(table: string, columns: string, order: string): Promis
 }
 
 export async function fetchDataset(): Promise<Dataset> {
-  const { data: profile } = await supabase.from('profiles').select('timezone').maybeSingle();
+  const { data: profile } = await supabase.from('profiles').select('timezone, goal_weight_kg, calorie_target, protein_target_g').maybeSingle();
   const timeZone: string | undefined = profile?.timezone ?? undefined;
   const [rows, workouts, meals, weights, habits, notes, reports] = await Promise.all([
     readAll<SummaryRow>(
@@ -198,6 +206,7 @@ export async function fetchDataset(): Promise<Dataset> {
   return {
     timeZone,
     demo: false,
+    goals: { weightKg: num(profile?.goal_weight_kg), calories: num(profile?.calorie_target), proteinG: num(profile?.protein_target_g) },
     days: rows.map((r) => dayFromRow(r, timeZone)),
     workouts: workouts.map((w) => {
       const start = Date.parse(w.started_at);

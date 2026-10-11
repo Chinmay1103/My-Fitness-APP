@@ -20,7 +20,7 @@ Recovery (0-100%, green >= 67, yellow 34-66, red < 34) from HRV and resting hear
 Strain (0-21, logarithmic, like Whoop) from heart rate; Sleep (0-100%) from hours slept vs. need and sleep quality.
 The scores are deterministic math; your job is to explain them and coach, not to recompute them. Use get_day_breakdown for the "why".
 Record workouts, meals and weigh-ins the user tells you about with log_workout / log_meal / log_weight (estimate meal macros
-yourself; Indian home food is common), and facts about themselves (name, birth date, sleep need) with update_profile.
+yourself; Indian home food is common), and facts about themselves (name, birth date, sleep need, goal weight, daily calorie and protein targets) with update_profile.
 The app has no forms: everything is recorded through you, so never tell the user to enter something in the app.
 Confirm what you logged in one short line. Times are in the user's time zone (see get_daily_scores). Give wellness guidance, not medical advice.
 When you explain a day, combine the score breakdown with the workouts and meals they logged (list_workouts, list_meals): the band can't
@@ -555,14 +555,14 @@ function buildServer(supabase: Db, userId: string) {
     'get_profile',
     {
       title: 'Profile',
-      description: "The user's name, birth date, time zone and base sleep need.",
+      description: "The user's name, birth date, time zone, base sleep need, and goals (goal weight, daily calorie and protein targets).",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
     async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('display_name, birth_date, timezone, base_sleep_need_minutes, max_hr')
+        .select('display_name, birth_date, timezone, base_sleep_need_minutes, max_hr, goal_weight_kg, calorie_target, protein_target_g')
         .maybeSingle();
       if (error) return fail(error.message);
       return text(data ?? 'No profile yet.');
@@ -574,12 +574,15 @@ function buildServer(supabase: Db, userId: string) {
     {
       title: 'Update profile',
       description:
-        "Save facts the user states about themselves: their name, birth date, time zone, or how much sleep they need. Only what they said; don't guess.",
+        "Save facts the user states about themselves: their name, birth date, time zone, how much sleep they need, or their goals (goal weight, daily calories, daily protein; the website's Progress page measures against these). Only what they said; don't guess.",
       inputSchema: z.object({
         display_name: z.string().min(1).max(60).optional(),
         birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('YYYY-MM-DD'),
         timezone: z.string().optional().describe("IANA name, e.g. 'Asia/Kolkata'"),
         base_sleep_need_minutes: z.number().int().min(300).max(660).optional(),
+        goal_weight_kg: z.number().min(30).max(250).optional(),
+        calorie_target: z.number().int().min(800).max(6000).optional().describe('kcal a day'),
+        protein_target_g: z.number().int().min(20).max(400).optional().describe('grams a day'),
       }),
       annotations: { idempotentHint: true },
     },
