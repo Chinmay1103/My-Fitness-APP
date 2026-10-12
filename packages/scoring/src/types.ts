@@ -33,8 +33,16 @@ export interface SleepSession {
   segments?: SleepSegment[];
 }
 
+export type Sex = "male" | "female";
+
 export interface UserProfile {
   age: number;
+  /** True when `age` comes from the user's birth date rather than a default. */
+  ageKnown?: boolean;
+  /** Latest weigh-in, for workout calories. */
+  weightKg?: number;
+  /** For workout calories (the heart-rate formula differs by sex). Averaged when missing. */
+  sex?: Sex;
   /** Measured max heart rate. Estimated from age when missing. */
   maxHr?: number;
   /** Baseline sleep need before strain and debt adjustments. Defaults to 8h. */

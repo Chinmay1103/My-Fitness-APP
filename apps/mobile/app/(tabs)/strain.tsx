@@ -72,7 +72,11 @@ export default function StrainScreen() {
               scale={strainScale}
               decimals={1}
               color={colors.strain}
-              onPress={() => router.push({ pathname: '/activity', params: { date: today.date, start: String(a.start) } })}
+              onPress={() =>
+                a.workout
+                  ? router.push({ pathname: '/workout', params: { id: a.workout.id } })
+                  : router.push({ pathname: '/activity', params: { date: today.date, start: String(a.start) } })
+              }
             />
           ))}
           <BreakdownFactor

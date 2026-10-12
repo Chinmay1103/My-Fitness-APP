@@ -30,8 +30,10 @@ The app opens a new chat for each question, so at the start of a conversation ca
 them on recent days and pick up from there (e.g. "yesterday you planned a rest day; recovery agrees").
 For workouts, record the exact start and end time ("from 6:10 to 7:05 pm"); ask if they only give a rough time. The app matches
 those times to the band's heart rate, and list_workouts then shows what the band measured during each one (avg/peak heart rate,
-minutes of effort, strain). Use that to tell them how hard it really was, e.g. a run that stayed in zone 2 or a lifting session
-the heart barely noticed.
+minutes per zone, strain, calories burned, and the 1-10 effort heart rate matched). Use that to tell them how hard it really was,
+e.g. a run that stayed in zone 2 or a lifting session the heart barely noticed, and what it cost in calories. Calories need their
+weight (log_weight), birth date and sex (update_profile); if calories_basis shows defaults, ask once. Always save the overall
+session effort (1-10, halves allowed) in log_workout's effort field, not just in notes; fix older ones with update_workout.
 Log habits that can affect sleep and recovery with log_habit whenever they come up (drinks, late coffee, a late dinner, screens
 in bed, stress, meditation), using the same short kinds each time; the app shows what each one does to their mornings.
 When they ask for a weekly report (or it's Sunday or Monday and they ask how the week went), read get_week_summary and save it
@@ -170,7 +172,13 @@ function buildServer(supabase: Db, userId: string) {
         ended_at: z.string().optional().describe('When it ended, ISO 8601 with the UTC offset. Prefer this over minutes'),
         minutes: z.number().int().min(1).max(600).optional().describe('Length, if the user gave a duration instead of an end time'),
         title: z.string().max(80).optional().describe("Short name, e.g. 'Push day' or 'Easy 5k'"),
-        effort: z.number().int().min(1).max(10).optional().describe('How hard it felt, 1 (very easy) to 10 (all out). Ask if the user did not say'),
+        effort: z
+          .number()
+          .min(1)
+          .max(10)
+          .multipleOf(0.5)
+          .optional()
+          .describe('How hard the whole session felt, 1 (very easy) to 10 (all out); halves allowed (8.5). Put it here, not only in notes: the app reads only this field. Ask if the user did not say'),
         distance_km: z.number().min(0).max(500).optional(),
         exercises: z
           .array(
@@ -252,11 +260,51 @@ function buildServer(supabase: Db, userId: string) {
   );
 
   server.registerTool(
+    'update_workout',
+    {
+      title: 'Fix a logged workout',
+      description:
+        "Change a workout already logged (id from list_workouts): its overall effort rating, start/end time, title or notes. Use it when the user corrects something, or to add the effort rating to a workout that has none (e.g. it is only in the notes). Only the fields given change.",
+      inputSchema: z.object({
+        id: z.string().uuid(),
+        effort: z.number().min(1).max(10).multipleOf(0.5).optional().describe('Overall session effort, 1-10, halves allowed'),
+        started_at: z.string().optional().describe("ISO 8601 with the user's UTC offset"),
+        ended_at: z.string().optional().describe("ISO 8601 with the user's UTC offset"),
+        title: z.string().max(80).optional(),
+        notes: z.string().max(1000).optional(),
+      }),
+      annotations: { idempotentHint: true },
+    },
+    async ({ id, effort, started_at, ended_at, title, notes }) => {
+      const { data: row, error: readError } = await supabase.from('workouts').select('started_at, ended_at, details').eq('id', id).maybeSingle();
+      if (readError) return fail(readError.message);
+      if (!row) return fail('No workout with that id. Get it from list_workouts.');
+      const start = started_at ? new Date(started_at) : new Date(row.started_at);
+      const end = ended_at ? new Date(ended_at) : row.ended_at ? new Date(row.ended_at) : null;
+      if (Number.isNaN(start.getTime()) || (end && Number.isNaN(end.getTime()))) return fail("Couldn't read the times.");
+      if (end && (end <= start || end.getTime() - start.getTime() > 10 * 3_600_000)) return fail('ended_at must be after started_at and within 10 hours.');
+      const details = { ...((row.details ?? {}) as Record<string, unknown>), ...(effort != null ? { effort } : {}) };
+      const { error } = await supabase
+        .from('workouts')
+        .update({
+          started_at: start.toISOString(),
+          ...(end ? { ended_at: end.toISOString() } : {}),
+          ...(title != null ? { title } : {}),
+          ...(notes != null ? { notes } : {}),
+          details: details as Json,
+        })
+        .eq('id', id);
+      if (error) return fail(error.message);
+      return text({ updated: 'workout', id });
+    },
+  );
+
+  server.registerTool(
     'list_workouts',
     {
       title: 'Recent workouts',
       description:
-        "Workouts the user logged in the last N days, newest first. `band` is what the band measured during it (after the phone app has synced that day): heart rate, minutes of effort, strain, and how much of the strain came from the effort rating.",
+        "Workouts the user logged in the last N days, newest first. `measured` is the phone's analysis of exactly the logged start-to-end time (after the app has synced that day): strain of the workout alone (0-21) and its level, avg/peak heart rate, average % of heart-rate reserve, minutes per zone, `heart_rate_effort` (the 1-10 rating heart rate alone matches, to compare with the rating they gave), and calories burned (total and active, from heart rate with the Keytel formula; `calories_basis` says whether weight, age and sex were theirs or defaults). `band` is the stretch of effort the band detected around it and the strain it added to the day.",
       inputSchema: z.object({ days: z.number().int().min(1).max(90).default(7) }),
       annotations: { readOnlyHint: true },
     },
@@ -271,12 +319,13 @@ function buildServer(supabase: Db, userId: string) {
       // The phone matches workouts to the band's stretches of effort and uploads them in the day's scores.
       const dates = [...new Set(data.map((w) => localDate(new Date(w.started_at), timeZone)))];
       const { data: summaries } = dates.length
-        ? await supabase.from('daily_summaries').select('date, scores').in('date', dates)
+        ? await supabase.from('daily_summaries').select('date, scores, extras').in('date', dates)
         : { data: [] };
       type Activity = { start: number; end: number; minutes: number; avgBpm: number; maxBpm: number; strain: number; effortStrain?: number; workout?: { id: string } };
       const activities = (summaries ?? []).flatMap(
         (row) => ((row.scores as { strain?: { activities?: Activity[] } } | null)?.strain?.activities ?? []),
       );
+      const measured = (summaries ?? []).flatMap((row) => ((row.extras as { workouts?: { id: string }[] } | null)?.workouts ?? []));
       return text(
         data.map((w) => {
           const a = activities.find((x) => x.workout?.id === w.id);
@@ -284,6 +333,7 @@ function buildServer(supabase: Db, userId: string) {
             ...w,
             started_at: localTime(w.started_at, timeZone),
             ended_at: localTime(w.ended_at, timeZone),
+            measured: measured.find((m) => m.id === w.id) ?? 'not measured yet: the phone app works it out the next time it is opened',
             band: a
               ? {
                   effort_from: localTime(new Date(a.start).toISOString(), timeZone),
@@ -555,14 +605,14 @@ function buildServer(supabase: Db, userId: string) {
     'get_profile',
     {
       title: 'Profile',
-      description: "The user's name, birth date, time zone, base sleep need, and goals (goal weight, daily calorie and protein targets).",
+      description: "The user's name, birth date, sex, time zone, base sleep need, max heart rate, and goals (goal weight, daily calorie and protein targets).",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
     async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('display_name, birth_date, timezone, base_sleep_need_minutes, max_hr, goal_weight_kg, calorie_target, protein_target_g')
+        .select('display_name, birth_date, sex, timezone, base_sleep_need_minutes, max_hr, goal_weight_kg, calorie_target, protein_target_g')
         .maybeSingle();
       if (error) return fail(error.message);
       return text(data ?? 'No profile yet.');
@@ -574,10 +624,12 @@ function buildServer(supabase: Db, userId: string) {
     {
       title: 'Update profile',
       description:
-        "Save facts the user states about themselves: their name, birth date, time zone, how much sleep they need, or their goals (goal weight, daily calories, daily protein; the website's Progress page measures against these). Only what they said; don't guess.",
+        "Save facts the user states about themselves: their name, birth date, sex, time zone, how much sleep they need, a measured max heart rate, or their goals (goal weight, daily calories, daily protein; the website's Progress page measures against these). Only what they said; don't guess.",
       inputSchema: z.object({
         display_name: z.string().min(1).max(60).optional(),
         birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('YYYY-MM-DD'),
+        sex: z.enum(['male', 'female']).optional().describe('Used for workout calories (the heart-rate formula differs by sex)'),
+        max_hr: z.number().int().min(120).max(230).optional().describe('Only a measured max heart rate; otherwise the app estimates it from age'),
         timezone: z.string().optional().describe("IANA name, e.g. 'Asia/Kolkata'"),
         base_sleep_need_minutes: z.number().int().min(300).max(660).optional(),
         goal_weight_kg: z.number().min(30).max(250).optional(),

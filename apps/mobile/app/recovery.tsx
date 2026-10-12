@@ -8,11 +8,12 @@ import { ScoreRing } from '@/components/ScoreRing';
 import { DayPager } from '@/components/Swipe';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Screen } from '@/components/ui';
-import { KINDS, type WorkoutKind } from '@/lib/workouts';
+import { WhyCard } from '@/components/WhyCard';
+import { dayBeforeLines, sleepLine } from '@/lib/why';
 import { type } from '@/constants/theme';
 import { makeStyles, useColors } from '@/lib/theme';
 import { FACTOR_LABELS, RECOVERY_GUIDANCE, recoveryFactorDetail } from '@/lib/insights';
-import { formatDate, formatMinutes, formatTime } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 
 export default function RecoveryScreen() {
@@ -155,57 +156,18 @@ const FACTOR_SCREENS: Record<string, Href> = {
 };
 
 /**
- * What happened the day before this morning's score: strain and what made it, logged workouts,
- * late meals and the night's sleep. The band can't see a late dinner; this puts it next to the score.
- * Explains only; none of it changes the score beyond what's in the breakdown above.
+ * What happened the day before this morning's score: strain and its workouts, late workouts, late
+ * meals, habits and the night's sleep. The band can't see a late dinner; this puts it next to the
+ * score. Explains only; none of it changes the score beyond what's in the breakdown above.
  */
 function LedHereCard() {
-  const styles = useStyles();
-  const { days, metrics } = useScores();
-  const { score, previous, index } = useSelectedDay();
-  const before = days[index - 1];
-  const meals = metrics[index - 1]?.nutrition.meals ?? [];
-  const lateMeals = meals.filter((m) => new Date(m.eatenAt).getHours() >= 21);
-  const lines: { text: string; href: Href }[] = [];
-  if (previous) {
-    const workouts = before?.workouts ?? [];
-    lines.push({
-      text: `Strain ${previous.strain.strain.toFixed(1)} the day before${
-        workouts.length
-          ? `, with ${workouts.map((w) => w.title || KINDS[w.kind as WorkoutKind]?.label || 'a workout').join(' and ')}`
-          : previous.strain.activities.length
-            ? `, ${previous.strain.activities.length} stretch${previous.strain.activities.length === 1 ? '' : 'es'} of effort`
-            : ''
-      }.`,
-      href: '/strain',
-    });
-  }
-  if (lateMeals.length) {
-    lines.push({
-      text: `Late eating: ${lateMeals.map((m) => `${m.description ?? 'a meal'} at ${formatTime(m.eatenAt)}`).join(', ')}. Digesting late often raises resting heart rate overnight.`,
-      href: { pathname: '/metric/[key]', params: { key: 'caloriesIn' } },
-    });
-  }
-  if (score?.sleep) {
-    lines.push({
-      text: `Slept ${formatMinutes(score.sleep.asleepMinutes)} of the ${formatMinutes(score.sleep.needMinutes)} needed (sleep ${score.sleep.score}%).`,
-      href: '/sleep',
-    });
-  }
-  if (!lines.length) return null;
-  return (
-    <Card title="WHAT LED HERE">
-      {lines.map((l) => (
-        <Text key={l.text} style={styles.led} onPress={() => router.push(l.href)} accessibilityRole="link">
-          {`${l.text}  ›`}
-        </Text>
-      ))}
-    </Card>
-  );
+  const ctx = useScores();
+  const { score, index } = useSelectedDay();
+  const sleep = sleepLine(score);
+  return <WhyCard lines={[...dayBeforeLines(ctx, index, 'recovery'), ...(sleep ? [sleep] : [])]} />;
 }
 
-const useStyles = makeStyles((colors) => StyleSheet.create({
+const useStyles = makeStyles(() => StyleSheet.create({
   hero: { alignItems: 'center', gap: 10 },
   verdict: { ...type.title, textAlign: 'center' },
-  led: { ...type.body, color: colors.text },
 }));

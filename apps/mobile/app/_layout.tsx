@@ -64,6 +64,7 @@ export default function RootLayout() {
               <Stack.Screen name="weekly" options={{ title: 'Weekly report' }} />
               <Stack.Screen name="habits" options={{ title: 'Habits' }} />
               <Stack.Screen name="workouts" options={{ title: 'Workouts' }} />
+              <Stack.Screen name="workout" options={{ title: 'Workout' }} />
             </Stack>
           </ScoresProvider>
         </AuthProvider>

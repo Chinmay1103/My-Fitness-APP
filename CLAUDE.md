@@ -64,8 +64,17 @@ best set by estimated max (Epley, reps capped at 12; bodyweight moves by reps), 
 from the exercise name by keyword rules, `muscleFor`).
 
 Display-only metrics (`steps.ts`, `activity.ts`): `combineSteps` merges band and phone steps per 5
-min and drops ghost steps (band-only, flat heart rate, low cadence); Active Zone Minutes the Fitbit
+min and drops ghost steps (band-only, flat heart rate, low cadence); phone-only steps count only when
+the band was off (no heart rate or band steps within 10 min), else they're the same walk filed in a
+neighbouring window (`phoneOverlap`; before Oct 12 they were added and totals beat both devices); Active Zone Minutes the Fitbit
 way (1/min fat burn, 2/min cardio and peak; 150 a week).
+
+**Workouts** (`workout.ts`, display only): `analyzeWorkout` measures a logged workout over exactly its
+start-to-end time: zones, TRIMP, strain of the workout alone (same TRIMP + effort top-up rule as the
+day, breakdown by zone + effort), the 1-10 effort heart rate alone matches, and calories: 1 MET
+resting (1 kcal/kg/h) + Keytel 2005 per zone above it (below zone 1 blends from rest to the formula's
+value at 30% reserve) + Compendium METs for minutes without heart rate. Uses the weigh-in before it,
+age from `profiles.birth_date`, `profiles.sex` (formulas averaged when unknown); defaults are flagged.
 
 When changing a formula, check the numbers on mock data still look like a real Whoop week, not
 just that tests pass.
@@ -101,7 +110,12 @@ summary (`lib/morningSummary.ts`) is a background task defined in `index.ts`; sw
   logged workouts and meals into a **coach note** (`save_daily_note` -> `daily_notes` table) that the
   Today screen shows under the rings (`lib/coachNote.ts`, `components/CoachNoteCard.tsx`). The note
   explains; it never changes a score. `lib/workouts.ts` holds the workout model
-  and matches workouts to band-detected activities. Shared data comes from
+  and matches workouts to band-detected activities. `app/workout.tsx` is one workout: how hard you pushed
+  (WHY strain by zone) and calories (WHY kcal), from `lib/workoutAnalysis.ts`; the per-workout numbers are
+  synced in `daily_summaries.extras.workouts` for the coach's list_workouts. "What led here" sentences
+  (`lib/why.ts`, `components/WhyCard.tsx`) sit on Recovery, Sleep and every metric screen. The real
+  profile (birth date, max HR, sex) is read in `lib/profile.ts` and used for scoring (demo data keeps
+  `MOCK_PROFILE`; the morning-summary background task still uses it). Shared data comes from
   `lib/ScoresProvider.tsx`; UI pieces live in `components/`;
   **live heart rate** (`app/live.tsx`, `lib/liveHeartRate.ts`) reads the band's standard Bluetooth
   heart-rate signal ("Share heart rate" in Google Health) via react-native-ble-plx, kept alive in
@@ -176,6 +190,7 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | 4c | Dashboard revamp (Oct 10) | Today dashboard with Next steps + metric tiles and drill-downs, phone+band steps, rebuilt hypnogram, light mode, battery limits. Then: flat cards, Plain background (light mode no longer shows the photos), drill-down links on every card and chart, sleep-part detail screens, tap/drag to read the live heart-rate graph. Needs a new EAS build (Weight permission, `userInterfaceStyle: automatic`); then check on the phone which device Health Connect labels steps with (Health data screen) |
 | 4b | Live heart rate + home-screen widget + heart-rate alert (WhatsApp) | Code ready (Oct 6–7); needs a new EAS build and a test with the band |
 | 5 | Trends, weekly report, notifications, MCP server | Done Oct 10 (needs a build to test): body check, training load, learned sleep need, habits, weekly report (Claude writes it via `save_weekly_report`), workout history with lift progress, morning summary notification (background task, Health Connect background read). App icon from the logo-designer skill (`logos/`) |
+| 4d | Workout effort + calories, "why" everywhere (Oct 12) | Code ready: workout screen, steps double-count fix, real profile in scoring, connector `update_workout` + half-point effort + sex. To do: `npm run db:push` (sex column), redeploy the mcp function, have the coach add effort ratings to past workouts and your birth date and sex |
 | 6 | Website (long-range trends and reports) | Built Oct 10 (`apps/web/`, tried on demo data); extras column and goals (Oct 11) pushed, connector redeployed. Progress page added Oct 11. To do: install the Oct 11 preview build, tell the coach the goals, check the site at chinmay1103.github.io/My-Fitness-APP/web/ with real data |
 
 Keep this table up to date when a milestone moves.

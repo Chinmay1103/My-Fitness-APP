@@ -1,4 +1,4 @@
-import { activeZoneMinutes, estimateMaxHr, MOCK_PROFILE } from '@fitness/scoring';
+import { activeZoneMinutes, estimateMaxHr } from '@fitness/scoring';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -21,7 +21,7 @@ export default function ActivityScreen() {
   const { date, start } = useLocalSearchParams<{ date: string; start: string }>();
   const colors = useColors();
   const styles = useStyles();
-  const { scores, days } = useScores();
+  const { scores, days, profile } = useScores();
   const score = scores.find((s) => s.date === date);
   const day = days.find((d) => d.date === date);
   const activity = score?.strain.activities.find((a) => String(a.start) === start);
@@ -37,9 +37,9 @@ export default function ActivityScreen() {
   const kind = (activity.workout?.kind ?? 'other') as WorkoutKind;
   const title = activity.workout ? activity.workout.title || KINDS[kind]?.label || 'Workout' : 'Activity';
   const restingHr = day.restingHr ?? 60;
-  const maxHr = estimateMaxHr(MOCK_PROFILE);
+  const maxHr = estimateMaxHr(profile);
   const inside = day.heartRate.filter((s) => s.time >= activity.start && s.time <= activity.end);
-  const zones = activeZoneMinutes(inside, restingHr, MOCK_PROFILE);
+  const zones = activeZoneMinutes(inside, restingHr, profile);
   const share = score.strain.strain > 0 ? Math.round((activity.strain / score.strain.strain) * 100) : 0;
 
   return (
@@ -84,6 +84,10 @@ export default function ActivityScreen() {
           ) : (
             <Muted>No effort rating, so strain is from heart rate only. Tell the coach how hard it felt (1–10) to count lifting properly.</Muted>
           )}
+          <Button
+            label="How hard you pushed, and calories"
+            onPress={() => router.push({ pathname: '/workout', params: { id: activity.workout!.id } })}
+          />
         </Card>
       ) : (
         <Card title="WHAT WAS THIS?">

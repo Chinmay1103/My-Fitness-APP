@@ -13,6 +13,8 @@ import { makeStyles, useColors } from '@/lib/theme';
 import { formatDate, formatMinutes } from '@/lib/format';
 import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 import { trendHref, type TrendKey } from '@/lib/trends';
+import { dayBeforeLines } from '@/lib/why';
+import { WhyCard } from '@/components/WhyCard';
 
 const open = (key: TrendKey) => () => router.push(trendHref(key));
 
@@ -26,8 +28,9 @@ const STAGES = [
 export default function SleepScreen() {
   const colors = useColors();
   const styles = useStyles();
-  const { scores, learnedNeed } = useScores();
-  const { score, day, previous, isLatest } = useSelectedDay();
+  const ctx = useScores();
+  const { scores, learnedNeed } = ctx;
+  const { score, day, previous, isLatest, index } = useSelectedDay();
   const sleep = score?.sleep;
   const need = score?.sleepNeed;
   const priorStrain = previous?.strain.strain;
@@ -104,6 +107,12 @@ export default function SleepScreen() {
         </Breakdown>
         <Muted>Hours matter most: quality can take up to 30% off, but a short night can never score high.</Muted>
       </Card>
+
+      <WhyCard
+        title={isLatest ? 'WHAT LED TO LAST NIGHT' : 'WHAT LED TO THAT NIGHT'}
+        lines={dayBeforeLines(ctx, index, 'sleep')}
+        footnote="What happened the day before. Strain adds to how much sleep you need; late meals, late workouts, caffeine and alcohol tend to cut deep sleep."
+      />
 
       {need ? (
         <Card title={`${isLatest ? 'LAST NIGHT ' : ''}YOU NEEDED ${formatMinutes(need.total).toUpperCase()}`} onPress={open('sleepNeed')} linkLabel="30 days">

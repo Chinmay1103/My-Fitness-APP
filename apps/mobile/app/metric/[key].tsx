@@ -12,6 +12,8 @@ import { formatCount, formatDate, formatMinutes, formatTime } from '@/lib/format
 import { DAILY_ZONE_GOAL, METRICS, metricStatus, normalRange, STEP_GOAL, type DayMetrics, type MetricDef, type MetricKey } from '@/lib/metrics';
 import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 import { makeStyles, useColors } from '@/lib/theme';
+import { metricLines } from '@/lib/why';
+import { WhyCard } from '@/components/WhyCard';
 
 /**
  * One metric up close: the picked day's value against your normal, 30 days of it, what feeds it
@@ -22,7 +24,8 @@ export default function MetricScreen() {
   const def = METRICS[key as MetricKey];
   const colors = useColors();
   const styles = useStyles();
-  const { metrics } = useScores();
+  const ctx = useScores();
+  const { metrics } = ctx;
   const { index, isLatest, score } = useSelectedDay();
   if (!def) {
     return (
@@ -72,6 +75,8 @@ export default function MetricScreen() {
         </DayPager>
       </Card>
 
+      <WhyCard title={value != null ? `WHY ${def.format(value)} ${def.unit}`.toUpperCase() : 'WHY'} lines={metricLines(def, ctx, index)} />
+
       {m ? <Extra def={def} m={m} metrics={metrics} index={index} /> : null}
 
       <Card title="LAST 30 DAYS">
@@ -110,9 +115,11 @@ function Extra({ def, m, metrics, index }: { def: MetricDef; m: DayMetrics; metr
           </Row>
           <HourBars values={m.steps.hourly} color={colors.steps} format={formatCount} />
           <Muted>
-            {m.steps.phone === 0
-              ? 'No phone steps that day, so only heart rate could confirm the band’s count.'
-              : `Counted: ${formatCount(m.steps.total)} toward your goal of ${formatCount(STEP_GOAL)}, hour by hour above.`}
+            {`${formatCount(m.steps.band)} band − ${formatCount(m.steps.ghost)} ghost + ${formatCount(m.steps.phoneOnly)} phone-only = ${formatCount(m.steps.total)} toward your goal of ${formatCount(STEP_GOAL)}.${
+              m.steps.phoneOverlap
+                ? ` ${formatCount(m.steps.phoneOverlap)} phone steps weren't added: the band was on your wrist then and counted the same walk a few minutes apart.`
+                : ''
+            }${m.steps.phone === 0 ? ' No phone steps that day, so only heart rate could confirm the band’s count.' : ''}`}
           </Muted>
         </Card>
       );

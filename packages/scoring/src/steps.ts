@@ -11,6 +11,13 @@ const SUSTAINED_WINDOW_STEPS = 80 * STEP_WINDOW_MINUTES;
 /** When both counted, the band may be at most this much above the phone (wrist vs pocket differ a little). */
 const BAND_OVER_PHONE_RATIO = 1.3;
 const BAND_OVER_PHONE_EXTRA = 30;
+/**
+ * Phone steps with no band steps in the same window are only "band off" when the band shows no sign
+ * of being worn this close by (heart rate, or its own steps, within this many windows either side).
+ * The two devices cut the same walk into records with different time boundaries (the band's arrive
+ * in batches through Google Health), so a walk often lands in neighbouring windows on each.
+ */
+const NEIGHBOUR_WINDOWS = 2;
 
 /** Which device counted a stretch of steps. Unknown devices are treated as the band. */
 export type StepDevice = "band" | "phone";
@@ -32,6 +39,11 @@ export interface StepTotals {
   ghost: number;
   /** Steps only the phone counted (band off the wrist or charging). Included in `total`. */
   phoneOnly: number;
+  /**
+   * Phone steps left out because the band was being worn then: the band counted the same walk, just
+   * in a neighbouring 5-minute window. Not in `total`.
+   */
+  phoneOverlap: number;
   /** Believed steps per local hour, 0 = midnight to 1 AM. */
   hourly: number[];
 }
@@ -59,7 +71,9 @@ function bucket(records: StepRecord[], device: StepDevice): Map<number, number> 
  *   (and never the phone's when it's higher: a phone bouncing in a vehicle counts steps too);
  * - only the band: keep it if heart rate rose or the cadence was a real walk, else it's ghost steps;
  *   with no heart rate to check against, keep it;
- * - only the phone: keep it (the band was off).
+ * - only the phone: keep it only if the band was off (no heart rate and no band steps within 10
+ *   minutes); otherwise the band counted the same walk in a neighbouring window, and adding the
+ *   phone's too would count it twice.
  */
 export function combineSteps(records: StepRecord[], heartRate: HeartRateSample[], restingHr: number): StepTotals {
   const band = bucket(records, "band");
@@ -77,6 +91,11 @@ export function combineSteps(records: StepRecord[], heartRate: HeartRateSample[]
   let total = 0;
   let ghost = 0;
   let phoneOnly = 0;
+  let phoneOverlap = 0;
+  const near = (m: Map<number, unknown>, w: number) => {
+    for (let k = -NEIGHBOUR_WINDOWS; k <= NEIGHBOUR_WINDOWS; k++) if (m.has(w + k * WINDOW)) return true;
+    return false;
+  };
   for (const w of new Set([...band.keys(), ...phone.keys()])) {
     const b = band.get(w) ?? 0;
     const p = phone.get(w) ?? 0;
@@ -87,6 +106,9 @@ export function combineSteps(records: StepRecord[], heartRate: HeartRateSample[]
       const h = hr.get(w);
       const walking = !h || h.sum / h.n >= restingHr + WALKING_HR_LIFT || b >= SUSTAINED_WINDOW_STEPS;
       kept = walking ? b : 0;
+    } else if (near(hr, w) || near(band, w)) {
+      kept = 0;
+      phoneOverlap += p;
     } else {
       kept = p;
       phoneOnly += p;
@@ -104,6 +126,7 @@ export function combineSteps(records: StepRecord[], heartRate: HeartRateSample[]
     phone: Math.round(sum(phone)),
     ghost: Math.round(ghost),
     phoneOnly: Math.round(phoneOnly),
+    phoneOverlap: Math.round(phoneOverlap),
     hourly: hourly.map(Math.round),
   };
 }

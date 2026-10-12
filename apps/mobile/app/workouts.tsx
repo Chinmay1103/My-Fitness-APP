@@ -1,3 +1,4 @@
+import { strainLevel } from '@fitness/scoring';
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useMemo, useState } from 'react';
@@ -6,11 +7,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Sparkline } from '@/components/charts/Sparkline';
 import { Card, Muted, Screen } from '@/components/ui';
 import { fonts, spacing, type, withAlpha } from '@/constants/theme';
-import { formatMinutes, formatTime, localDate } from '@/lib/format';
+import { formatCount, formatMinutes, formatTime, localDate } from '@/lib/format';
 import { tapHaptic } from '@/lib/haptics';
 import type { LoggedWorkoutDetail } from '@/lib/logged';
 import { useScores } from '@/lib/ScoresProvider';
 import { makeStyles, useColors } from '@/lib/theme';
+import { workoutAnalysis } from '@/lib/workoutAnalysis';
 import { KINDS, effortLabel, type WorkoutKind } from '@/lib/workouts';
 
 interface Lift {
@@ -26,7 +28,7 @@ interface Lift {
 export default function WorkoutsScreen() {
   const colors = useColors();
   const styles = useStyles();
-  const { scores, days, logged } = useScores();
+  const { scores, days, logged, profile } = useScores();
 
   const workouts = useMemo(() => {
     const byId = new Map<string, LoggedWorkoutDetail>(logged.workouts.map((w) => [w.id, w]));
@@ -59,6 +61,7 @@ export default function WorkoutsScreen() {
   }, [workouts]);
 
   const totalStrain = workouts.slice(0, 7).reduce((sum, w) => sum + (bandFor(w)?.activity.strain ?? 0), 0);
+  const totalKcal = workouts.slice(0, 7).reduce((sum, w) => sum + (workoutAnalysis(w, days, logged, profile)?.calories.total ?? 0), 0);
 
   return (
     <Screen back overline="WORKOUTS" title="History" glow={colors.strain}>
@@ -75,6 +78,7 @@ export default function WorkoutsScreen() {
         <Card title={`${workouts.length} WORKOUT${workouts.length === 1 ? '' : 'S'}`}>
           {workouts.slice(0, 40).map((w, i) => {
             const band = bandFor(w);
+            const measured = i < 40 ? workoutAnalysis(w, days, logged, profile) : null;
             const kind = (KINDS[w.kind as WorkoutKind] ? w.kind : 'other') as WorkoutKind;
             const minutes = Math.round((w.end - w.start) / 60_000);
             const details = [
@@ -86,13 +90,12 @@ export default function WorkoutsScreen() {
             return (
               <Pressable
                 key={w.id}
-                disabled={!band}
+                disabled={!measured}
                 onPress={() => {
-                  if (!band) return;
                   tapHaptic();
-                  router.push({ pathname: '/activity', params: { date: band.date, start: String(band.activity.start) } });
+                  router.push({ pathname: '/workout', params: { id: w.id } });
                 }}
-                accessibilityRole={band ? 'button' : undefined}
+                accessibilityRole={measured ? 'button' : undefined}
                 style={({ pressed }) => [styles.row, i > 0 && styles.divider, pressed && styles.pressed]}>
                 <View style={[styles.icon, { backgroundColor: withAlpha(colors.strain, 0.16) }]}>
                   <SymbolView name={KINDS[kind].icon} tintColor={colors.strain} size={18} />
@@ -102,16 +105,16 @@ export default function WorkoutsScreen() {
                   <Text style={styles.date}>{new Date(w.start).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</Text>
                   <Text style={styles.detail}>{details.join(' · ')}</Text>
                   <Text style={styles.detail}>
-                    {band
-                      ? `Band: strain ${band.activity.strain.toFixed(1)}${band.activity.avgBpm ? ` · avg ${band.activity.avgBpm} bpm · peak ${band.activity.maxBpm}` : ''}${band.activity.effortStrain ? ` · +${band.activity.effortStrain.toFixed(1)} from effort` : ''}`
-                      : 'Band: not matched (open the app after the workout, or the band saw no effort then)'}
+                    {measured
+                      ? `Strain ${measured.strain.toFixed(1)} (${strainLevel(measured.strain).toLowerCase()}) · ${formatCount(measured.calories.total)} kcal${measured.avgBpm != null ? ` · avg ${measured.avgBpm} bpm · peak ${measured.peakBpm}` : ''}`
+                      : 'Older than the 45 days the phone keeps'}
                   </Text>
                 </View>
-                {band ? <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }} tintColor={colors.muted} size={16} /> : null}
+                {measured ? <SymbolView name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }} tintColor={colors.muted} size={16} /> : null}
               </Pressable>
             );
           })}
-          <Muted>{`Last 7 workouts added ${totalStrain.toFixed(1)} strain in total. Tap one to see its heart rate.`}</Muted>
+          <Muted>{`Last 7 workouts added ${totalStrain.toFixed(1)} to your days' strain and burned about ${formatCount(totalKcal)} kcal. Tap one to see how hard you pushed and where the calories came from.`}</Muted>
         </Card>
       ) : (
         <Card>

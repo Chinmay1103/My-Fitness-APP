@@ -47,6 +47,21 @@ describe("combineSteps", () => {
     expect(r.phoneOnly).toBe(800);
   });
 
+  it("doesn't count a walk twice when the devices file it in neighbouring windows", () => {
+    // The phone logs 10:00-10:05, the band's batch lands at 10:05-10:10: the same 500 steps.
+    const r = combineSteps([steps("phone", 0, 5, 500), steps("band", 5, 10, 520)], hr(100, 0, 10), 60);
+    expect(r.total).toBe(520);
+    expect(r.phoneOnly).toBe(0);
+    expect(r.phoneOverlap).toBe(500);
+    expect(r.total).toBeLessThanOrEqual(Math.max(r.band, r.phone));
+  });
+
+  it("still adds phone steps when the band was off (no heart rate, no band steps nearby)", () => {
+    const r = combineSteps([steps("band", 0, 10, 900), steps("phone", 60, 70, 700)], hr(100, 0, 10), 60);
+    expect(r.total).toBe(1600);
+    expect(r.phoneOnly).toBe(700);
+  });
+
   it("spreads a long record over its windows and sums by hour", () => {
     const r = combineSteps([steps("band", 0, 60, 6000), steps("phone", 0, 60, 6000)], [], 60);
     expect(r.total).toBe(6000);

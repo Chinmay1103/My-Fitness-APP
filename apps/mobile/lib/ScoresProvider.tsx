@@ -7,6 +7,7 @@ import {
   type DailyScores,
   type DayData,
   type LearnedSleepNeed,
+  type UserProfile,
 } from '@fitness/scoring';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
@@ -17,6 +18,7 @@ import { publishLatestFromHistory } from './heartRateWidget';
 import { liveZone, setHeartRateBaseline } from './liveHeartRate';
 import { attachWorkouts, fetchLogged, NOTHING_LOGGED, type Logged } from './logged';
 import { computeDayMetrics, type DayMetrics } from './metrics';
+import { fetchProfile } from './profile';
 import { syncDailySummaries } from './sync';
 
 const HISTORY_DAYS = 45;
@@ -36,6 +38,8 @@ interface ScoresState {
   logged: Logged;
   /** Steps, SpO2, zone minutes, nutrition... per day, lined up with `days`. Display only. */
   metrics: DayMetrics[];
+  /** Age, max heart rate and sex from what you told the coach; the demo profile until then. */
+  profile: UserProfile;
   /** Your own base sleep need, learned from the nights you recovered best after (null for the first 14). */
   learnedNeed: LearnedSleepNeed | null;
   /** Result of the last upload to Supabase: 'ok', an error message, or null if nothing was sent. */
@@ -55,6 +59,7 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
   const [scores, setScores] = useState<DailyScores[]>([]);
   const [logged, setLogged] = useState<Logged>(NOTHING_LOGGED);
   const [learnedNeed, setLearnedNeed] = useState<LearnedSleepNeed | null>(null);
+  const [profile, setProfile] = useState<UserProfile>(MOCK_PROFILE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<HealthSource>(mockSource);
@@ -69,32 +74,35 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
     try {
       const picked = await pickHealthSource();
       setSource(picked);
-      const [fromSource, fromCoach] = await Promise.all([
+      const [fromSource, fromCoach, told] = await Promise.all([
         picked.getDays(HISTORY_DAYS),
         fetchLogged(new Date(Date.now() - HISTORY_DAYS * 86_400_000)).catch(() => NOTHING_LOGGED),
+        fetchProfile().catch(() => MOCK_PROFILE),
       ]);
+      // Demo data is generated for the demo profile's age, so it's scored with it too.
+      const you = picked.id === 'mock' ? MOCK_PROFILE : told;
+      setProfile(you);
       // Demo days bring their own workouts, and demo habits so the Habits screen has something to show.
       const mockHabits = picked.id === 'mock' ? generateMockHabits(fromSource).map((h, i) => ({ ...h, id: `mock-${i}`, occurredAt: Date.parse(`${h.date}T20:00:00`) })) : [];
       setLogged(picked.id === 'mock' ? { ...fromCoach, habits: [...fromCoach.habits, ...mockHabits] } : fromCoach);
       // Logged workouts count toward real days' strain.
       const loaded = picked.id === 'mock' ? fromSource : attachWorkouts(fromSource, fromCoach.workouts);
       setDays(loaded);
-      // TODO(milestone 3): use the user's real age from their profile.
       // Score once with the default 8 h need, learn your own from the nights you recovered best
       // after, then score again with it.
-      const first = computeDailyScores(loaded, MOCK_PROFILE);
+      const first = computeDailyScores(loaded, you);
       const learned = learnSleepNeed(first);
       setLearnedNeed(learned);
-      const computed = learned ? computeDailyScores(loaded, { ...MOCK_PROFILE, baseSleepNeedMinutes: learned.minutes }) : first;
+      const computed = learned ? computeDailyScores(loaded, { ...you, baseSleepNeedMinutes: learned.minutes }) : first;
       setScores(computed);
       // Zones for live heart rate: the latest resting HR (or the median of the last week's).
       const rested = loaded.slice(-7).flatMap((d) => (d.restingHr ? [d.restingHr] : [])).sort((a, b) => a - b);
       const restingHr = loaded.at(-1)?.restingHr ?? rested[Math.floor(rested.length / 2)] ?? 60;
-      setHeartRateBaseline(restingHr, estimateMaxHr(MOCK_PROFILE));
+      setHeartRateBaseline(restingHr, estimateMaxHr(you));
       // The home-screen widget shows the newest real reading when live heart rate isn't running.
       if (picked.id !== 'mock') publishLatestFromHistory(loaded.at(-1)?.heartRate ?? [], liveZone);
       // A failed upload shouldn't hide the scores, so it's reported separately.
-      syncDailySummaries(picked.id, loaded, computed)
+      syncDailySummaries(picked.id, loaded, computed, fromCoach, you)
         .then((sent) => setSyncStatus(sent ? 'ok' : null))
         .catch((e) => setSyncStatus(e instanceof Error ? e.message : String(e)));
     } catch (e) {
@@ -117,14 +125,14 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
 
   const syncNow = useCallback(async () => {
     try {
-      const sent = await syncDailySummaries(source.id, days, scores);
+      const sent = await syncDailySummaries(source.id, days, scores, logged, profile);
       setSyncStatus(sent ? 'ok' : null);
     } catch (e) {
       setSyncStatus(e instanceof Error ? e.message : String(e));
     }
-  }, [source, days, scores]);
+  }, [source, days, scores, logged, profile]);
 
-  const metrics = useMemo(() => computeDayMetrics(days, scores, logged, MOCK_PROFILE), [days, scores, logged]);
+  const metrics = useMemo(() => computeDayMetrics(days, scores, logged, profile), [days, scores, logged, profile]);
 
   const setDayBack = useCallback(
     (back: number) => setDayBackRaw(Math.min(Math.max(back, 0), Math.max(scores.length - 1, 0))),
@@ -143,6 +151,7 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
         scores,
         logged,
         metrics,
+        profile,
         learnedNeed,
         syncStatus,
         refresh,
