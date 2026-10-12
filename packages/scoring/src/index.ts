@@ -15,3 +15,4 @@ export * from "./habits";
 export * from "./week";
 export * from "./lifts";
 export * from "./workout";
+export * from "./bodyAge";

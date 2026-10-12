@@ -76,6 +76,15 @@ resting (1 kcal/kg/h) + Keytel 2005 per zone above it (below zone 1 blends from 
 value at 30% reserve) + Compendium METs for minutes without heart rate. Uses the weigh-in before it,
 age from `profiles.birth_date`, `profiles.sex` (formulas averaged when unknown); defaults are flagged.
 
+**Body age** (`bodyAge.ts`, display only, Whoop-Age style): last 30 days, needs 14 days of band data.
+Nine factors (VO2max est. by Uth 15.3×maxHR/RHR vs FRIEND age-sex norms, resting HR, steps, moderate
+40–60% and vigorous 60%+ HRR minutes/week, logged strength minutes/week, sleep hours, bedtime SD, BMI)
+each map to a published all-cause-mortality hazard ratio; years = 0.5 × 8 × log2(HR) against a
+typical adult (0.5 for overlap between factors), ±3 y per factor, ±10 total, shared out so they sum
+to the difference. Levers = years at a realistic target. Screen `app/body-age.tsx`, Today card,
+wording in `lib/bodyAge.ts`. Birth date, sex and height are set on Account (`components/AboutYouCard.tsx`,
+the one profile form; logging still goes through the coach) or by telling the coach.
+
 When changing a formula, check the numbers on mock data still look like a real Whoop week, not
 just that tests pass.
 
@@ -191,6 +200,7 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | 4b | Live heart rate + home-screen widget + heart-rate alert (WhatsApp) | Code ready (Oct 6–7); needs a new EAS build and a test with the band |
 | 5 | Trends, weekly report, notifications, MCP server | Done Oct 10 (needs a build to test): body check, training load, learned sleep need, habits, weekly report (Claude writes it via `save_weekly_report`), workout history with lift progress, morning summary notification (background task, Health Connect background read). App icon from the logo-designer skill (`logos/`) |
 | 4d | Workout effort + calories, "why" everywhere (Oct 12) | Code ready: workout screen, steps double-count fix, real profile in scoring, connector `update_workout` + half-point effort + sex. To do: `npm run db:push` (sex column), redeploy the mcp function, have the coach add effort ratings to past workouts and your birth date and sex |
+| 4e | Bug sweep + body age (Oct 13) | Fixed: training load counted pre-band days as zero (false "too much too soon"), pre-midnight sleep heart rate counted as daytime, empty days synced, Today next steps and morning summary used the demo profile. Added About you (birth date, sex, height) and body age. To do: `npm run db:push` (height), redeploy mcp, new build; body age appears after 14 days of band data (about Oct 17) |
 | 6 | Website (long-range trends and reports) | Built Oct 10 (`apps/web/`, tried on demo data); extras column and goals (Oct 11) pushed, connector redeployed. Progress page added Oct 11. To do: install the Oct 11 preview build, tell the coach the goals, check the site at chinmay1103.github.io/My-Fitness-APP/web/ with real data |
 
 Keep this table up to date when a milestone moves.

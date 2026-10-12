@@ -1,4 +1,4 @@
-import { bodyCheck, CALIBRATED_DAYS, MOCK_PROFILE } from '@fitness/scoring';
+import { bodyCheck, CALIBRATED_DAYS } from '@fitness/scoring';
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useMemo, useState } from 'react';
@@ -19,23 +19,25 @@ import { todayHeadline } from '@/lib/insights';
 import { DASHBOARD_ORDER, METRICS } from '@/lib/metrics';
 import { nextSteps } from '@/lib/nextSteps';
 import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
+import { useBodyAge } from '@/lib/bodyAge';
 
 export default function TodayScreen() {
   const colors = useColors();
   const styles = useStyles();
-  const { scores, days, metrics, sourceLabel, dayBack, learnedNeed } = useScores();
+  const { scores, days, metrics, sourceLabel, dayBack, learnedNeed, profile } = useScores();
   // "today" is whichever day is picked with the day pager; the latest day unless swiped back.
   const { score: today, isLatest, index } = useSelectedDay();
   // Suggestions are about what's still ahead, so only for the latest day.
   const steps = useMemo(
-    () => nextSteps({ scores, days, metrics, profile: { ...MOCK_PROFILE, baseSleepNeedMinutes: learnedNeed?.minutes ?? MOCK_PROFILE.baseSleepNeedMinutes } }),
-    [scores, days, metrics, learnedNeed],
+    () => nextSteps({ scores, days, metrics, profile: { ...profile, baseSleepNeedMinutes: learnedNeed?.minutes ?? profile.baseSleepNeedMinutes } }),
+    [scores, days, metrics, learnedNeed, profile],
   );
   const series = useMemo(
     () => Object.fromEntries(DASHBOARD_ORDER.map((key) => [key, metrics.map(METRICS[key].value)])),
     [metrics],
   );
   const note = useCoachNote(today?.date);
+  const bodyAge = useBodyAge();
   const body = useMemo(() => bodyCheck(days, index), [days, index]);
   // Three rings side by side must fit narrow phones (or a large display-size setting): size them
   // from the width the card actually has, up to 104. Until it's measured, estimate from the screen.
@@ -153,6 +155,17 @@ export default function TodayScreen() {
 
       {isLatest ? <NextStepsCard steps={steps} /> : null}
 
+      {isLatest && bodyAge ? (
+        <Card title="BODY AGE" href="/body-age" linkLabel="Why" wholeCard>
+          <Text style={styles.headline}>
+            {bodyAge.bodyAge != null
+              ? `${bodyAge.bodyAge.toFixed(1)} · ${Math.abs(bodyAge.delta).toFixed(1)} years ${bodyAge.delta <= 0 ? 'younger' : 'older'} than your age`
+              : `${Math.abs(bodyAge.delta).toFixed(1)} years ${bodyAge.delta <= 0 ? 'younger' : 'older'} than your age`}
+          </Text>
+          <Muted>From your fitness, activity, sleep and body over the last 30 days.</Muted>
+        </Card>
+      ) : null}
+
       {note ? <CoachNoteCard note={note} accent={recoveryColor} /> : null}
 
       <Text style={styles.section}>{isLatest ? 'YOUR METRICS' : 'THAT DAY'}</Text>
@@ -189,6 +202,7 @@ export default function TodayScreen() {
 }
 
 const EXPLORE = [
+  { href: '/body-age', title: 'Body age', detail: 'How old your body acts, and what moves it', icon: { ios: 'hourglass', android: 'hourglass_top', web: 'hourglass_top' } },
   { href: '/weekly', title: 'Weekly report', detail: 'The week in numbers, and Claude’s take', icon: { ios: 'chart.line.uptrend.xyaxis', android: 'insights', web: 'insights' } },
   { href: '/body-check', title: 'Body check', detail: 'Temperature, breathing and resting HR vs your usual', icon: { ios: 'cross.case', android: 'health_and_safety', web: 'health_and_safety' } },
   { href: '/habits', title: 'Habits', detail: 'What drinks, late coffee or late dinners do to you', icon: { ios: 'cup.and.saucer', android: 'local_cafe', web: 'local_cafe' } },

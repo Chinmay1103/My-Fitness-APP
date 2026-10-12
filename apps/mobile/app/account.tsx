@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { AboutYouCard } from '@/components/AboutYouCard';
 import { Logo } from '@/components/Logo';
 import { MorningSummaryCard } from '@/components/MorningSummaryCard';
 import { Button, Card, Chip, Input, Muted, Screen } from '@/components/ui';
@@ -93,6 +94,7 @@ export default function AccountScreen() {
             <Text style={styles.email}>{session.user.email}</Text>
             <Button label="Sign out" onPress={signOut} disabled={busy} />
           </Card>
+          <AboutYouCard />
           <Card title="WHAT SYNCS">
             <Muted>
               One summary per day: resting heart rate, HRV, sleep times and your three scores with what drove them. Raw

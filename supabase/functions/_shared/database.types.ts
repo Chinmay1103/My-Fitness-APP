@@ -232,6 +232,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           goal_weight_kg: number | null
+          height_cm: number | null
           id: string
           max_hr: number | null
           protein_target_g: number | null
@@ -245,6 +246,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           goal_weight_kg?: number | null
+          height_cm?: number | null
           id: string
           max_hr?: number | null
           protein_target_g?: number | null
@@ -258,6 +260,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           goal_weight_kg?: number | null
+          height_cm?: number | null
           id?: string
           max_hr?: number | null
           protein_target_g?: number | null

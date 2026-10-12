@@ -31,8 +31,8 @@ them on recent days and pick up from there (e.g. "yesterday you planned a rest d
 For workouts, record the exact start and end time ("from 6:10 to 7:05 pm"); ask if they only give a rough time. The app matches
 those times to the band's heart rate, and list_workouts then shows what the band measured during each one (avg/peak heart rate,
 minutes per zone, strain, calories burned, and the 1-10 effort heart rate matched). Use that to tell them how hard it really was,
-e.g. a run that stayed in zone 2 or a lifting session the heart barely noticed, and what it cost in calories. Calories need their
-weight (log_weight), birth date and sex (update_profile); if calories_basis shows defaults, ask once. Always save the overall
+e.g. a run that stayed in zone 2 or a lifting session the heart barely noticed, and what it cost in calories. Calories and body age need their
+weight (log_weight), birth date, sex and height (update_profile); if calories_basis shows defaults, ask once. Always save the overall
 session effort (1-10, halves allowed) in log_workout's effort field, not just in notes; fix older ones with update_workout.
 Log habits that can affect sleep and recovery with log_habit whenever they come up (drinks, late coffee, a late dinner, screens
 in bed, stress, meditation), using the same short kinds each time; the app shows what each one does to their mornings.
@@ -607,14 +607,14 @@ function buildServer(supabase: Db, userId: string) {
     'get_profile',
     {
       title: 'Profile',
-      description: "The user's name, birth date, sex, time zone, base sleep need, max heart rate, and goals (goal weight, daily calorie and protein targets).",
+      description: "The user's name, birth date, sex, height, time zone, base sleep need, max heart rate, and goals (goal weight, daily calorie and protein targets).",
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
     async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('display_name, birth_date, sex, timezone, base_sleep_need_minutes, max_hr, goal_weight_kg, calorie_target, protein_target_g')
+        .select('display_name, birth_date, sex, height_cm, timezone, base_sleep_need_minutes, max_hr, goal_weight_kg, calorie_target, protein_target_g')
         .maybeSingle();
       if (error) return fail(error.message);
       return text(data ?? 'No profile yet.');
@@ -626,11 +626,12 @@ function buildServer(supabase: Db, userId: string) {
     {
       title: 'Update profile',
       description:
-        "Save facts the user states about themselves: their name, birth date, sex, time zone, how much sleep they need, a measured max heart rate, or their goals (goal weight, daily calories, daily protein; the website's Progress page measures against these). Only what they said; don't guess.",
+        "Save facts the user states about themselves: their name, birth date, sex, height, time zone, how much sleep they need, a measured max heart rate, or their goals (goal weight, daily calories, daily protein; the website's Progress page measures against these). Only what they said; don't guess.",
       inputSchema: z.object({
         display_name: z.string().min(1).max(60).optional(),
         birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('YYYY-MM-DD'),
         sex: z.enum(['male', 'female']).optional().describe('Used for workout calories (the heart-rate formula differs by sex)'),
+        height_cm: z.number().int().min(120).max(230).optional().describe('Height in cm (convert feet/inches), for BMI in body age'),
         max_hr: z.number().int().min(120).max(230).optional().describe('Only a measured max heart rate; otherwise the app estimates it from age'),
         timezone: z.string().optional().describe("IANA name, e.g. 'Asia/Kolkata'"),
         base_sleep_need_minutes: z.number().int().min(300).max(660).optional(),

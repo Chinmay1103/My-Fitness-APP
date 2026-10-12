@@ -43,6 +43,8 @@ export interface UserProfile {
   weightKg?: number;
   /** For workout calories (the heart-rate formula differs by sex). Averaged when missing. */
   sex?: Sex;
+  /** For body mass index in body age. */
+  heightCm?: number;
   /** Measured max heart rate. Estimated from age when missing. */
   maxHr?: number;
   /** Baseline sleep need before strain and debt adjustments. Defaults to 8h. */
