@@ -29,14 +29,17 @@ export function loadZone(ratio: number): LoadZone {
 }
 
 export function trainingLoad(scores: DailyScores[]): LoadDay[] {
+  // Days before the first one with any load are before the band was worn: counting them as zero
+  // would make the usual look tiny and every first week "overreaching".
+  const first = scores.findIndex((s) => s.strain.trimp > 0);
   return scores.map((s, i) => {
     const avg = (n: number) => {
-      const slice = scores.slice(Math.max(0, i - n + 1), i + 1);
-      return slice.reduce((sum, d) => sum + d.strain.trimp, 0) / slice.length;
+      const slice = scores.slice(Math.max(0, first, i - n + 1), i + 1);
+      return slice.length ? slice.reduce((sum, d) => sum + d.strain.trimp, 0) / slice.length : 0;
     };
     const acute = avg(7);
     const chronic = avg(28);
-    const ratio = i + 1 >= MIN_DAYS && chronic > 0 ? round(acute / chronic, 2) : null;
+    const ratio = first >= 0 && i - first + 1 >= MIN_DAYS && chronic > 0 ? round(acute / chronic, 2) : null;
     return { date: s.date, acute: round(acute, 1), chronic: round(chronic, 1), ratio, zone: ratio === null ? null : loadZone(ratio) };
   });
 }

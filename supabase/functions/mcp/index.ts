@@ -504,7 +504,9 @@ function buildServer(supabase: Db, userId: string) {
       type Scores = { strain?: { trimp?: number }; sleep?: { needMinutes?: number; asleepMinutes?: number } | null };
       const trimp = (r: (typeof rows)[number]) => (r.scores as Scores | null)?.strain?.trimp ?? 0;
       const acute = week.reduce((a, r) => a + trimp(r), 0) / week.length;
-      const chronic = rows.reduce((a, r) => a + trimp(r), 0) / rows.length;
+      // Days before the band was worn (no load at all yet) don't count toward what's usual.
+      const worn = rows.slice(Math.max(0, rows.findIndex((r) => trimp(r) > 0)));
+      const chronic = worn.length ? worn.reduce((a, r) => a + trimp(r), 0) / worn.length : 0;
       const ranked = week.filter((r) => r.recovery_score != null).sort((a, b) => b.recovery_score! - a.recovery_score!);
       const sleepDebt = week.reduce((a, r) => {
         const s = (r.scores as Scores | null)?.sleep;

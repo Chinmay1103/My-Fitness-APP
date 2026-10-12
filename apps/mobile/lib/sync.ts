@@ -36,6 +36,13 @@ export async function syncDailySummaries(
   const { data } = await supabase.auth.getSession();
   if (!data.session) return false;
 
+  // Days with nothing from the band (before it arrived, or off all day) would show up as zero strain
+  // in averages on the website and in the coach's week summary.
+  const byDay = new Map(days.map((d) => [d.date, d]));
+  scores = scores.filter((s) => {
+    const d = byDay.get(s.date);
+    return d && (d.heartRate.length > 0 || d.sleep || d.restingHr != null || d.hrvRmssd != null);
+  });
   const recent = new Set(scores.slice(-SYNC_DAYS).map((s) => s.date));
   const older = scores.filter((s) => !recent.has(s.date)).map((s) => s.date);
   let missing = new Set<string>();

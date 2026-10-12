@@ -56,6 +56,16 @@ describe("training load", () => {
     expect(last.ratio).toBeLessThan(1.6);
   });
 
+  it("ignores the days before the band was worn", () => {
+    // 19 empty days (no band yet), then the real ones: the usual is the real days only.
+    const empty = scores.slice(0, 19).map((s) => ({ ...s, strain: { ...s.strain, trimp: 0, strain: 0 } }));
+    const load = trainingLoad([...empty, ...scores.slice(19)]);
+    expect(load[19 + 12]!.ratio).toBeNull(); // 13 days of band so far
+    const last = load.at(-1)!;
+    expect(last.ratio).toBeGreaterThan(0.5);
+    expect(last.ratio).toBeLessThan(1.6);
+  });
+
   it("names the zones", () => {
     expect([0.6, 1, 1.4, 1.8].map(loadZone)).toEqual(["fresh", "steady", "building", "overreaching"]);
   });

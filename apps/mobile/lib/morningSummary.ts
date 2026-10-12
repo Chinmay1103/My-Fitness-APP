@@ -1,4 +1,4 @@
-import { bodyCheck, computeDailyScores, learnSleepNeed, MOCK_PROFILE, type DailyScores, type DayData } from '@fitness/scoring';
+import { bodyCheck, computeDailyScores, learnSleepNeed, MOCK_PROFILE, type DailyScores, type DayData, type UserProfile } from '@fitness/scoring';
 import { requireOptionalNativeModule } from 'expo';
 import { Platform } from 'react-native';
 
@@ -6,6 +6,7 @@ import { formatMinutes, formatTime, localDate } from './format';
 import { healthConnectSource } from './health/healthConnectSource';
 import { attachWorkouts, fetchLogged } from './logged';
 import { STRAIN_TARGETS, tonightPlan } from './nextSteps';
+import { fetchProfile } from './profile';
 import { localStore } from './storage';
 
 /**
@@ -85,12 +86,12 @@ export async function setMorningSummary(on: boolean): Promise<string | null> {
 }
 
 /** The words of the summary, from the latest day's scores. Null when last night isn't scored yet. */
-export function morningMessage(scores: DailyScores[], days: DayData[], baseNeed: number): { title: string; body: string } | null {
+export function morningMessage(scores: DailyScores[], days: DayData[], baseNeed: number, profile: UserProfile = MOCK_PROFILE): { title: string; body: string } | null {
   const today = scores.at(-1);
   const recovery = today?.recovery;
   if (!today || recovery?.score == null || !recovery.zone) return null;
   const [lo, hi] = STRAIN_TARGETS[recovery.zone];
-  const plan = tonightPlan(scores, days, { ...MOCK_PROFILE, baseSleepNeedMinutes: baseNeed });
+  const plan = tonightPlan(scores, days, { ...profile, baseSleepNeedMinutes: baseNeed });
   const body = bodyCheck(days);
   const parts = [
     body?.level === 'alert' ? 'Body check: several signals are up, keep today easy.' : null,
@@ -119,15 +120,19 @@ export async function sendMorningSummary(force: boolean): Promise<string> {
   if (!(await healthConnectSource.hasPermissions())) return 'Health Connect isn’t connected.';
 
   const from = new Date(now.getTime() - 45 * 86_400_000);
-  const [raw, logged] = await Promise.all([healthConnectSource.getDays(45), fetchLogged(from).catch(() => null)]);
+  const [raw, logged, profile] = await Promise.all([
+    healthConnectSource.getDays(45),
+    fetchLogged(from).catch(() => null),
+    fetchProfile().catch(() => MOCK_PROFILE),
+  ]);
   const days = logged ? attachWorkouts(raw, logged.workouts) : raw;
   const latest = days.at(-1);
   if (!latest?.sleep || now.getTime() - latest.sleep.end < SETTLE_MS) return 'Last night’s sleep hasn’t synced yet.';
-  const first = computeDailyScores(days, MOCK_PROFILE);
+  const first = computeDailyScores(days, profile);
   const learned = learnSleepNeed(first);
-  const baseNeed = learned?.minutes ?? MOCK_PROFILE.baseSleepNeedMinutes ?? 480;
-  const scores = learned ? computeDailyScores(days, { ...MOCK_PROFILE, baseSleepNeedMinutes: baseNeed }) : first;
-  const message = morningMessage(scores, days, baseNeed);
+  const baseNeed = learned?.minutes ?? profile.baseSleepNeedMinutes ?? 480;
+  const scores = learned ? computeDailyScores(days, { ...profile, baseSleepNeedMinutes: baseNeed }) : first;
+  const message = morningMessage(scores, days, baseNeed, profile);
   if (!message) return 'Recovery can’t be scored yet (it needs 4 nights of HRV and resting heart rate).';
 
   await m.n.setNotificationChannelAsync(CHANNEL, { name: 'Morning summary', importance: m.n.AndroidImportance.DEFAULT });

@@ -210,12 +210,15 @@ export const healthConnectSource: HealthSource = {
       if (day) day.hrvRmssd = Math.round(r.heartRateVariabilityMillis);
     }
 
-    // Heart rate for strain is the waking day; samples during that day's main sleep go to
-    // `sleepHeartRate` instead, which is only charted.
+    // Heart rate for strain is the waking day; samples during a main sleep go to `sleepHeartRate`
+    // instead, which is only charted. A night that starts before midnight belongs to the next
+    // day's sleep, so its first hours are checked against that one too.
+    const nextDay = new Map(result.map((d, i) => [d.date, result[i + 1]]));
     for (const s of heartRateSamples(heartRate)) {
       const day = byDate.get(localDate(s.time));
       if (!day) continue;
-      if (day.sleep && s.time >= day.sleep.start && s.time <= day.sleep.end) (day.sleepHeartRate ??= []).push(s);
+      const asleep = [day.sleep, nextDay.get(day.date)?.sleep].some((n) => n && s.time >= n.start && s.time <= n.end);
+      if (asleep) (day.sleepHeartRate ??= []).push(s);
       else day.heartRate.push(s);
     }
 
