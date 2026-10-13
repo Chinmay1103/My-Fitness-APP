@@ -66,6 +66,7 @@ export default function RootLayout() {
               <Stack.Screen name="workouts" options={{ title: 'Workouts' }} />
               <Stack.Screen name="workout" options={{ title: 'Workout' }} />
               <Stack.Screen name="body-age" options={{ title: 'Body age' }} />
+              <Stack.Screen name="guide" options={{ title: 'Start here' }} />
             </Stack>
           </ScoresProvider>
         </AuthProvider>

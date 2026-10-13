@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-na
 import { CoachNoteCard } from '@/components/CoachNoteCard';
 import { MetricTile } from '@/components/MetricTile';
 import { NextStepsCard } from '@/components/NextStepsCard';
+import { YourDayCard } from '@/components/YourDayCard';
 import { ScoreRing } from '@/components/ScoreRing';
 import { DayPager } from '@/components/Swipe';
 import { Card, Muted, Pill, Screen } from '@/components/ui';
@@ -15,11 +16,12 @@ import { makeStyles, useColors } from '@/lib/theme';
 import { formatDate } from '@/lib/format';
 import { tapHaptic } from '@/lib/haptics';
 import { useCoachNote } from '@/lib/coachNote';
-import { todayHeadline } from '@/lib/insights';
 import { DASHBOARD_ORDER, METRICS } from '@/lib/metrics';
 import { nextSteps } from '@/lib/nextSteps';
 import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 import { useBodyAge } from '@/lib/bodyAge';
+import { yourDay } from '@/lib/yourDay';
+import { HELP_TODAY } from '@/lib/help';
 
 export default function TodayScreen() {
   const colors = useColors();
@@ -28,10 +30,12 @@ export default function TodayScreen() {
   // "today" is whichever day is picked with the day pager; the latest day unless swiped back.
   const { score: today, isLatest, index } = useSelectedDay();
   // Suggestions are about what's still ahead, so only for the latest day.
-  const steps = useMemo(
-    () => nextSteps({ scores, days, metrics, profile: { ...profile, baseSleepNeedMinutes: learnedNeed?.minutes ?? profile.baseSleepNeedMinutes } }),
-    [scores, days, metrics, learnedNeed, profile],
+  const ownProfile = useMemo(
+    () => ({ ...profile, baseSleepNeedMinutes: learnedNeed?.minutes ?? profile.baseSleepNeedMinutes }),
+    [profile, learnedNeed],
   );
+  const steps = useMemo(() => nextSteps({ scores, days, metrics, profile: ownProfile }), [scores, days, metrics, ownProfile]);
+  const dayLines = useMemo(() => yourDay({ scores, days, profile: ownProfile }, index, isLatest), [scores, days, ownProfile, index, isLatest]);
   const series = useMemo(
     () => Object.fromEntries(DASHBOARD_ORDER.map((key) => [key, metrics.map(METRICS[key].value)])),
     [metrics],
@@ -48,10 +52,10 @@ export default function TodayScreen() {
 
   const recovery = today.recovery;
   const recoveryColor = recovery?.zone ? colors.recovery[recovery.zone] : colors.muted;
-  const headline = todayHeadline(today);
 
   return (
     <Screen
+      help={HELP_TODAY}
       logo
       overline={isLatest ? 'TODAY' : dayBack === 1 ? 'YESTERDAY' : `${dayBack} DAYS AGO`}
       title={formatDate(today.date)}
@@ -127,7 +131,6 @@ export default function TodayScreen() {
             />
           </View>
         </DayPager>
-        {headline ? <Text style={[styles.headline, { color: recoveryColor }]}>{headline}</Text> : null}
         <Muted>Tap a score to see what drove it.</Muted>
         {recovery?.calibrating ? (
           <Muted>
@@ -136,6 +139,8 @@ export default function TodayScreen() {
           </Muted>
         ) : null}
       </Card>
+
+      <YourDayCard lines={dayLines} isLatest={isLatest} />
 
       {body && body.level !== 'normal' ? (
         <Card title="BODY CHECK" href="/body-check" wholeCard>

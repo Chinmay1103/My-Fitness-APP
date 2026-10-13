@@ -15,6 +15,7 @@ import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 import { trendHref, type TrendKey } from '@/lib/trends';
 import { dayBeforeLines, sleepChangeLines } from '@/lib/why';
 import { WhyCard } from '@/components/WhyCard';
+import { sleepHelp } from '@/lib/help';
 
 const open = (key: TrendKey) => () => router.push(trendHref(key));
 
@@ -39,7 +40,7 @@ export default function SleepScreen() {
   const title = isLatest || !score ? 'Last night' : `Night into ${formatDate(score.date)}`;
   if (!sleep || !session) {
     return (
-      <Screen overline="SLEEP" title={title}>
+      <Screen help={sleepHelp(ctx.scores)} overline="SLEEP" title={title}>
         <Card>
           <DayPager />
           <Muted>No sleep recorded that night.</Muted>
@@ -53,7 +54,7 @@ export default function SleepScreen() {
   const bedtimeDrift = Math.round((1 - sleep.consistency) * 120);
 
   return (
-    <Screen overline="SLEEP" title={title} glow={colors.sleep}>
+    <Screen help={sleepHelp(ctx.scores)} overline="SLEEP" title={title} glow={colors.sleep}>
       <Card>
         <DayPager>
           <View style={styles.hero}>

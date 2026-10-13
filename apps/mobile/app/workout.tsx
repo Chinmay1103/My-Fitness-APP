@@ -13,6 +13,7 @@ import { useScores } from '@/lib/ScoresProvider';
 import { makeStyles, useColors } from '@/lib/theme';
 import { usualStrain, workoutAnalysis, workoutInputs } from '@/lib/workoutAnalysis';
 import { KINDS, effortLabel, paceText, type WorkoutKind } from '@/lib/workouts';
+import { HELP_WORKOUT } from '@/lib/help';
 
 const PAD = 5 * 60_000;
 
@@ -67,6 +68,7 @@ export default function WorkoutScreen() {
 
   return (
     <Screen
+      help={HELP_WORKOUT}
       back
       overline={`${new Date(w.start).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} · ${formatTime(w.start)} – ${formatTime(w.end)}`}
       title={title}

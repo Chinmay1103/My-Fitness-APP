@@ -13,6 +13,7 @@ import { normalRange } from '@/lib/metrics';
 import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 import { makeStyles, useColors } from '@/lib/theme';
 import { TRENDS, type TrendKey } from '@/lib/trends';
+import { trendHelp } from '@/lib/help';
 
 /**
  * One part of the sleep score up close (efficiency, deep + REM, bedtime, hours, need, debt): the
@@ -58,7 +59,7 @@ export default function TrendScreen() {
           : 'In your usual range';
 
   return (
-    <Screen back overline={def.label.toUpperCase()} title={score ? (isLatest ? 'Last night' : formatDate(score.date)) : ''} glow={color}>
+    <Screen back help={trendHelp(def, series)} overline={def.label.toUpperCase()} title={score ? (isLatest ? 'Last night' : formatDate(score.date)) : ''} glow={color}>
       <Card>
         <DayPager>
           <View style={styles.hero}>

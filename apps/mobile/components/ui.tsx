@@ -19,7 +19,9 @@ import { Aurora } from '@/components/Aurora';
 import { Logo } from '@/components/Logo';
 import { PlainBackdrop } from '@/components/PlainBackdrop';
 import { SceneBackdrop } from '@/components/SceneBackdrop';
+import { HelpButton } from '@/components/HelpSheet';
 import { MenuButton } from '@/components/SideMenu';
+import type { Help } from '@/lib/help';
 import { useHorizontalSwipe, type SwipeDirection } from '@/components/Swipe';
 import { radius, spacing, type } from '@/constants/theme';
 import { makeStyles, useColors } from '@/lib/theme';
@@ -42,6 +44,8 @@ type ScreenProps = {
   glow?: string;
   /** A second background color lower down; the time-of-day color if left out. */
   glow2?: string;
+  /** "How to read this" (lib/help.ts), behind a (?) button next to the menu. */
+  help?: Help;
 };
 
 /**
@@ -49,7 +53,7 @@ type ScreenProps = {
  * Navigator headers are hidden app-wide; every screen draws its own title here, so the glow runs
  * all the way up behind the status bar instead of stopping under a flat header bar.
  */
-export function Screen({ children, logo, overline, title, accessory, back, glow, glow2 }: ScreenProps) {
+export function Screen({ children, logo, overline, title, accessory, back, glow, glow2, help }: ScreenProps) {
   const colors = useColors();
   const styles = useStyles();
   const { loading, error, scores, refresh } = useScores();
@@ -119,7 +123,10 @@ export function Screen({ children, logo, overline, title, accessory, back, glow,
               ) : (
                 <Overline logo={logo} text={overline} />
               )}
-              <MenuButton />
+              <View style={styles.headerButtons}>
+                {help ? <HelpButton help={help} /> : null}
+                <MenuButton />
+              </View>
             </View>
             {back ? <Overline logo={logo} text={overline} /> : null}
             <View style={styles.titleRow}>
@@ -367,6 +374,7 @@ const useStyles = makeStyles((colors) => StyleSheet.create({
   back: { marginLeft: -2 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   topRowBack: { marginBottom: spacing.sm },
+  headerButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   overline: { ...type.overline, color: colors.muted },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   loadingSpinner: { marginTop: spacing.lg },

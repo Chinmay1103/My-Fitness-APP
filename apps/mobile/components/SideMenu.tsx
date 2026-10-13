@@ -46,6 +46,10 @@ const page = (label: string, path: string, ios: SymbolNames['ios'], android: Sym
 
 const SECTIONS: Section[] = [
   {
+    title: 'HELP',
+    items: [page('Start here: how to read the app', '/guide', 'book', 'menu_book')],
+  },
+  {
     title: 'SCORES',
     items: [
       page('Today', '/', 'gauge.with.needle', 'readiness_score'),

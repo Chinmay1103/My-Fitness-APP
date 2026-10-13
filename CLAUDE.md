@@ -38,6 +38,11 @@ Open design to-dos from the Sep 30 screen-recording review: [docs/design-review-
   in `Screen`) listing all screens and metrics, grouped, with the current one lit. Charts zoom with two
   fingers through `useScrub(onScrub, { minSpan })` in `components/charts/parts.tsx` (`view` = shown part,
   `ZoomStrip` for flex rows, `ZoomHint`); `onScrub` always gets the fraction of the *whole* chart.
+- **Reading help** (Oct 13): Today opens with "Your day" (`lib/yourDay.ts`, `components/YourDayCard.tsx`):
+  body / today's strain target / tonight's bedtime, each a verdict + one sentence. Every screen passes
+  `help` to `Screen` for a (?) sheet (`components/HelpSheet.tsx`, wording in `lib/help.ts`, with "For you"
+  ranges from the last 30 days). `app/guide.tsx` is "Start here" (daily routine, score bands, how to read
+  any screen), first in the side menu.
 - **Battery**: backgrounds settle after 2 min (`motion.backgroundMotion`); live heart rate stops
   itself after 30 min, or after 10 min without the band, unless the heart-rate alert is on.
 

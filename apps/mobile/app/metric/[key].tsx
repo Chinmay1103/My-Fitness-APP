@@ -14,6 +14,7 @@ import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 import { makeStyles, useColors } from '@/lib/theme';
 import { metricLines } from '@/lib/why';
 import { WhyCard } from '@/components/WhyCard';
+import { metricHelp } from '@/lib/help';
 
 /**
  * One metric up close: the picked day's value against your normal, 30 days of it, what feeds it
@@ -46,7 +47,7 @@ export default function MetricScreen() {
   const max = Math.max(...series.filter((v): v is number => v != null), def.goal ?? 0, 1) * 1.1;
 
   return (
-    <Screen back overline={def.label.toUpperCase()} title={score ? (isLatest ? 'Today' : formatDate(score.date)) : ''} glow={color}>
+    <Screen back help={metricHelp(def, series)} overline={def.label.toUpperCase()} title={score ? (isLatest ? 'Today' : formatDate(score.date)) : ''} glow={color}>
       <Card>
         <DayPager>
           <View style={styles.hero}>

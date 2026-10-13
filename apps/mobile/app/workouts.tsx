@@ -14,6 +14,7 @@ import { useScores } from '@/lib/ScoresProvider';
 import { makeStyles, useColors } from '@/lib/theme';
 import { workoutAnalysis } from '@/lib/workoutAnalysis';
 import { KINDS, effortLabel, type WorkoutKind } from '@/lib/workouts';
+import { HELP_WORKOUTS } from '@/lib/help';
 
 interface Lift {
   name: string;
@@ -64,7 +65,7 @@ export default function WorkoutsScreen() {
   const totalKcal = workouts.slice(0, 7).reduce((sum, w) => sum + (workoutAnalysis(w, days, logged, profile)?.calories.total ?? 0), 0);
 
   return (
-    <Screen back overline="WORKOUTS" title="History" glow={colors.strain}>
+    <Screen back help={HELP_WORKOUTS} overline="WORKOUTS" title="History" glow={colors.strain}>
       {lifts.length ? (
         <Card title="LIFT PROGRESS">
           {lifts.map((l) => (

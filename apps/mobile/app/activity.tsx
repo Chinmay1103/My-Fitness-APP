@@ -9,6 +9,7 @@ import { formatDate, formatMinutes, formatTime } from '@/lib/format';
 import { useScores } from '@/lib/ScoresProvider';
 import { makeStyles, useColors } from '@/lib/theme';
 import { KINDS, effortLabel, type WorkoutKind } from '@/lib/workouts';
+import { HELP_ACTIVITY } from '@/lib/help';
 
 const PAD = 5 * 60_000;
 
@@ -43,7 +44,7 @@ export default function ActivityScreen() {
   const share = score.strain.strain > 0 ? Math.round((activity.strain / score.strain.strain) * 100) : 0;
 
   return (
-    <Screen back overline={`${formatTime(activity.start)} – ${formatTime(activity.end)}`} title={title} glow={colors.strain}>
+    <Screen back help={HELP_ACTIVITY} overline={`${formatTime(activity.start)} – ${formatTime(activity.end)}`} title={title} glow={colors.strain}>
       <Card>
         <View style={styles.hero}>
           <Text style={[styles.strain, { color: colors.strain }]}>{activity.strain.toFixed(1)}</Text>

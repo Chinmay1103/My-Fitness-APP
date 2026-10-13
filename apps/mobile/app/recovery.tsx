@@ -15,6 +15,7 @@ import { makeStyles, useColors } from '@/lib/theme';
 import { FACTOR_LABELS, RECOVERY_GUIDANCE, recoveryFactorDetail } from '@/lib/insights';
 import { formatDate } from '@/lib/format';
 import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
+import { recoveryHelp } from '@/lib/help';
 
 export default function RecoveryScreen() {
   const colors = useColors();
@@ -26,7 +27,7 @@ export default function RecoveryScreen() {
 
   if (!recovery || recovery.score === null || !recovery.zone || !recovery.breakdown) {
     return (
-      <Screen back overline="RECOVERY" title={title}>
+      <Screen back help={recoveryHelp(scores)} overline="RECOVERY" title={title}>
         <Card>
           <DayPager />
         </Card>
@@ -46,7 +47,7 @@ export default function RecoveryScreen() {
   const guidance = RECOVERY_GUIDANCE[recovery.zone];
 
   return (
-    <Screen back overline="RECOVERY" title={title} glow={color}>
+    <Screen back help={recoveryHelp(scores)} overline="RECOVERY" title={title} glow={color}>
       <Card>
         <DayPager>
           <View style={styles.hero}>

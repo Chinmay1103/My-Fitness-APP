@@ -7,6 +7,7 @@ import { makeStyles, useColors } from '@/lib/theme';
 import { continueInClaude, openInClaude, shareToClaude } from '@/lib/claudeHandoff';
 import { parseChatLink, setCoachChat, useCoachChat } from '@/lib/coachChat';
 import { useScores } from '@/lib/ScoresProvider';
+import { HELP_COACH } from '@/lib/help';
 
 const QUESTIONS = [
   'How should I train today?',
@@ -73,7 +74,7 @@ export default function CoachScreen() {
   };
 
   return (
-    <Screen overline="COACH" title="Ask Claude" glow={colors.muted}>
+    <Screen help={HELP_COACH} overline="COACH" title="Ask Claude" glow={colors.muted}>
       <Card>
         <Input
           value={question}

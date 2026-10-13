@@ -14,6 +14,7 @@ import { formatTime } from '@/lib/format';
 import { tapHaptic } from '@/lib/haptics';
 import { ago, heartRateLimits, useDayHeartRate } from '@/lib/heartRate';
 import { useScores } from '@/lib/ScoresProvider';
+import { HELP_HEART_RATE } from '@/lib/help';
 
 export default function HeartRateScreen() {
   const colors = useColors();
@@ -38,7 +39,7 @@ export default function HeartRateScreen() {
   };
 
   return (
-    <Screen back overline="HEART RATE" title={date ? dayName(date, isToday) : 'Heart rate'} glow={colors.restingHr}>
+    <Screen back help={HELP_HEART_RATE} overline="HEART RATE" title={date ? dayName(date, isToday) : 'Heart rate'} glow={colors.restingHr}>
       <View style={styles.stepper}>
         <StepButton icon="left" label="Previous day" disabled={back >= days.length - 1} onPress={() => step(1)} />
         <Text style={styles.stepperText}>

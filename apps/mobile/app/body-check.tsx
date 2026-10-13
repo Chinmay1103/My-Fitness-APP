@@ -9,6 +9,7 @@ import { fonts, spacing, type, withAlpha } from '@/constants/theme';
 import { formatDate } from '@/lib/format';
 import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 import { makeStyles, useColors } from '@/lib/theme';
+import { HELP_BODY_CHECK } from '@/lib/help';
 
 const SIGNALS: Record<BodySignalKey, { label: string; unit: string; format: (v: number) => string; href: Href; read: (d: { skinTempDelta?: number; respiratoryRate?: number; restingHr?: number }) => number | undefined }> = {
   skinTemp: {
@@ -55,7 +56,7 @@ export default function BodyCheckScreen() {
           : 'Not enough nights yet';
 
   return (
-    <Screen back overline="BODY CHECK" title={isLatest ? 'Last night' : score ? formatDate(score.date) : ''} glow={tone}>
+    <Screen back help={HELP_BODY_CHECK} overline="BODY CHECK" title={isLatest ? 'Last night' : score ? formatDate(score.date) : ''} glow={tone}>
       <Card>
         <DayPager>
           <View style={styles.hero}>

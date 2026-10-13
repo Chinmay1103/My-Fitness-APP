@@ -314,6 +314,11 @@ export function sleepChangeLines(ctx: WhyContext, index: number): WhyLine[] {
 const trimpFor = (strain: number) => -120 * Math.log(1 - Math.min(strain, 20.9) / 21);
 const STEADY_TRIMP_PER_MIN = 0.65 * 0.64 * Math.exp(1.92 * 0.65);
 
+/** Roughly how many minutes of steady zone 2–3 cardio take a day's `trimp` to `targetStrain`, in steps of 5. */
+export function steadyMinutesTo(targetStrain: number, trimp: number): number {
+  return Math.max(5, Math.round((trimpFor(targetStrain) - trimp) / STEADY_TRIMP_PER_MIN / 5) * 5);
+}
+
 /**
  * Why the day's strain is where it is: against your usual day, what built it, what isn't logged,
  * how far from the target the morning's recovery set, and what it adds to that night's sleep need.
@@ -376,7 +381,7 @@ export function strainLines(ctx: WhyContext, index: number, isLatest: boolean): 
   if (zone) {
     const [lo, hi] = STRAIN_TARGETS[zone];
     if (strain < lo) {
-      const minutes = Math.max(5, Math.round((trimpFor(lo) - trimp) / STEADY_TRIMP_PER_MIN / 5) * 5);
+      const minutes = steadyMinutesTo(lo, trimp);
       lines.push({
         text: isLatest
           ? `${(lo - strain).toFixed(1)} below today's target (${lo}–${hi}, set by a ${zone} recovery): about ${formatMinutes(minutes)} of steady cardio (zone 2–3) would get you there.`

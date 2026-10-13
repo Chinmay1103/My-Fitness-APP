@@ -11,6 +11,7 @@ import { makeStyles, useColors } from '@/lib/theme';
 import { formatMinutes } from '@/lib/format';
 import { isAlertSupported } from '@/lib/heartRateAlert';
 import { isWidgetSupported, pinHeartRateWidget } from '@/lib/heartRateWidget';
+import { HELP_LIVE } from '@/lib/help';
 import {
   getHeartRateBaseline,
   isLiveHeartRateSupported,
@@ -65,7 +66,7 @@ export default function LiveScreen() {
   };
 
   return (
-    <Screen back overline="LIVE" title="Heart rate" glow={colors.restingHr}>
+    <Screen back help={HELP_LIVE} overline="LIVE" title="Heart rate" glow={colors.restingHr}>
       {!supported ? (
         <Card title="NEEDS THE NEW BUILD">
           <Muted>

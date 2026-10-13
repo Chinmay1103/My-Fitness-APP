@@ -8,6 +8,7 @@ import { fonts, spacing, type } from '@/constants/theme';
 import { BODY_AGE_FACTORS, useBodyAge } from '@/lib/bodyAge';
 import { useScores } from '@/lib/ScoresProvider';
 import { makeStyles, useColors } from '@/lib/theme';
+import { HELP_BODY_AGE } from '@/lib/help';
 
 const years = (y: number) => `${Math.abs(y).toFixed(1)} year${Math.abs(y) === 1 ? '' : 's'}`;
 
@@ -24,7 +25,7 @@ export default function BodyAgeScreen() {
   if (!b) {
     const worn = days.slice(-30).filter((d) => d.heartRate.length > 0 || d.sleep).length;
     return (
-      <Screen back overline="BODY AGE" title="Not yet">
+      <Screen back help={HELP_BODY_AGE} overline="BODY AGE" title="Not yet">
         <Card>
           <Muted>{`Body age looks at the last 30 days, so it needs at least ${BODY_AGE_MIN_DAYS} days of band data (${worn} so far).`}</Muted>
         </Card>
@@ -38,7 +39,7 @@ export default function BodyAgeScreen() {
   const levers = b.factors.filter((f) => f.lever).sort((x, y) => x.lever!.years - y.lever!.years).slice(0, 3);
 
   return (
-    <Screen back overline="BODY AGE" title="Last 30 days" glow={tone}>
+    <Screen back help={HELP_BODY_AGE} overline="BODY AGE" title="Last 30 days" glow={tone}>
       <Card>
         <View style={styles.hero}>
           <Text style={[styles.big, { color: tone }]}>{b.bodyAge != null ? b.bodyAge.toFixed(1) : `${b.delta > 0 ? '+' : b.delta < 0 ? '−' : '±'}${Math.abs(b.delta).toFixed(1)}`}</Text>

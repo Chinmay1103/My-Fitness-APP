@@ -11,6 +11,7 @@ import { formatMinutes } from '@/lib/format';
 import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 import { makeStyles, useColors } from '@/lib/theme';
 import { useWeeklyReport } from '@/lib/weeklyReport';
+import { HELP_WEEKLY } from '@/lib/help';
 
 const LOAD_TEXT = {
   fresh: 'Lighter than usual',
@@ -37,7 +38,7 @@ export default function WeeklyScreen() {
 
   const days = scores.slice(Math.max(0, index - 6), index + 1);
   return (
-    <Screen back overline="WEEKLY REPORT" title={`${shortDate(week.start)} – ${shortDate(week.end)}`} glow={colors.sleep}>
+    <Screen back help={HELP_WEEKLY} overline="WEEKLY REPORT" title={`${shortDate(week.start)} – ${shortDate(week.end)}`} glow={colors.sleep}>
       <Card>
         <DayPager>
           <Row>

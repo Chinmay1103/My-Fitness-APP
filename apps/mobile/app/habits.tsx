@@ -8,6 +8,7 @@ import { useAskCoach } from '@/lib/askCoach';
 import { formatTime } from '@/lib/format';
 import { useScores } from '@/lib/ScoresProvider';
 import { makeStyles, useColors } from '@/lib/theme';
+import { HELP_HABITS } from '@/lib/help';
 
 /**
  * What your habits do to you: for each thing you've told the coach about (drinks, late coffee, a
@@ -29,7 +30,7 @@ export default function HabitsScreen() {
   };
 
   return (
-    <Screen back overline="HABITS" title="What they do to you" glow={colors.recovery.yellow}>
+    <Screen back help={HELP_HABITS} overline="HABITS" title="What they do to you" glow={colors.recovery.yellow}>
       {impacts.length ? (
         impacts.map((h) => {
           const rec = effect(h.recoveryDiff, ' recovery');
