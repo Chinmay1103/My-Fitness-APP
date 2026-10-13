@@ -8,12 +8,14 @@ import { ScoreRing } from '@/components/ScoreRing';
 import { DayPager } from '@/components/Swipe';
 import { ComboChart } from '@/components/charts/ComboChart';
 import { Button, Card, Muted, Screen, Stat } from '@/components/ui';
+import { WhyCard } from '@/components/WhyCard';
 import { fonts, motion, spacing, withAlpha } from '@/constants/theme';
 import { makeStyles, useColors } from '@/lib/theme';
 import { useAnimatedTarget } from '@/lib/animation';
 import { formatDate, formatMinutes, formatTime } from '@/lib/format';
 import { STRAIN_TARGETS } from '@/lib/nextSteps';
 import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
+import { strainLines } from '@/lib/why';
 import { KINDS, type WorkoutKind } from '@/lib/workouts';
 
 function strainLabel(strain: number): string {
@@ -26,8 +28,9 @@ function strainLabel(strain: number): string {
 export default function StrainScreen() {
   const colors = useColors();
   const styles = useStyles();
-  const { scores } = useScores();
-  const { score: today, isLatest } = useSelectedDay();
+  const ctx = useScores();
+  const { scores } = ctx;
+  const { score: today, isLatest, index } = useSelectedDay();
   const zone = today?.recovery?.zone ?? null;
   if (!today) return <Screen overline="STRAIN" title="Today so far"><Muted>No data yet.</Muted></Screen>;
 
@@ -92,10 +95,14 @@ export default function StrainScreen() {
         </Breakdown>
         <Muted>
           Only time above 30% of your heart-rate reserve counts, and a hard minute counts several times more than an
-          easy one. Each activity gets its share of the day's total. Logged workouts with an effort rating can add
-          what heart rate misses (lifting). Tap an activity to see it.
+          easy one. Logged workouts with an effort rating can add what heart rate misses (lifting).
         </Muted>
       </Card>
+
+      <WhyCard
+        title={isLatest ? 'WHAT’S DRIVING TODAY' : 'WHAT DROVE THAT DAY'}
+        lines={strainLines(ctx, index, isLatest)}
+      />
 
       <Card title="LIVE HEART RATE" href="/live" linkLabel="Open" wholeCard>
         <Muted>Watch your heart rate and zone second by second during a workout, straight from the band.</Muted>

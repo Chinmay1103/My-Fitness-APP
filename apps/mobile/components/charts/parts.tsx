@@ -14,31 +14,92 @@ import { useScores } from '@/lib/ScoresProvider';
  * react-native-svg into one canvas each, which keeps them light even at 30 days.
  */
 
+/** The part of a chart on screen, as fractions of the whole: { lo: 0, hi: 1 } is zoomed all the way out. */
+export interface ZoomView {
+  lo: number;
+  hi: number;
+}
+
+export const FULL_VIEW: ZoomView = { lo: 0, hi: 1 };
+
 /**
- * Touch handling for a chart: tap or drag sideways to scrub, up/down still scrolls the page.
- * `onScrub` gets the finger's position across the chart, 0 (left) to just under 1 (right).
- * Spread `scrubProps` on the View that wraps the plot; its children should ignore touches.
+ * Touch handling for a chart: tap or drag sideways with one finger to scrub, up/down still scrolls
+ * the page, and two fingers pinch to zoom in on part of it (and slide sideways while zoomed).
+ * `onScrub` gets the finger's position across the *whole* chart, 0 (left) to just under 1 (right),
+ * whatever the zoom; draw with `view` to show only the zoomed part. `minSpan` is the furthest you
+ * can zoom in, as a fraction of the whole. Spread `scrubProps` on the View that wraps the plot; its
+ * children should ignore touches.
  */
-export function useScrub(onScrub: (fraction: number) => void) {
+export function useScrub(onScrub: (fraction: number) => void, { minSpan = 1 }: { minSpan?: number } = {}) {
   const [width, setWidth] = useState(0);
-  const ref = useRef({ onScrub, width: 0, startX: 0 });
+  const [view, setViewState] = useState<ZoomView>(FULL_VIEW);
+  const ref = useRef({
+    onScrub,
+    minSpan,
+    width: 0,
+    pageLeft: 0,
+    view: FULL_VIEW,
+    pinch: null as null | { distance: number; start: ZoomView; anchor: number },
+    setView: (v: ZoomView) => {
+      ref.current.view = v;
+      setViewState(v);
+    },
+  });
   ref.current.onScrub = onScrub;
+  ref.current.minSpan = Math.min(minSpan, 1);
 
   const pan = useMemo(() => {
+    const r = ref.current;
     const emit = (x: number) => {
-      const { width: w } = ref.current;
-      if (w > 0) ref.current.onScrub(Math.min(Math.max(x / w, 0), 0.9999));
+      if (r.width <= 0) return;
+      const f = Math.min(Math.max(x / r.width, 0), 0.9999);
+      r.onScrub(Math.min(r.view.lo + f * (r.view.hi - r.view.lo), 0.9999));
     };
+    // Keeps the point that was between the fingers when the pinch began under the fingers' midpoint,
+    // so pinching zooms around them and sliding both fingers pans.
+    const pinchMove = (x1: number, x2: number) => {
+      const mid = Math.min(Math.max(((x1 + x2) / 2 - r.pageLeft) / r.width, 0), 1);
+      const distance = Math.max(Math.abs(x1 - x2), 24);
+      if (!r.pinch) {
+        r.pinch = { distance, start: r.view, anchor: r.view.lo + mid * (r.view.hi - r.view.lo) };
+        return;
+      }
+      const startSpan = r.pinch.start.hi - r.pinch.start.lo;
+      const span = Math.min(Math.max((startSpan * r.pinch.distance) / distance, r.minSpan), 1);
+      if (span >= 0.999) {
+        if (r.view !== FULL_VIEW) r.setView(FULL_VIEW);
+        return;
+      }
+      const lo = Math.min(Math.max(r.pinch.anchor - mid * span, 0), 1 - span);
+      r.setView({ lo, hi: lo + span });
+    };
+    const canZoom = () => r.minSpan < 1 && r.width > 0;
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > Math.abs(g.dy),
+      onMoveShouldSetPanResponder: (e, g) => (canZoom() && e.nativeEvent.touches.length >= 2) || Math.abs(g.dx) > Math.abs(g.dy),
       onPanResponderGrant: (e) => {
-        ref.current.startX = e.nativeEvent.locationX;
-        emit(ref.current.startX);
+        r.pageLeft = e.nativeEvent.pageX - e.nativeEvent.locationX;
+        r.pinch = null;
+        if (e.nativeEvent.touches.length < 2) emit(e.nativeEvent.locationX);
       },
-      // Start point plus distance moved: steadier than locationX, which can jump between views.
-      onPanResponderMove: (_, g) => emit(ref.current.startX + g.dx),
-      onPanResponderTerminationRequest: (_, g) => Math.abs(g.dy) > Math.abs(g.dx),
+      // Measured from the page edge, not locationX, which can jump between views.
+      onPanResponderMove: (e) => {
+        const touches = e.nativeEvent.touches;
+        if (canZoom() && touches.length >= 2) {
+          pinchMove(touches[0].pageX, touches[1].pageX);
+          return;
+        }
+        // One finger left over from a pinch: don't let it jump the picked day.
+        if (r.pinch) return;
+        emit(e.nativeEvent.pageX - r.pageLeft);
+      },
+      onPanResponderRelease: () => {
+        r.pinch = null;
+      },
+      onPanResponderTerminate: () => {
+        r.pinch = null;
+      },
+      onPanResponderTerminationRequest: (_, g) => !r.pinch && Math.abs(g.dy) > Math.abs(g.dx),
     });
   }, []);
 
@@ -46,7 +107,46 @@ export function useScrub(onScrub: (fraction: number) => void) {
     ref.current.width = e.nativeEvent.layout.width;
     setWidth(e.nativeEvent.layout.width);
   };
-  return { width, scrubProps: { ...pan.panHandlers, onLayout } };
+  const zoomed = view.hi - view.lo < 0.999;
+  return {
+    width,
+    view,
+    zoomed,
+    resetZoom: () => ref.current.setView(FULL_VIEW),
+    scrubProps: { ...pan.panHandlers, onLayout },
+  };
+}
+
+/**
+ * Shows only the zoomed part of whatever's inside: the children are laid out `1 / span` times
+ * wider than the chart and slid left, so flex rows of bars and labels zoom with no extra math.
+ */
+export function ZoomStrip({ width, view, children }: { width: number; view: ZoomView; children: ReactNode }) {
+  const inner = width / (view.hi - view.lo);
+  return (
+    <View style={{ width, overflow: 'hidden' }}>
+      <View style={{ width: inner, marginLeft: -view.lo * inner }}>{children}</View>
+    </View>
+  );
+}
+
+/** "Pinch to zoom", or a button back out once zoomed in. */
+export function ZoomHint({ zoomed, onReset }: { zoomed: boolean; onReset: () => void }) {
+  const styles = useStyles();
+  if (!zoomed) return <Text style={styles.openHint}>Pinch to zoom</Text>;
+  return (
+    <Pressable
+      onPress={() => {
+        tapHaptic();
+        onReset();
+      }}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel="Zoom back out"
+      style={({ pressed }) => [styles.openLink, pressed && { opacity: 0.6 }]}>
+      <Text style={styles.openLinkText}>Zoom out</Text>
+    </Pressable>
+  );
 }
 
 /**
@@ -133,24 +233,38 @@ export function ChartHeader({ value, color, title, detail, right }: { value: str
  * link that switches the whole screen (and Today, Sleep, Strain, Recovery) to that day, so any bar
  * leads to that day's full report. `back` counts days back from the latest, like `dayBack`.
  */
-export function OpenDayLink({ back, date }: { back: number; date?: string }) {
+export function OpenDayLink({ back, date, zoom }: { back: number; date?: string; zoom?: { zoomed: boolean; onReset: () => void } }) {
   const styles = useStyles();
   const { dayBack, setDayBack } = useScores();
   const showing = back === dayBack;
-  if (!date || showing) {
-    return <Text style={styles.openHint}>Drag across the chart to pick a day</Text>;
-  }
+  const link =
+    !date || showing ? (
+      <Text style={styles.openHint}>{zoom && !zoom.zoomed ? 'Drag to pick a day · pinch to zoom' : 'Drag across the chart to pick a day'}</Text>
+    ) : (
+      <DayLink label={`Show ${dayName(date, back === 0)} above  ↑`} onOpen={() => setDayBack(back)} />
+    );
+  if (!zoom || (!zoom.zoomed && (!date || showing))) return link;
+  return (
+    <View style={styles.hintRow}>
+      {link}
+      <ZoomHint {...zoom} />
+    </View>
+  );
+}
+
+function DayLink({ label, onOpen }: { label: string; onOpen: () => void }) {
+  const styles = useStyles();
   return (
     <Pressable
       onPress={() => {
         tapHaptic();
-        setDayBack(back);
+        onOpen();
       }}
       hitSlop={8}
       accessibilityRole="button"
       accessibilityHint="Switches the screen above to this day"
       style={({ pressed }) => [styles.openLink, pressed && { opacity: 0.6 }]}>
-      <Text style={styles.openLinkText}>{`Show ${dayName(date, back === 0)} above  ↑`}</Text>
+      <Text style={styles.openLinkText}>{label}</Text>
     </Pressable>
   );
 }
@@ -239,6 +353,7 @@ const useStyles = makeStyles((colors) => StyleSheet.create({
   rangeText: { color: colors.muted, fontFamily: fonts.bodySemi, fontSize: 11 },
   rangeTextSelected: { color: colors.background },
   openHint: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 11 },
+  hintRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   openLink: { alignSelf: 'flex-start', borderColor: colors.border, borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   openLinkText: { color: colors.text, fontFamily: fonts.bodySemi, fontSize: 12 },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },

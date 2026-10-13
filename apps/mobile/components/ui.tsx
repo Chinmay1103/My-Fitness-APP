@@ -19,6 +19,7 @@ import { Aurora } from '@/components/Aurora';
 import { Logo } from '@/components/Logo';
 import { PlainBackdrop } from '@/components/PlainBackdrop';
 import { SceneBackdrop } from '@/components/SceneBackdrop';
+import { MenuButton } from '@/components/SideMenu';
 import { useHorizontalSwipe, type SwipeDirection } from '@/components/Swipe';
 import { radius, spacing, type } from '@/constants/theme';
 import { makeStyles, useColors } from '@/lib/theme';
@@ -100,27 +101,27 @@ export function Screen({ children, logo, overline, title, accessory, back, glow,
         }>
         {back || overline || title ? (
           <View style={styles.header}>
-            {back ? (
-              <Pressable
-                onPress={() => {
-                  tapHaptic();
-                  router.back();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Back"
-                hitSlop={12}
-                style={styles.back}>
-                <SymbolView name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }} tintColor={colors.text} size={24} />
-              </Pressable>
-            ) : null}
-            {logo && overline ? (
-              <View style={styles.logoRow}>
-                <Logo size={22} />
-                <Text style={styles.overline}>{overline}</Text>
-              </View>
-            ) : overline ? (
-              <Text style={styles.overline}>{overline}</Text>
-            ) : null}
+            {/* Back (or the overline on tab screens) on the left, the menu of every screen on the right. */}
+            <View style={[styles.topRow, back && styles.topRowBack]}>
+              {back ? (
+                <Pressable
+                  onPress={() => {
+                    tapHaptic();
+                    if (router.canGoBack()) router.back();
+                    else router.navigate('/');
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Back"
+                  hitSlop={12}
+                  style={styles.back}>
+                  <SymbolView name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }} tintColor={colors.text} size={24} />
+                </Pressable>
+              ) : (
+                <Overline logo={logo} text={overline} />
+              )}
+              <MenuButton />
+            </View>
+            {back ? <Overline logo={logo} text={overline} /> : null}
             <View style={styles.titleRow}>
               {title ? (
                 <Text style={styles.title} accessibilityRole="header">
@@ -134,6 +135,18 @@ export function Screen({ children, logo, overline, title, accessory, back, glow,
         {error ? <Text style={styles.error}>Couldn't load health data: {error}</Text> : null}
         {children}
       </ScrollView>
+    </View>
+  );
+}
+
+function Overline({ logo, text }: { logo?: boolean; text?: string }) {
+  const styles = useStyles();
+  if (!text) return <View />;
+  if (!logo) return <Text style={styles.overline}>{text}</Text>;
+  return (
+    <View style={styles.logoRow}>
+      <Logo size={22} />
+      <Text style={styles.overline}>{text}</Text>
     </View>
   );
 }
@@ -351,7 +364,9 @@ const useStyles = makeStyles((colors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.md, gap: spacing.md },
   header: { gap: 2, marginBottom: spacing.xs },
-  back: { alignSelf: 'flex-start', marginLeft: -2, marginBottom: spacing.sm },
+  back: { marginLeft: -2 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  topRowBack: { marginBottom: spacing.sm },
   overline: { ...type.overline, color: colors.muted },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   loadingSpinner: { marginTop: spacing.lg },

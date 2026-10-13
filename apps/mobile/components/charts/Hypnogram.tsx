@@ -2,13 +2,13 @@ import type { SleepSegment, SleepStage } from '@fitness/scoring';
 import { SymbolView } from 'expo-symbols';
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Defs, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import Svg, { ClipPath, Defs, G, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { fonts, withAlpha } from '@/constants/theme';
 import { formatMinutes, formatTime } from '@/lib/format';
 import { tapHaptic } from '@/lib/haptics';
 import { makeStyles, useColors } from '@/lib/theme';
-import { ChartHeader, Reveal, useScrub } from './parts';
+import { ChartHeader, Reveal, ZoomHint, useScrub } from './parts';
 
 /** Top to bottom, lightest to deepest, like every sleep app draws it. */
 const ROWS: { stage: SleepStage; label: string; about: string }[] = [
@@ -24,12 +24,14 @@ const HOUR = 3_600_000;
 const MIN = 60_000;
 /** Each stage sits as a band this tall inside its row; the line runs through its middle. */
 const BAND_H = 14;
+/** The shortest stretch of the night you can pinch in to. */
+const MIN_VIEW_MS = 30 * MIN;
 
 /**
  * The night stage by stage, drawn the way sleep labs do: one continuous stepped line that drops
  * into deeper rows and climbs back out, over a soft fill colored by depth. Short stretches stay
  * thin steps instead of floating blobs, so a fragmented night of real band data still reads as one
- * night. Drag across it to read each stretch; tap a stage name to light up all of that stage.
+ * night. Drag across it to read each stretch, pinch to zoom; tap a stage name to light up all of that stage.
  */
 export function Hypnogram({ segments }: { segments: SleepSegment[] }) {
   const colors = useColors();
@@ -43,7 +45,7 @@ export function Hypnogram({ segments }: { segments: SleepSegment[] }) {
   pickedRef.current = picked;
 
   // The drag area covers only the plot (right of the stage names), so its width is the plot's.
-  const { width: plotW, scrubProps } = useScrub((f) => {
+  const { width: plotW, view, zoomed, resetZoom, scrubProps } = useScrub((f) => {
     const t = start + f * span;
     const i = segments.findIndex((s) => t >= s.start && t < s.end);
     if (i >= 0 && i !== pickedRef.current) {
@@ -51,11 +53,14 @@ export function Hypnogram({ segments }: { segments: SleepSegment[] }) {
       setPicked(i);
       setFocusStage(null);
     }
-  });
+  }, { minSpan: MIN_VIEW_MS / span });
 
   const width = plotW + LABEL_W;
   const plotH = ROWS.length * ROW_H;
-  const x = (t: number) => LABEL_W + ((t - start) / span) * plotW;
+  // The part of the night on screen: all of it, or the zoomed stretch.
+  const viewStart = start + view.lo * span;
+  const viewSpan = span * (view.hi - view.lo);
+  const x = (t: number) => LABEL_W + ((t - viewStart) / viewSpan) * plotW;
   const rowOf = (stage: SleepStage) => ROWS.findIndex((r) => r.stage === stage);
   const midY = (stage: SleepStage) => rowOf(stage) * ROW_H + ROW_H / 2;
   const stageColor = (stage: SleepStage) => (stage === 'awake' ? colors.sleepStages.awake : colors.sleepStages[stage]);
@@ -102,9 +107,10 @@ export function Hypnogram({ segments }: { segments: SleepSegment[] }) {
           value={formatMinutes(stats.asleep)}
           color={labelColor('rem')}
           title={`Asleep · ${stats.cycles} sleep cycle${stats.cycles === 1 ? '' : 's'}`}
-          detail="Drag across the night, or tap a stage"
+          detail="Drag across the night, pinch to zoom, or tap a stage"
         />
       )}
+      {zoomed ? <ZoomHint zoomed onReset={resetZoom} /> : null}
 
       <View style={{ height: plotH + AXIS_H }}>
         {/* Stage names: tappable, outside the drag area. */}
@@ -147,6 +153,10 @@ export function Hypnogram({ segments }: { segments: SleepSegment[] }) {
                       <Stop key="end" offset={1} stopColor={colors.sleepStages.deep} stopOpacity={0.04} />,
                     ]}
                   </LinearGradient>
+                  {/* Zoomed in, the night runs off the plot's edges; keep it off the stage names. */}
+                  <ClipPath id="hyp-clip">
+                    <Rect x={LABEL_W} y={0} width={plotW} height={plotH} />
+                  </ClipPath>
                 </Defs>
                 {/* A faint lane per stage, and hour lines. */}
                 {ROWS.map((r, i) => (
@@ -161,46 +171,52 @@ export function Hypnogram({ segments }: { segments: SleepSegment[] }) {
                     opacity={focusStage === r.stage ? 1 : 0.45}
                   />
                 ))}
-                {hours.map((t) => (
-                  <Line key={t} x1={x(t)} x2={x(t)} y1={0} y2={plotH} stroke={colors.muted} strokeOpacity={0.18} strokeDasharray="2 4" />
-                ))}
+                <G clipPath="url(#hyp-clip)">
+                  {hours.map((t) => (
+                    <Line key={t} x1={x(t)} x2={x(t)} y1={0} y2={plotH} stroke={colors.muted} strokeOpacity={0.18} strokeDasharray="2 4" />
+                  ))}
 
-                <Path d={area} fill="url(#hyp-fill)" />
-                {/* Every stretch as a flat band in its row: thin steps for short ones, never dots. */}
-                {segments.map((s, i) => {
-                  const dim = (focusStage && s.stage !== focusStage) || (picked !== null && picked !== i);
-                  return (
-                    <Rect
-                      key={s.start}
-                      x={x(s.start)}
-                      y={midY(s.stage) - BAND_H / 2}
-                      width={Math.max(x(s.end) - x(s.start), 1.5)}
-                      height={BAND_H}
-                      rx={Math.min(3, (x(s.end) - x(s.start)) / 2)}
-                      fill={stageColor(s.stage)}
-                      opacity={dim ? 0.25 : 0.95}
-                    />
-                  );
-                })}
-                <Path d={line} stroke="url(#hyp-line)" strokeWidth={1.5} fill="none" strokeLinejoin="round" opacity={focusStage || seg ? 0.35 : 0.8} />
+                  <Path d={area} fill="url(#hyp-fill)" />
+                  {/* Every stretch as a flat band in its row: thin steps for short ones, never dots. */}
+                  {segments.map((s, i) => {
+                    const dim = (focusStage && s.stage !== focusStage) || (picked !== null && picked !== i);
+                    return (
+                      <Rect
+                        key={s.start}
+                        x={x(s.start)}
+                        y={midY(s.stage) - BAND_H / 2}
+                        width={Math.max(x(s.end) - x(s.start), 1.5)}
+                        height={BAND_H}
+                        rx={Math.min(3, (x(s.end) - x(s.start)) / 2)}
+                        fill={stageColor(s.stage)}
+                        opacity={dim ? 0.25 : 0.95}
+                      />
+                    );
+                  })}
+                  <Path d={line} stroke="url(#hyp-line)" strokeWidth={1.5} fill="none" strokeLinejoin="round" opacity={focusStage || seg ? 0.35 : 0.8} />
 
-                {seg ? (
-                  <>
-                    <Rect x={x(seg.start)} y={0} width={Math.max(x(seg.end) - x(seg.start), 2)} height={plotH} fill={colors.text} opacity={0.07} />
-                    <Line x1={x(seg.start)} x2={x(seg.start)} y1={0} y2={plotH} stroke={colors.text} strokeOpacity={0.4} />
-                    <Line x1={x(seg.end)} x2={x(seg.end)} y1={0} y2={plotH} stroke={colors.text} strokeOpacity={0.4} />
-                  </>
-                ) : null}
+                  {seg ? (
+                    <>
+                      <Rect x={x(seg.start)} y={0} width={Math.max(x(seg.end) - x(seg.start), 2)} height={plotH} fill={colors.text} opacity={0.07} />
+                      <Line x1={x(seg.start)} x2={x(seg.start)} y1={0} y2={plotH} stroke={colors.text} strokeOpacity={0.4} />
+                      <Line x1={x(seg.end)} x2={x(seg.end)} y1={0} y2={plotH} stroke={colors.text} strokeOpacity={0.4} />
+                    </>
+                  ) : null}
+                </G>
               </Svg>
             </Reveal>
             <View style={[styles.axis, { marginLeft: LABEL_W }]}>
               <View style={styles.axisEnd}>
                 <SymbolView name={{ ios: 'moon.stars.fill', android: 'nights_stay', web: 'nights_stay' }} tintColor={colors.muted} size={13} />
-                <Text style={styles.axisText}>{formatTime(start)}</Text>
+                <Text style={styles.axisText}>{formatTime(zoomed ? viewStart : start)}</Text>
               </View>
-              {hours.length >= 4 ? <Text style={styles.axisText}>{formatTime(hours[Math.floor(hours.length / 2)])}</Text> : null}
+              {zoomed ? (
+                <Text style={styles.axisText}>{formatTime(viewStart + viewSpan / 2)}</Text>
+              ) : hours.length >= 4 ? (
+                <Text style={styles.axisText}>{formatTime(hours[Math.floor(hours.length / 2)])}</Text>
+              ) : null}
               <View style={styles.axisEnd}>
-                <Text style={styles.axisText}>{formatTime(end)}</Text>
+                <Text style={styles.axisText}>{formatTime(zoomed ? viewStart + viewSpan : end)}</Text>
                 <SymbolView name={{ ios: 'sun.max.fill', android: 'wb_sunny', web: 'wb_sunny' }} tintColor={colors.muted} size={13} />
               </View>
             </View>

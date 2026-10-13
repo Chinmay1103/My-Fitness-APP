@@ -9,7 +9,7 @@ import { DayPager } from '@/components/Swipe';
 import { TrendBars } from '@/components/TrendBars';
 import { Card, Muted, Screen } from '@/components/ui';
 import { WhyCard } from '@/components/WhyCard';
-import { dayBeforeLines, sleepLine } from '@/lib/why';
+import { dayBeforeLines, recoveryChangeLines, sleepLine } from '@/lib/why';
 import { type } from '@/constants/theme';
 import { makeStyles, useColors } from '@/lib/theme';
 import { FACTOR_LABELS, RECOVERY_GUIDANCE, recoveryFactorDetail } from '@/lib/insights';
@@ -164,7 +164,7 @@ function LedHereCard() {
   const ctx = useScores();
   const { score, index } = useSelectedDay();
   const sleep = sleepLine(score);
-  return <WhyCard lines={[...dayBeforeLines(ctx, index, 'recovery'), ...(sleep ? [sleep] : [])]} />;
+  return <WhyCard lines={[...recoveryChangeLines(ctx, index), ...dayBeforeLines(ctx, index, 'recovery'), ...(sleep ? [sleep] : [])]} />;
 }
 
 const useStyles = makeStyles(() => StyleSheet.create({

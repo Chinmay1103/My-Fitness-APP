@@ -5,7 +5,7 @@ import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react
 import { fonts, gradientFor } from '@/constants/theme';
 import { makeStyles, useColors } from '@/lib/theme';
 import { shortDay } from '@/lib/format';
-import { ChartHeader, OpenDayLink, DEFAULT_RANGES, Legend, RangeSwitch, Reveal, dayName, smoothPath, usePickedDay, useScrub } from './parts';
+import { ChartHeader, OpenDayLink, DEFAULT_RANGES, Legend, RangeSwitch, Reveal, ZoomStrip, dayName, smoothPath, usePickedDay, useScrub } from './parts';
 
 export interface ComboPoint {
   date: string;
@@ -27,10 +27,12 @@ interface Props {
 
 const GAP = 3;
 const TOP = 8;
+/** The fewest days you can pinch in to. */
+const MIN_DAYS = 5;
 
 /**
  * Bars and a line on the same days, for two things that move together: strain (bars) against
- * recovery (line), or hours slept (bars) against hours needed (dashed line). Drag to scrub.
+ * recovery (line), or hours slept (bars) against hours needed (dashed line). Drag to scrub, pinch to zoom.
  */
 export function ComboChart({ points: all, bar, line, describe, height = 130 }: Props) {
   const colors = useColors();
@@ -39,16 +41,18 @@ export function ComboChart({ points: all, bar, line, describe, height = 130 }: P
   const points = all.slice(-range);
   const n = points.length;
   const { index, pick, reset } = usePickedDay(n, (i) => points[i]?.bar != null || points[i]?.line != null);
-  const { width, scrubProps } = useScrub((f) => pick(Math.floor(f * n)));
+  const { width, view, zoomed, resetZoom, scrubProps } = useScrub((f) => pick(Math.floor(f * n)), { minSpan: MIN_DAYS / n });
 
-  const slot = width / n;
+  // Zoomed in, the days between view.lo and view.hi fill the width; the rest is drawn off the edges.
+  const slot = width / (n * (view.hi - view.lo));
+  const left = (i: number) => (i - view.lo * n) * slot;
   const plotH = height - TOP;
   const barY = (v: number) => TOP + (1 - Math.min(v / bar.max, 1)) * plotH;
   const lineY = (v: number) => TOP + (1 - Math.min(v / line.max, 1)) * plotH;
-  const drawn = points.flatMap((p, i) => (p.line != null ? [{ x: i * slot + slot / 2, y: lineY(p.line), i }] : []));
+  const drawn = points.flatMap((p, i) => (p.line != null ? [{ x: left(i) + slot / 2, y: lineY(p.line), i }] : []));
   const [light, dark] = gradientFor(bar.color, colors);
   const gradId = `combo${bar.label.replace(/\W/g, '')}`;
-  const labelEvery = n > 14 ? 7 : 1;
+  const labelEvery = n * (view.hi - view.lo) > 14 ? 7 : 1;
 
   const sel = points[index];
   const detail = sel ? (describe ? describe(sel) : `${line.label} ${sel.line != null ? line.format(sel.line) : '--'}`) : '';
@@ -66,12 +70,13 @@ export function ComboChart({ points: all, bar, line, describe, height = 130 }: P
             onChange={(r) => {
               setRange(r);
               reset();
+              resetZoom();
             }}
           />
         }
       />
-      <OpenDayLink back={n - 1 - index} date={points[index]?.date} />
-      <View {...scrubProps} accessible accessibilityLabel={`${bar.label} and ${line.label}, last ${n} days.`}>
+      <OpenDayLink back={n - 1 - index} date={points[index]?.date} zoom={{ zoomed, onReset: resetZoom }} />
+      <View {...scrubProps} style={styles.plot} accessible accessibilityLabel={`${bar.label} and ${line.label}, last ${n} days.`}>
         {width > 0 ? (
           <View pointerEvents="none">
             <Reveal width={width} height={height}>
@@ -82,12 +87,12 @@ export function ComboChart({ points: all, bar, line, describe, height = 130 }: P
                     <Stop offset="1" stopColor={dark} />
                   </LinearGradient>
                 </Defs>
-                {sel ? <Rect x={index * slot} y={0} width={slot} height={height} rx={4} fill={colors.track} /> : null}
+                {sel ? <Rect x={left(index)} y={0} width={slot} height={height} rx={4} fill={colors.track} /> : null}
                 {points.map((p, i) =>
                   p.bar != null ? (
                     <Rect
                       key={p.date}
-                      x={i * slot + GAP / 2}
+                      x={left(i) + GAP / 2}
                       y={barY(p.bar)}
                       width={Math.max(slot - GAP, 1)}
                       height={Math.max(height - barY(p.bar), 2)}
@@ -117,24 +122,26 @@ export function ComboChart({ points: all, bar, line, describe, height = 130 }: P
                     strokeWidth={p.i === index ? 2 : 0}
                   />
                 ))}
-                {sel ? <Line x1={index * slot + slot / 2} x2={index * slot + slot / 2} y1={0} y2={TOP} stroke={colors.text} strokeOpacity={0.4} /> : null}
+                {sel ? <Line x1={left(index) + slot / 2} x2={left(index) + slot / 2} y1={0} y2={TOP} stroke={colors.text} strokeOpacity={0.4} /> : null}
               </Svg>
             </Reveal>
           </View>
         ) : (
           <View style={{ height }} />
         )}
-        <View style={styles.days} pointerEvents="none">
-          {points.map((p, i) => (
-            <View key={p.date} style={styles.dayCell}>
-              {i === index || (n - 1 - i) % labelEvery === 0 ? (
-                <Text style={[styles.day, i === index && styles.daySelected]} numberOfLines={1}>
-                  {shortDay(p.date)}
-                </Text>
-              ) : null}
-            </View>
-          ))}
-        </View>
+        <ZoomStrip width={width} view={view}>
+          <View style={styles.days} pointerEvents="none">
+            {points.map((p, i) => (
+              <View key={p.date} style={styles.dayCell}>
+                {i === index || (n - 1 - i) % labelEvery === 0 ? (
+                  <Text style={[styles.day, i === index && styles.daySelected]} numberOfLines={1}>
+                    {shortDay(p.date)}
+                  </Text>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        </ZoomStrip>
       </View>
       <Legend
         items={[
@@ -148,6 +155,7 @@ export function ComboChart({ points: all, bar, line, describe, height = 130 }: P
 
 const useStyles = makeStyles((colors) => StyleSheet.create({
   wrap: { gap: 10 },
+  plot: { overflow: 'hidden' },
   days: { flexDirection: 'row', marginTop: 6 },
   dayCell: { flex: 1, alignItems: 'center' },
   day: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 11, marginHorizontal: -12, textAlign: 'center' },

@@ -6,13 +6,16 @@ import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react
 import { fonts, withAlpha, type Palette } from '@/constants/theme';
 import { makeStyles, useColors } from '@/lib/theme';
 import { formatTime } from '@/lib/format';
-import { ChartHeader, Legend, Reveal, useScrub } from './parts';
+import { ChartHeader, Legend, Reveal, ZoomHint, useScrub } from './parts';
 
 const MINUTE = 60_000;
 const FULL_DAY = 24 * 60 * MINUTE;
 /** Longer gaps between readings break the line instead of drawing a straight bridge across them. */
 const GAP_MS = 15 * MINUTE;
 const PAD_Y = 8;
+const HOUR = 60 * MINUTE;
+/** The shortest stretch you can pinch in to. */
+const MIN_VIEW_MS = 20 * MINUTE;
 
 interface Props {
   /** The calendar day's samples, oldest first. */
@@ -63,7 +66,7 @@ function bucket(samples: HeartRateSample[], size: number): HeartRateSample[] {
 /**
  * One day of heart rate, midnight to midnight. The line takes the color of the zone it's in (the
  * same zones the strain score uses), so walks and workouts stand out from resting time. Drag to
- * read any moment.
+ * read any moment; pinch to zoom in on part of the day (the line gets more detailed as you go in).
  */
 export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact = false, window, height = compact ? 64 : 160 }: Props) {
   const colors = useColors();
@@ -71,18 +74,24 @@ export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact
   const [picked, setPicked] = useState<number | null>(null);
   const dayStart = window?.start ?? new Date(`${date}T00:00:00`).getTime();
   const span = window ? Math.max(window.end - window.start, MINUTE) : FULL_DAY;
-  const inView = window ? samples.filter((s) => s.time >= window.start && s.time <= window.end) : samples;
-  const points = bucket(inView, compact ? 10 * MINUTE : window ? Math.max(Math.round(span / 120), 15_000) : 2 * MINUTE);
-  const { width, scrubProps } = useScrub((f) => setPicked(dayStart + f * span));
+  const { width, view, zoomed, resetZoom, scrubProps } = useScrub((f) => setPicked(dayStart + f * span), {
+    minSpan: compact ? 1 : MIN_VIEW_MS / span,
+  });
+  // The part on screen: the whole span, or the zoomed stretch of it.
+  const viewStart = dayStart + view.lo * span;
+  const viewSpan = span * (view.hi - view.lo);
+  const viewEnd = viewStart + viewSpan;
+  const inView = window || zoomed ? samples.filter((s) => s.time >= viewStart && s.time <= viewEnd) : samples;
+  const points = bucket(inView, compact ? 10 * MINUTE : window || zoomed ? Math.max(Math.round(viewSpan / 240), 15_000) : 2 * MINUTE);
 
-  if (points.length === 0) {
+  if (points.length === 0 && !zoomed) {
     return compact ? <View style={{ height }} /> : <Text style={styles.empty}>No heart rate recorded for this day yet.</Text>;
   }
 
   const bpms = points.map((p) => p.bpm);
   const min = Math.min(...bpms, restingHr) - 6;
   const max = Math.max(Math.max(...bpms) + 6, restingHr + 40);
-  const xAt = (t: number) => ((t - dayStart) / span) * width;
+  const xAt = (t: number) => ((t - viewStart) / viewSpan) * width;
   const yAt = (v: number) => PAD_Y + (1 - (v - min) / (max - min)) * (height - PAD_Y * 2);
 
   let line = '';
@@ -103,9 +112,15 @@ export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact
 
   const sel = picked !== null ? nearest(points, picked) : null;
   const latest = samples.at(-1)!;
+  const end = points.at(-1);
   const shown = sel ?? latest;
   const shownZone = heartRateZone(shown.bpm, restingHr, maxHr);
-  const sleepBox = sleep && sleep.end > dayStart && sleep.start < dayStart + span ? { x1: xAt(Math.max(sleep.start, dayStart)), x2: xAt(Math.min(sleep.end, dayStart + span)) } : null;
+  const sleepBox = sleep && sleep.end > viewStart && sleep.start < viewEnd ? { x1: xAt(Math.max(sleep.start, viewStart)), x2: xAt(Math.min(sleep.end, viewEnd)) } : null;
+  // Faint lines on the hour: every 6 h for the whole day, closer together as you zoom in.
+  const midnight = new Date(`${date}T00:00:00`).getTime();
+  const gridStep = (viewSpan > 12 * HOUR ? 6 : viewSpan > 4 * HOUR ? 2 : 1) * HOUR;
+  const grid: number[] = [];
+  for (let t = midnight + Math.ceil((viewStart - midnight) / gridStep) * gridStep; t < viewEnd; t += gridStep) if (t > viewStart) grid.push(t);
 
   const plot = (
     <Svg width={width} height={height}>
@@ -119,7 +134,7 @@ export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact
       {sleepBox ? <Rect x={sleepBox.x1} y={0} width={Math.max(sleepBox.x2 - sleepBox.x1, 1)} height={height} fill={withAlpha(colors.sleep, 0.12)} /> : null}
       {compact
         ? null
-        : [6, 12, 18].map((h) => <Line key={h} x1={(width * h) / 24} x2={(width * h) / 24} y1={0} y2={height} stroke={colors.text} strokeOpacity={0.06} />)}
+        : grid.map((t) => <Line key={t} x1={xAt(t)} x2={xAt(t)} y1={0} y2={height} stroke={colors.text} strokeOpacity={0.06} />)}
       <Line x1={0} x2={width} y1={yAt(restingHr)} y2={yAt(restingHr)} stroke={colors.text} strokeOpacity={0.3} strokeDasharray="3 4" />
       <Path d={line} stroke={`url(#${gradId})`} strokeWidth={compact ? 1.5 : 2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
       {sel ? (
@@ -127,9 +142,9 @@ export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact
           <Line x1={xAt(sel.time)} x2={xAt(sel.time)} y1={0} y2={height} stroke={colors.text} strokeOpacity={0.25} />
           <Circle cx={xAt(sel.time)} cy={yAt(sel.bpm)} r={4} fill={colors.text} stroke={zoneColor(shownZone, colors)} strokeWidth={2} />
         </>
-      ) : (
-        <Circle cx={xAt(points.at(-1)!.time)} cy={yAt(points.at(-1)!.bpm)} r={3.5} fill={zoneColor(heartRateZone(points.at(-1)!.bpm, restingHr, maxHr), colors)} />
-      )}
+      ) : end ? (
+        <Circle cx={xAt(end.time)} cy={yAt(end.bpm)} r={3.5} fill={zoneColor(heartRateZone(end.bpm, restingHr, maxHr), colors)} />
+      ) : null}
     </Svg>
   );
 
@@ -148,12 +163,14 @@ export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact
         color={zoneColor(shownZone, colors)}
         title={sel ? `${formatTime(sel.time)} · bpm` : `Latest · ${formatTime(latest.time)} · bpm`}
         detail={zoneName(shownZone)}
+        right={<ZoomHint zoomed={zoomed} onReset={resetZoom} />}
       />
       <View
         {...scrubProps}
+        style={styles.plot}
         onTouchEnd={() => setPicked(null)}
         accessible
-        accessibilityLabel={`Heart rate through the day, ${Math.round(Math.min(...bpms))} to ${Math.round(Math.max(...bpms))} bpm. Latest ${Math.round(latest.bpm)} at ${formatTime(latest.time)}.`}>
+        accessibilityLabel={`Heart rate${bpms.length ? `, ${Math.round(Math.min(...bpms))} to ${Math.round(Math.max(...bpms))} bpm` : ''}${zoomed ? `, ${formatTime(viewStart)} to ${formatTime(viewEnd)}` : ' through the day'}. Latest ${Math.round(latest.bpm)} at ${formatTime(latest.time)}.`}>
         {width > 0 ? (
           <View pointerEvents="none">
             <Reveal width={width} height={height}>
@@ -165,7 +182,10 @@ export function HeartRateChart({ samples, date, restingHr, maxHr, sleep, compact
         )}
       </View>
       <View style={styles.axis}>
-        {(window ? [0, 0.5, 1].map((f) => formatTime(dayStart + f * span)) : ['12 AM', '6 AM', '12 PM', '6 PM', '12 AM']).map((label, i) => (
+        {(window || zoomed
+          ? [0, 0.5, 1].map((f) => formatTime(viewStart + f * viewSpan))
+          : ['12 AM', '6 AM', '12 PM', '6 PM', '12 AM']
+        ).map((label, i) => (
           <Text key={i} style={styles.axisText}>
             {label}
           </Text>
@@ -190,6 +210,7 @@ function nearest(points: HeartRateSample[], time: number): HeartRateSample | nul
 
 const useStyles = makeStyles((colors) => StyleSheet.create({
   wrap: { gap: 10 },
+  plot: { overflow: 'hidden' },
   empty: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 14, paddingVertical: 24, textAlign: 'center' },
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -4 },
   axisText: { color: colors.muted, fontFamily: fonts.bodyMedium, fontSize: 11 },

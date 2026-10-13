@@ -13,7 +13,7 @@ import { makeStyles, useColors } from '@/lib/theme';
 import { formatDate, formatMinutes } from '@/lib/format';
 import { useScores, useSelectedDay } from '@/lib/ScoresProvider';
 import { trendHref, type TrendKey } from '@/lib/trends';
-import { dayBeforeLines } from '@/lib/why';
+import { dayBeforeLines, sleepChangeLines } from '@/lib/why';
 import { WhyCard } from '@/components/WhyCard';
 
 const open = (key: TrendKey) => () => router.push(trendHref(key));
@@ -110,7 +110,7 @@ export default function SleepScreen() {
 
       <WhyCard
         title={isLatest ? 'WHAT LED TO LAST NIGHT' : 'WHAT LED TO THAT NIGHT'}
-        lines={dayBeforeLines(ctx, index, 'sleep')}
+        lines={[...sleepChangeLines(ctx, index), ...dayBeforeLines(ctx, index, 'sleep')]}
         footnote="What happened the day before. Strain adds to how much sleep you need; late meals, late workouts, caffeine and alcohol tend to cut deep sleep."
       />
 

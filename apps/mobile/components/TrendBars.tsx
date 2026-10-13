@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import Svg, { Line } from 'react-native-svg';
 
-import { ChartHeader, OpenDayLink, DEFAULT_RANGES, RangeSwitch, dayName, usePickedDay, useScrub } from '@/components/charts/parts';
+import { ChartHeader, OpenDayLink, DEFAULT_RANGES, RangeSwitch, ZoomStrip, dayName, usePickedDay, useScrub } from '@/components/charts/parts';
 import { fonts, gradientFor, motion } from '@/constants/theme';
 import { makeStyles, useColors } from '@/lib/theme';
 import { useAnimatedTarget } from '@/lib/animation';
@@ -29,11 +29,13 @@ interface Props {
 }
 
 const GAP = 3;
+/** The fewest days you can pinch in to. */
+const MIN_DAYS = 5;
 
 /**
  * The day-by-day bar chart: a bar per day, grown in one after another, with a dashed line at the
  * period's average. Drag across the bars to scrub (a light tick per day); the readout above shows
- * the picked day against the average. 7D / 14D / 30D switch, 14 first.
+ * the picked day against the average; pinch to zoom. 7D / 14D / 30D switch, 14 first.
  */
 export function TrendBars({ label, points: allPoints, max, color, height = 110, format = (v) => String(Math.round(v)) }: Props) {
   const colors = useColors();
@@ -42,7 +44,7 @@ export function TrendBars({ label, points: allPoints, max, color, height = 110, 
   const points = allPoints.slice(-range);
   const n = points.length;
   const { index, pick, reset } = usePickedDay(n, (i) => points[i]?.value != null);
-  const { scrubProps } = useScrub((f) => pick(Math.floor(f * n)));
+  const { width, view, zoomed, resetZoom, scrubProps } = useScrub((f) => pick(Math.floor(f * n)), { minSpan: MIN_DAYS / n });
 
   const values = points.map((p) => p.value).filter((v): v is number => v !== null);
   const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
@@ -50,7 +52,7 @@ export function TrendBars({ label, points: allPoints, max, color, height = 110, 
   const selected = points[index];
   const diff = selected?.value != null && avg !== null ? selected.value - avg : null;
   // With many bars, only label one day a week (counting back from today) plus the picked one.
-  const labelEvery = n > 14 ? 7 : 1;
+  const labelEvery = n * (view.hi - view.lo) > 14 ? 7 : 1;
 
   return (
     <View style={styles.wrap}>
@@ -71,11 +73,12 @@ export function TrendBars({ label, points: allPoints, max, color, height = 110, 
             onChange={(r) => {
               setRange(r);
               reset();
+              resetZoom();
             }}
           />
         }
       />
-      <OpenDayLink back={n - 1 - index} date={points[index]?.date} />
+      <OpenDayLink back={n - 1 - index} date={points[index]?.date} zoom={{ zoomed, onReset: resetZoom }} />
 
       <View
         {...scrubProps}
@@ -85,29 +88,31 @@ export function TrendBars({ label, points: allPoints, max, color, height = 110, 
         accessibilityValue={{ text: selected ? `${dayName(selected.date, index === n - 1)}: ${selected.value != null ? format(selected.value) : 'no data'}` : '' }}
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
         onAccessibilityAction={(e) => pick(index + (e.nativeEvent.actionName === 'increment' ? 1 : -1))}>
-        <View style={[styles.row, { height }]} pointerEvents="none">
-          {points.map((p, i) => (
-            <Bar key={p.date} point={p} index={i} isSelected={i === index} max={max} color={p.color ?? color} height={height} />
-          ))}
-          {avgY !== null ? (
-            <View style={[StyleSheet.absoluteFill, { top: avgY - 0.5, height: 1 }]}>
-              <Svg height={1} width="100%">
-                <Line x1="0" y1="0.5" x2="100%" y2="0.5" stroke={colors.text} strokeOpacity={0.35} strokeDasharray="3 4" />
-              </Svg>
-            </View>
-          ) : null}
-        </View>
-        <View style={styles.row} pointerEvents="none">
-          {points.map((p, i) => (
-            <View key={p.date} style={styles.dayCell}>
-              {i === index || (n - 1 - i) % labelEvery === 0 ? (
-                <Text style={[styles.day, i === index && styles.daySelected]} numberOfLines={1}>
-                  {shortDay(p.date)}
-                </Text>
-              ) : null}
-            </View>
-          ))}
-        </View>
+        <ZoomStrip width={width} view={view}>
+          <View style={[styles.row, { height }]} pointerEvents="none">
+            {points.map((p, i) => (
+              <Bar key={p.date} point={p} index={i} isSelected={i === index} max={max} color={p.color ?? color} height={height} />
+            ))}
+            {avgY !== null ? (
+              <View style={[StyleSheet.absoluteFill, { top: avgY - 0.5, height: 1 }]}>
+                <Svg height={1} width="100%">
+                  <Line x1="0" y1="0.5" x2="100%" y2="0.5" stroke={colors.text} strokeOpacity={0.35} strokeDasharray="3 4" />
+                </Svg>
+              </View>
+            ) : null}
+          </View>
+          <View style={styles.row} pointerEvents="none">
+            {points.map((p, i) => (
+              <View key={p.date} style={styles.dayCell}>
+                {i === index || (n - 1 - i) % labelEvery === 0 ? (
+                  <Text style={[styles.day, i === index && styles.daySelected]} numberOfLines={1}>
+                    {shortDay(p.date)}
+                  </Text>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        </ZoomStrip>
       </View>
     </View>
   );

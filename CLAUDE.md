@@ -34,6 +34,10 @@ Open design to-dos from the Sep 30 screen-recording review: [docs/design-review-
   should open something deeper: `Card` takes `href`/`onPress` (title-row link, or `wholeCard`),
   `Stat` and `BreakdownFactor` take `onPress`, and day-by-day charts show `OpenDayLink` to switch the
   screen to the scrubbed day. Sleep-score parts open `app/trend/[key].tsx` (`lib/trends.ts`).
+- **Side menu + pinch zoom** (Oct 13): every screen's header has a ☰ button (`components/SideMenu.tsx`,
+  in `Screen`) listing all screens and metrics, grouped, with the current one lit. Charts zoom with two
+  fingers through `useScrub(onScrub, { minSpan })` in `components/charts/parts.tsx` (`view` = shown part,
+  `ZoomStrip` for flex rows, `ZoomHint`); `onScrub` always gets the fraction of the *whole* chart.
 - **Battery**: backgrounds settle after 2 min (`motion.backgroundMotion`); live heart rate stops
   itself after 30 min, or after 10 min without the band, unless the heart-rate alert is on.
 
@@ -122,7 +126,10 @@ summary (`lib/morningSummary.ts`) is a background task defined in `index.ts`; sw
   and matches workouts to band-detected activities. `app/workout.tsx` is one workout: how hard you pushed
   (WHY strain by zone) and calories (WHY kcal), from `lib/workoutAnalysis.ts`; the per-workout numbers are
   synced in `daily_summaries.extras.workouts` for the coach's list_workouts. "What led here" sentences
-  (`lib/why.ts`, `components/WhyCard.tsx`) sit on Recovery, Sleep and every metric screen. The real
+  (`lib/why.ts`, `components/WhyCard.tsx`) sit on Recovery, Sleep, Strain and every metric screen. They lead
+  with what changed: vs the day before and which factor moved it most (`recoveryChangeLines`,
+  `sleepChangeLines`), what built the day's strain, distance to target and its cost in sleep need
+  (`strainLines`), and streaks (`streakLine`). The real
   profile (birth date, max HR, sex, height, protein/calorie targets) is read in `lib/profile.ts` and used
   for scoring and Next steps (demo data keeps `MOCK_PROFILE`). "Late" meals/workouts in `lib/why.ts`
   mean within 2 h of that night's bedtime. Sleep debt over several days is summed with
@@ -204,6 +211,7 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | 4d | Workout effort + calories, "why" everywhere (Oct 12) | Code ready: workout screen, steps double-count fix, real profile in scoring, connector `update_workout` + half-point effort + sex. To do: `npm run db:push` (sex column), redeploy the mcp function, have the coach add effort ratings to past workouts and your birth date and sex |
 | 4e | Bug sweep + body age (Oct 13) | Fixed: training load counted pre-band days as zero (false "too much too soon"), pre-midnight sleep heart rate counted as daytime, empty days synced, Today next steps and morning summary used the demo profile. Added About you (birth date, sex, height) and body age. To do: `npm run db:push` (height), redeploy mcp, new build; body age appears after 14 days of band data (about Oct 17) |
 | 4f | Full check on real data (Oct 13) | Report: [docs/bug-report-2026-10-13.md](docs/bug-report-2026-10-13.md). Fixed double-counted sleep debt, late meals vs bedtime, protein target, website skips empty pre-band rows. Same to-dos as 4d/4e |
+| 4g | Side menu, pinch zoom, dynamic "why" (Oct 13) | Code ready: ☰ menu on every screen, two-finger zoom on all day-by-day charts, heart rate and the hypnogram, "what changed" reasons on Recovery/Sleep and a new one on Strain. Needs a new EAS build |
 | 6 | Website (long-range trends and reports) | Built Oct 10 (`apps/web/`, tried on demo data); extras column and goals (Oct 11) pushed, connector redeployed. Progress page added Oct 11. To do: install the Oct 11 preview build, tell the coach the goals, check the site at chinmay1103.github.io/My-Fitness-APP/web/ with real data |
 
 Keep this table up to date when a milestone moves.
