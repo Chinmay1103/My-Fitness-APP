@@ -501,7 +501,7 @@ function buildServer(supabase: Db, userId: string) {
         const k = v.filter((x): x is number => x != null);
         return k.length ? Math.round((k.reduce((a, b) => a + b, 0) / k.length) * 10) / 10 : null;
       };
-      type Scores = { strain?: { trimp?: number }; sleep?: { needMinutes?: number; asleepMinutes?: number } | null };
+      type Scores = { strain?: { trimp?: number }; sleep?: { needMinutes?: number; asleepMinutes?: number } | null; sleepNeed?: { debt?: number } | null };
       const trimp = (r: (typeof rows)[number]) => (r.scores as Scores | null)?.strain?.trimp ?? 0;
       const acute = week.reduce((a, r) => a + trimp(r), 0) / week.length;
       // Days before the band was worn (no load at all yet) don't count toward what's usual.
@@ -509,8 +509,10 @@ function buildServer(supabase: Db, userId: string) {
       const chronic = worn.length ? worn.reduce((a, r) => a + trimp(r), 0) / worn.length : 0;
       const ranked = week.filter((r) => r.recovery_score != null).sort((a, b) => b.recovery_score! - a.recovery_score!);
       const sleepDebt = week.reduce((a, r) => {
-        const s = (r.scores as Scores | null)?.sleep;
-        return a + (s?.needMinutes && s.asleepMinutes ? Math.max(0, s.needMinutes - s.asleepMinutes) : 0);
+        // Against the need without its debt payback, or the same missed sleep counts every night.
+        const sc = r.scores as Scores | null;
+        const s = sc?.sleep;
+        return a + (s?.needMinutes && s.asleepMinutes ? Math.max(0, s.needMinutes - (sc?.sleepNeed?.debt ?? 0) - s.asleepMinutes) : 0);
       }, 0);
       const from = `${dateBack(6)}T00:00:00`;
       const [workouts, habits] = await Promise.all([

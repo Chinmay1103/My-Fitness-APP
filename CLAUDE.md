@@ -123,8 +123,10 @@ summary (`lib/morningSummary.ts`) is a background task defined in `index.ts`; sw
   (WHY strain by zone) and calories (WHY kcal), from `lib/workoutAnalysis.ts`; the per-workout numbers are
   synced in `daily_summaries.extras.workouts` for the coach's list_workouts. "What led here" sentences
   (`lib/why.ts`, `components/WhyCard.tsx`) sit on Recovery, Sleep and every metric screen. The real
-  profile (birth date, max HR, sex) is read in `lib/profile.ts` and used for scoring (demo data keeps
-  `MOCK_PROFILE`; the morning-summary background task still uses it). Shared data comes from
+  profile (birth date, max HR, sex, height, protein/calorie targets) is read in `lib/profile.ts` and used
+  for scoring and Next steps (demo data keeps `MOCK_PROFILE`). "Late" meals/workouts in `lib/why.ts`
+  mean within 2 h of that night's bedtime. Sleep debt over several days is summed with
+  `nightShortfall` (need minus its own debt payback), never need − asleep. Shared data comes from
   `lib/ScoresProvider.tsx`; UI pieces live in `components/`;
   **live heart rate** (`app/live.tsx`, `lib/liveHeartRate.ts`) reads the band's standard Bluetooth
   heart-rate signal ("Share heart rate" in Google Health) via react-native-ble-plx, kept alive in
@@ -201,6 +203,7 @@ On Windows PowerShell, call `npm.cmd` / `npx.cmd` if script execution policy blo
 | 5 | Trends, weekly report, notifications, MCP server | Done Oct 10 (needs a build to test): body check, training load, learned sleep need, habits, weekly report (Claude writes it via `save_weekly_report`), workout history with lift progress, morning summary notification (background task, Health Connect background read). App icon from the logo-designer skill (`logos/`) |
 | 4d | Workout effort + calories, "why" everywhere (Oct 12) | Code ready: workout screen, steps double-count fix, real profile in scoring, connector `update_workout` + half-point effort + sex. To do: `npm run db:push` (sex column), redeploy the mcp function, have the coach add effort ratings to past workouts and your birth date and sex |
 | 4e | Bug sweep + body age (Oct 13) | Fixed: training load counted pre-band days as zero (false "too much too soon"), pre-midnight sleep heart rate counted as daytime, empty days synced, Today next steps and morning summary used the demo profile. Added About you (birth date, sex, height) and body age. To do: `npm run db:push` (height), redeploy mcp, new build; body age appears after 14 days of band data (about Oct 17) |
+| 4f | Full check on real data (Oct 13) | Report: [docs/bug-report-2026-10-13.md](docs/bug-report-2026-10-13.md). Fixed double-counted sleep debt, late meals vs bedtime, protein target, website skips empty pre-band rows. Same to-dos as 4d/4e |
 | 6 | Website (long-range trends and reports) | Built Oct 10 (`apps/web/`, tried on demo data); extras column and goals (Oct 11) pushed, connector redeployed. Progress page added Oct 11. To do: install the Oct 11 preview build, tell the coach the goals, check the site at chinmay1103.github.io/My-Fitness-APP/web/ with real data |
 
 Keep this table up to date when a milestone moves.

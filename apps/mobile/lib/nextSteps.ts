@@ -132,14 +132,18 @@ export function nextSteps({ scores, days, metrics, profile, now = Date.now() }: 
   }
 
   // Protein, once some meals are logged and there's a weight to size the target.
-  if (m.nutrition.meals.length && m.weightKg) {
-    const target = Math.round(m.weightKg * PROTEIN_G_PER_KG);
+  // Your own target (told to the coach) wins over the 1.6 g/kg rule of thumb.
+  if (m.nutrition.meals.length && (profile.proteinTargetG || m.weightKg)) {
+    const target = profile.proteinTargetG ?? Math.round(m.weightKg! * PROTEIN_G_PER_KG);
     const have = m.nutrition.proteinG ?? 0;
+    const kcalLeft = profile.calorieTarget && m.nutrition.calories != null ? profile.calorieTarget - m.nutrition.calories : null;
     if (have < target * 0.9) {
       steps.push({
         kind: 'protein',
         title: `${target - have} g more protein today`,
-        detail: `${have} g of about ${target} g (${PROTEIN_G_PER_KG} g per kg) from what you logged. Dal, paneer, eggs, curd or chicken get you there.`,
+        detail: `${have} g of your ${target} g${profile.proteinTargetG ? ' target' : ` (${PROTEIN_G_PER_KG} g per kg)`} from what you logged${
+          kcalLeft != null && kcalLeft > 100 ? `, and ${formatCount(kcalLeft)} kcal left to your ${formatCount(profile.calorieTarget!)}` : ''
+        }. Dal, paneer, eggs, curd or chicken get you there.`,
         href: '/metric/macros',
         priority: 6,
       });

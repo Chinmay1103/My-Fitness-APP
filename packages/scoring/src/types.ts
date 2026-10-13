@@ -45,6 +45,9 @@ export interface UserProfile {
   sex?: Sex;
   /** For body mass index in body age. */
   heightCm?: number;
+  /** Daily goals told to the coach (profile). Display only. */
+  proteinTargetG?: number;
+  calorieTarget?: number;
   /** Measured max heart rate. Estimated from age when missing. */
   maxHr?: number;
   /** Baseline sleep need before strain and debt adjustments. Defaults to 8h. */

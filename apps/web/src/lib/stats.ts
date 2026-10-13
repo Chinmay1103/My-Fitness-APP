@@ -1,4 +1,4 @@
-import type { DailyScores } from '@fitness/scoring';
+import { nightShortfall, type DailyScores } from '@fitness/scoring';
 
 import type { Dataset } from './data';
 import { addDays, weekStart } from './dates';
@@ -101,7 +101,7 @@ export function periods(rows: Row[], unit: PeriodUnit): PeriodRow[] {
       days: g.filter((r) => r.day).length,
       averages,
       ...mix,
-      sleepDebt: Math.round(g.reduce((sum, r) => sum + (r.day?.asleep != null && r.day.need != null ? Math.max(0, r.day.need - r.day.asleep) : 0), 0)),
+      sleepDebt: Math.round(g.reduce((sum, r) => sum + (r.day ? nightShortfall(r.day.scores) : 0), 0)),
       workouts: g.reduce((sum, r) => sum + r.workouts, 0),
       zoneMinutes: g.reduce((sum, r) => sum + (r.day?.zoneMinutes ?? 0), 0),
     };

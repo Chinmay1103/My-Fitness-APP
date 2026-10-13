@@ -23,6 +23,8 @@ export async function fetchProfile(): Promise<UserProfile> {
   if (row.max_hr) profile.maxHr = row.max_hr;
   if (row.sex === 'male' || row.sex === 'female') profile.sex = row.sex as Sex;
   if (row.height_cm) profile.heightCm = row.height_cm;
+  if (row.protein_target_g) profile.proteinTargetG = row.protein_target_g;
+  if (row.calorie_target) profile.calorieTarget = row.calorie_target;
   return profile;
 }
 
@@ -32,6 +34,8 @@ export interface ProfileRow {
   max_hr?: number | null;
   sex?: string | null;
   height_cm?: number | null;
+  protein_target_g?: number | null;
+  calorie_target?: number | null;
 }
 
 /** The signed-in user's profile row, or null when signed out. */

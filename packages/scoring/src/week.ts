@@ -1,5 +1,6 @@
 import type { DailyScores } from "./daily";
 import { trainingLoad, type LoadZone } from "./load";
+import { nightShortfall } from "./sleep";
 import { round } from "./stats";
 
 /**
@@ -47,7 +48,7 @@ export function weekSummary(scores: DailyScores[], endIndex: number = scores.len
     asleep: avg(week.flatMap((s) => (s.sleep ? [s.sleep.asleepMinutes] : []))),
     best: sorted[0] ?? null,
     worst: sorted.at(-1) ?? null,
-    sleepDebt: Math.round(week.reduce((sum, s) => sum + (s.sleep ? Math.max(0, s.sleep.needMinutes - s.sleep.asleepMinutes) : 0), 0)),
+    sleepDebt: Math.round(week.reduce((sum, s) => sum + nightShortfall(s), 0)),
     greenDays: week.filter((s) => s.recovery?.zone === "green").length,
     redDays: week.filter((s) => s.recovery?.zone === "red").length,
     loadRatio: load?.ratio ?? null,

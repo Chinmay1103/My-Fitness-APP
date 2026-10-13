@@ -49,3 +49,13 @@ describe("sleep score", () => {
     expect(result.consistency).toBe(0.5);
   });
 });
+
+describe("nightShortfall", () => {
+  it("counts a missed hour once, not again while it's being paid back", async () => {
+    const { nightShortfall } = await import("../src");
+    // Need 8 h 20 m of which 20 m pays back debt; slept 7 h: 60 min short of the night's own need.
+    expect(nightShortfall({ sleep: { asleepMinutes: 420, needMinutes: 500 }, sleepNeed: { debt: 20 } })).toBe(60);
+    expect(nightShortfall({ sleep: { asleepMinutes: 520, needMinutes: 500 }, sleepNeed: { debt: 20 } })).toBe(0);
+    expect(nightShortfall({ sleep: null })).toBe(0);
+  });
+});

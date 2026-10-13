@@ -113,3 +113,13 @@ export function computeSleepScore(
     },
   };
 }
+
+/**
+ * How far one night fell short, for adding up sleep debt over days: asleep vs the need *without*
+ * the part that pays back earlier debt. Summing need − asleep instead counts the same missed sleep
+ * again every night it's being paid back (a 7 h-a-night week came out as 12 h of debt).
+ */
+export function nightShortfall(night: { sleep: { asleepMinutes: number; needMinutes: number } | null; sleepNeed?: { debt: number } | null }): number {
+  if (!night.sleep) return 0;
+  return Math.max(0, night.sleep.needMinutes - (night.sleepNeed?.debt ?? 0) - night.sleep.asleepMinutes);
+}

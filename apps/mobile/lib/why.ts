@@ -26,10 +26,14 @@ export interface WhyContext {
   profile: UserProfile;
 }
 
-/** Meals at or after this hour count as late. */
-const LATE_MEAL_HOUR = 21;
-/** Workouts ending at or after this hour can keep heart rate up into the night. */
-const LATE_WORKOUT_HOUR = 20;
+/**
+ * "Late" is relative to that night's bedtime, not the clock: a 9:30 pm dinner is late for someone
+ * asleep at 10:30, not for someone asleep at 1 am. Meals and hard workouts within this long of
+ * falling asleep count. Without a recorded bedtime, 9 pm (meals) and 8 pm (workouts) stand in.
+ */
+const LATE_BEFORE_BED_MS = 2 * 3_600_000;
+const FALLBACK_MEAL_HOUR = 21;
+const FALLBACK_WORKOUT_HOUR = 20;
 
 const workoutName = (w: { title?: string; kind: string }) => w.title || KINDS[w.kind as WorkoutKind]?.label || 'a workout';
 
@@ -69,18 +73,23 @@ export function dayBeforeLines(ctx: WhyContext, index: number, focus: 'recovery'
     href: '/strain',
   });
 
-  const late = workouts.filter((w) => new Date(w.end).getHours() >= LATE_WORKOUT_HOUR || new Date(w.end).getDate() !== new Date(w.start).getDate());
+  const bedtime = ctx.days[index]?.sleep?.start;
+  const isLate = (t: number, fallbackHour: number) =>
+    bedtime != null ? t <= bedtime && bedtime - t <= LATE_BEFORE_BED_MS : new Date(t).getHours() >= fallbackHour;
+  const late = workouts.filter((w) => isLate(w.end, FALLBACK_WORKOUT_HOUR));
   for (const w of late) {
     lines.push({
-      text: `${workoutName(w)} ended at ${formatTime(w.end)}. Hard training close to bed keeps heart rate up and can delay deep sleep.`,
+      text: `${workoutName(w)} ended at ${formatTime(w.end)}${bedtime != null ? `, ${formatMinutes(Math.round((bedtime - w.end) / 60_000))} before you fell asleep` : ''}. Hard training close to bed keeps heart rate up and can delay deep sleep.`,
       href: { pathname: '/workout', params: { id: w.id } },
     });
   }
 
-  const lateMeals = (ctx.metrics[index - 1]?.nutrition.meals ?? []).filter((m) => new Date(m.eatenAt).getHours() >= LATE_MEAL_HOUR);
+  // Meals from the evening before and any after midnight but before bed.
+  const meals = [...(ctx.metrics[index - 1]?.nutrition.meals ?? []), ...(ctx.metrics[index]?.nutrition.meals ?? [])];
+  const lateMeals = meals.filter((m) => isLate(m.eatenAt, FALLBACK_MEAL_HOUR) && (bedtime != null || ctx.metrics[index - 1]?.nutrition.meals.includes(m)));
   if (lateMeals.length) {
     lines.push({
-      text: `Late eating: ${lateMeals.map((m) => `${m.description ?? 'a meal'} at ${formatTime(m.eatenAt)}`).join(', ')}. Digesting late often raises resting heart rate overnight.`,
+      text: `Eating close to bed: ${lateMeals.map((m) => `${m.description ?? 'a meal'} at ${formatTime(m.eatenAt)}`).join(', ')}${bedtime != null ? `, within 2 h of falling asleep at ${formatTime(bedtime)}` : ''}. Digesting in bed often raises resting heart rate overnight.`,
       href: { pathname: '/metric/[key]', params: { key: 'caloriesIn' } },
     });
   }

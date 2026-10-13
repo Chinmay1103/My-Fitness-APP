@@ -207,7 +207,9 @@ export async function fetchDataset(): Promise<Dataset> {
     timeZone,
     demo: false,
     goals: { weightKg: num(profile?.goal_weight_kg), calories: num(profile?.calorie_target), proteinG: num(profile?.protein_target_g) },
-    days: rows.map((r) => dayFromRow(r, timeZone)),
+    // Rows with nothing from the band (synced before Oct 13 for days before it arrived) would show
+    // as zero-strain days and pull averages down.
+    days: rows.filter((r) => r.heart_rate || r.resting_hr != null || r.hrv_rmssd != null || r.asleep_minutes != null).map((r) => dayFromRow(r, timeZone)),
     workouts: workouts.map((w) => {
       const start = Date.parse(w.started_at);
       const d = w.details ?? {};

@@ -1,3 +1,4 @@
+import { nightShortfall } from '@fitness/scoring';
 import { Legend, TimeChart } from '../components/charts/TimeChart';
 import { Card, Empty, StatTile } from '../components/ui';
 import { addDays, weekStart } from '../lib/dates';
@@ -19,7 +20,7 @@ export function Sleep({ rows, prevRows, openDay, openTrend }: PageProps) {
   const bedtimes = nights.flatMap((r) => (r.day!.bedtime != null ? [r.day!.bedtime] : []));
   const wakes = nights.flatMap((r) => (r.day!.wake != null ? [r.day!.wake] : []));
   const prevBed = prevRows.flatMap((r) => (r.day?.bedtime != null ? [r.day.bedtime] : []));
-  const debt = nights.reduce((sum, r) => sum + (r.day!.need != null ? Math.max(0, r.day!.need - r.day!.asleep!) : 0), 0);
+  const debt = nights.reduce((sum, r) => sum + nightShortfall(r.day!.scores), 0);
   const spread = stdDev(bedtimes);
   const fmtH = (h: number) => formatMinutes(h * 60);
 
