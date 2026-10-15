@@ -205,9 +205,20 @@ export const healthConnectSource: HealthSource = {
       const day = byDate.get(localDate(Date.parse(r.time)));
       if (day) day.restingHr = Math.round(r.beatsPerMinute);
     }
+    // HRV: Fitbit's nightly number is the average over the sleep, and Health Connect can hold several
+    // readings per night (or a stray one after waking). Average those inside the main sleep, like
+    // Google Health does; with no reading inside it, fall back to the day's latest reading.
     for (const r of [...hrv].sort((a, b) => Date.parse(a.time) - Date.parse(b.time))) {
       const day = byDate.get(localDate(Date.parse(r.time)));
       if (day) day.hrvRmssd = Math.round(r.heartRateVariabilityMillis);
+    }
+    for (const day of result) {
+      if (!day.sleep) continue;
+      const inside = hrv.filter((r) => {
+        const t = Date.parse(r.time);
+        return t >= day.sleep!.start - 30 * 60_000 && t <= day.sleep!.end + 30 * 60_000;
+      });
+      if (inside.length) day.hrvRmssd = Math.round(inside.reduce((sum, r) => sum + r.heartRateVariabilityMillis, 0) / inside.length);
     }
 
     // Heart rate for strain is the waking day; samples during a main sleep go to `sleepHeartRate`
