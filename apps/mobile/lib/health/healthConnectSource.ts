@@ -33,7 +33,8 @@ const DAY = 24 * 60 * 60 * 1000;
 
 // Copies of the library's constants: importing them would load the library (see `lib`).
 const SDK_AVAILABLE = 3;
-const Stage = { AWAKE: 1, OUT_OF_BED: 3, DEEP: 5, REM: 6 };
+// AWAKE_IN_BED (7) is newer than the library's constants.
+const Stage = { AWAKE: 1, OUT_OF_BED: 3, DEEP: 5, REM: 6, AWAKE_IN_BED: 7 };
 
 type HealthConnectLib = typeof import('react-native-health-connect');
 let cachedLib: HealthConnectLib | null | undefined;
@@ -101,7 +102,7 @@ function localDate(time: number): string {
 function toStage(code: number): SleepStage {
   if (code === Stage.DEEP) return 'deep';
   if (code === Stage.REM) return 'rem';
-  if (code === Stage.AWAKE || code === Stage.OUT_OF_BED) return 'awake';
+  if (code === Stage.AWAKE || code === Stage.OUT_OF_BED || code === Stage.AWAKE_IN_BED) return 'awake';
   // LIGHT, plain SLEEPING and UNKNOWN all count as light sleep.
   return 'light';
 }
@@ -128,6 +129,36 @@ function toSleepSession(record: { startTime: string; endTime: string; stages?: {
     stages.light = (end - start) / 60000;
   }
   return { start, end, stages, segments: segments.length ? segments : undefined };
+}
+
+/** Longest gap between two sleep sessions from the same app that still counts as one night. */
+const SPLIT_NIGHT_GAP = 60 * 60_000;
+
+/**
+ * A night interrupted by a long wake-up can be written as two sessions; Google Health counts both,
+ * so join back-to-back sessions from the same app (the gap counts as awake). Sessions from
+ * different apps can be copies of the same night, so those are never joined.
+ */
+function joinSplitNights(sessions: { session: SleepSession; origin?: string }[]): SleepSession[] {
+  const sorted = [...sessions].sort((a, b) => a.session.start - b.session.start);
+  const joined: { session: SleepSession; origin?: string }[] = [];
+  for (const next of sorted) {
+    const prev = joined.findLast((j) => j.origin === next.origin);
+    const gap = prev ? next.session.start - prev.session.end : -1;
+    if (!prev || gap < 0 || gap > SPLIT_NIGHT_GAP) {
+      joined.push({ session: { ...next.session, stages: { ...next.session.stages } }, origin: next.origin });
+      continue;
+    }
+    const a = prev.session;
+    const b = next.session;
+    for (const k of ['awake', 'light', 'deep', 'rem'] as const) a.stages[k] += b.stages[k];
+    a.stages.awake += gap / 60000;
+    if (a.segments && b.segments) {
+      a.segments = [...a.segments, ...(gap > 0 ? [{ start: a.end, end: b.start, stage: 'awake' as const }] : []), ...b.segments];
+    } else a.segments = undefined;
+    a.end = b.end;
+  }
+  return joined.map((j) => j.session);
 }
 
 /** Opens Health Connect's own settings, e.g. to change permissions. */
@@ -174,7 +205,7 @@ export const healthConnectSource: HealthSource = {
 
     // Extras are optional: a missing permission leaves that metric empty instead of failing the scores.
     const optional = <T,>(read: Promise<T[]>) => read.catch(() => [] as T[]);
-    const [heartRate, resting, hrv, sleep, steps, spo2, breathing, calories, skinTemp] = await Promise.all([
+    const [heartRate, resting, hrv, sleep, steps, spo2, breathing, skinTemp] = await Promise.all([
       readAll('HeartRate', from, now),
       readAll('RestingHeartRate', from, now),
       readAll('HeartRateVariabilityRmssd', from, now),
@@ -182,7 +213,6 @@ export const healthConnectSource: HealthSource = {
       optional(readAll('Steps', from, now)),
       optional(readAll('OxygenSaturation', from, now)),
       optional(readAll('RespiratoryRate', from, now)),
-      optional(readAll('TotalCaloriesBurned', from, now)),
       optional(readAll('SkinTemperature', from, now)),
     ]);
 
@@ -194,8 +224,8 @@ export const healthConnectSource: HealthSource = {
     const byDate = new Map(result.map((d) => [d.date, d]));
 
     // Main sleep = the longest session ending on that day (naps are ignored for now).
-    for (const record of sleep) {
-      const session = toSleepSession(record);
+    const sessions = joinSplitNights(sleep.map((r) => ({ session: toSleepSession(r), origin: r.metadata?.dataOrigin })));
+    for (const session of sessions) {
       const day = byDate.get(localDate(session.end));
       if (day && (!day.sleep || session.end - session.start > day.sleep.end - day.sleep.start)) day.sleep = session;
     }
@@ -259,10 +289,25 @@ export const healthConnectSource: HealthSource = {
     const tempDeltas = skinTemp.flatMap((r) => r.deltas.map((x) => ({ time: x.time, delta: x.delta.inCelsius })));
     nightAverage(tempDeltas, (r) => r.delta, (d, v) => (d.skinTempDelta = Math.round(v * 100) / 100));
 
-    for (const r of calories) {
-      const day = byDate.get(localDate(Date.parse(r.startTime)));
-      if (day) day.caloriesBurned = Math.round((day.caloriesBurned ?? 0) + r.energy.inKilocalories);
-    }
+    // Energy burned per calendar day, added up by Health Connect itself: it drops copies written by
+    // more than one app (Google Health's own priority order) and splits records that cross midnight,
+    // so the total matches Google Health's. Summing the raw records could count calories twice.
+    await Promise.all(
+      result.map(async (day, i) => {
+        const start = new Date(firstMidnight.getFullYear(), firstMidnight.getMonth(), firstMidnight.getDate() + i);
+        const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+        if (start > now) return;
+        try {
+          const total = await hcOrThrow().aggregateRecord({
+            recordType: 'TotalCaloriesBurned',
+            timeRangeFilter: { operator: 'between', startTime: start.toISOString(), endTime: (end < now ? end : now).toISOString() },
+          });
+          if (total.dataOrigins.length) day.caloriesBurned = Math.round(total.ENERGY_TOTAL.inKilocalories);
+        } catch {
+          // No permission: leave it empty, like the other extras.
+        }
+      }),
+    );
 
     return result;
   },
